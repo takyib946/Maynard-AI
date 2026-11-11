@@ -3,483 +3,819 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#101827">
-<title>Maynard AI</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#090b16">
+<title>Maynard AI Ultimate</title>
+<link rel="manifest" href="/manifest.webmanifest">
 
 <style>
-:root {
-  --bg:#101827;
-  --panel:#172235;
-  --panel2:#202e43;
-  --text:#f4f7fb;
-  --muted:#a8b4c6;
-  --accent:#7c6cff;
-  --border:#304057;
+:root{
+--bg:#090b16;
+--panel:#111629;
+--panel2:#1b2140;
+--text:#f5f5ff;
+--muted:#a1a8c4;
+--line:#2a3150;
+--accent:#9875ff;
 }
 *{box-sizing:border-box}
 body{
-  margin:0;
-  font-family:Arial,sans-serif;
-  background:var(--bg);
-  color:var(--text);
-  height:100dvh;
-  display:flex;
-  flex-direction:column;
+margin:0;
+background:var(--bg);
+color:var(--text);
+font-family:system-ui,Arial,sans-serif;
+min-height:100vh;
 }
-header{
-  height:65px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:0 16px;
-  border-bottom:1px solid var(--border);
-  background:var(--panel);
+button,textarea{font:inherit}
+button{cursor:pointer;color:var(--text)}
+.app{display:flex;min-height:100vh}
+.sidebar{
+width:255px;
+background:#0d1020;
+border-right:1px solid var(--line);
+padding:18px;
+display:flex;
+flex-direction:column;
+gap:15px;
 }
-.brand{font-size:20px;font-weight:bold}
-.brand span{color:var(--accent)}
-.actions{display:flex;gap:8px}
-button,select{font:inherit}
-.icon-btn{
-  background:var(--panel2);
-  color:var(--text);
-  border:1px solid var(--border);
-  padding:9px 12px;
-  border-radius:10px;
+.brand{
+font-size:21px;
+font-weight:800;
+display:flex;
+align-items:center;
+gap:10px;
 }
-main{
-  flex:1;
-  min-height:0;
-  display:flex;
-  flex-direction:column;
-  max-width:900px;
-  width:100%;
-  margin:auto;
+.logo{
+width:40px;
+height:40px;
+border-radius:13px;
+display:grid;
+place-items:center;
+background:linear-gradient(135deg,#a779ff,#348fff);
+font-size:23px;
 }
-.toolbar{
-  display:flex;
-  gap:8px;
-  padding:12px;
-  overflow-x:auto;
+.btn{
+padding:11px;
+border:1px solid var(--line);
+border-radius:12px;
+background:var(--panel);
+text-align:left;
 }
-.toolbar select{
-  background:var(--panel);
-  color:var(--text);
-  border:1px solid var(--border);
-  padding:10px;
-  border-radius:10px;
-  min-width:180px;
+.btn:hover,.mode.active{
+background:var(--panel2);
+border-color:var(--accent);
 }
-#chat{
-  flex:1;
-  overflow-y:auto;
-  padding:16px;
+.new{
+background:linear-gradient(120deg,#8058e9,#397eea);
+border:0;
+text-align:center;
+font-weight:700;
+}
+.section{
+font-size:11px;
+letter-spacing:1.5px;
+color:var(--muted);
+}
+.modes{display:grid;gap:7px}
+.sidebar-bottom{
+margin-top:auto;
+display:grid;
+gap:8px;
+}
+.main{
+flex:1;
+min-width:0;
+display:flex;
+flex-direction:column;
+min-height:100vh;
+}
+.top{
+height:65px;
+border-bottom:1px solid var(--line);
+display:flex;
+align-items:center;
+justify-content:space-between;
+padding:0 20px;
+}
+.top button{
+background:none;
+border:0;
+font-size:20px;
+}
+.content{
+width:min(900px,100%);
+margin:auto;
+padding:25px 18px;
+flex:1;
 }
 .welcome{
-  text-align:center;
-  margin:55px auto;
-  max-width:500px;
+text-align:center;
+padding:9vh 10px 30px;
 }
-.welcome h1{font-size:30px}
-.welcome p{color:var(--muted);line-height:1.6}
-.message{
-  max-width:88%;
-  padding:13px 15px;
-  border-radius:16px;
-  margin:12px 0;
-  line-height:1.6;
-  white-space:pre-wrap;
-  overflow-wrap:anywhere;
+.biglogo{font-size:50px}
+.welcome h1{
+font-size:clamp(27px,5vw,43px);
+margin:8px 0;
 }
-.user{
-  background:#493f9e;
-  margin-left:auto;
+.gradient{
+background:linear-gradient(90deg,#b18cff,#64b8ff);
+background-clip:text;
+color:transparent;
 }
-.bot{
-  background:var(--panel);
-  border:1px solid var(--border);
-  margin-right:auto;
+.welcome p{color:var(--muted)}
+.suggestions{
+display:grid;
+grid-template-columns:repeat(2,minmax(0,1fr));
+gap:10px;
+max-width:650px;
+margin:25px auto;
 }
-.message-actions{
-  display:flex;
-  gap:8px;
-  margin-top:8px;
+.suggestion{
+background:var(--panel);
+border:1px solid var(--line);
+border-radius:14px;
+padding:15px;
+text-align:left;
 }
-.message-actions button{
-  font-size:12px;
-  padding:6px 9px;
-  border-radius:8px;
-  border:1px solid var(--border);
-  color:var(--muted);
-  background:var(--panel2);
+.suggestion small{
+display:block;
+color:var(--muted);
+margin-top:5px;
+}
+.messages{
+display:grid;
+gap:18px;
+padding-bottom:25px;
+}
+.msg{
+display:flex;
+gap:11px;
+align-items:flex-start;
+}
+.avatar{
+width:35px;
+height:35px;
+flex:none;
+border-radius:11px;
+background:var(--panel2);
+display:grid;
+place-items:center;
+font-weight:bold;
+}
+.user .avatar{background:#49378a}
+.bubble{
+background:var(--panel);
+border:1px solid var(--line);
+border-radius:4px 15px 15px 15px;
+padding:13px 15px;
+line-height:1.7;
+white-space:pre-wrap;
+overflow-wrap:anywhere;
+max-width:100%;
+}
+.user .bubble{
+background:#211b3c;
+border-color:#44356c;
+}
+.composer-wrap{
+position:sticky;
+bottom:0;
+background:linear-gradient(transparent,var(--bg) 18%);
+padding:15px 18px 20px;
 }
 .composer{
-  padding:12px;
-  border-top:1px solid var(--border);
-  background:var(--panel);
-}
-.attachments{
-  display:flex;
-  gap:7px;
-  flex-wrap:wrap;
-  margin-bottom:8px;
-}
-.file-chip{
-  background:var(--panel2);
-  padding:7px 9px;
-  border-radius:8px;
-  font-size:12px;
-}
-.input-area{
-  display:flex;
-  gap:8px;
-  align-items:flex-end;
+width:min(850px,100%);
+margin:auto;
+background:var(--panel);
+border:1px solid #343b5d;
+border-radius:18px;
+padding:12px;
 }
 textarea{
-  flex:1;
-  min-height:48px;
-  max-height:150px;
-  resize:none;
-  padding:14px;
-  border-radius:13px;
-  border:1px solid var(--border);
-  background:var(--bg);
-  color:var(--text);
-  outline:none;
-  font:inherit;
+width:100%;
+min-height:55px;
+max-height:170px;
+resize:vertical;
+border:0;
+outline:0;
+background:transparent;
+color:var(--text);
+padding:8px;
 }
-.send{
-  background:var(--accent);
-  color:white;
-  border:0;
-  border-radius:12px;
-  padding:14px 17px;
-  font-weight:bold;
+.actions{
+display:flex;
+align-items:center;
+gap:8px;
+flex-wrap:wrap;
 }
-.tools{
-  display:flex;
-  gap:8px;
-  margin-top:9px;
-  flex-wrap:wrap;
+.actions button{
+border:1px solid var(--line);
+border-radius:10px;
+padding:9px 12px;
+background:var(--panel2);
 }
-.tools button{
-  background:var(--panel2);
-  border:1px solid var(--border);
-  color:var(--text);
-  padding:8px 11px;
-  border-radius:9px;
-}
-.status{
-  font-size:12px;
-  color:var(--muted);
-  padding:7px 2px 0;
+.actions .send{
+margin-left:auto;
+background:linear-gradient(120deg,#8b62f3,#397eea);
+border:0;
+font-weight:bold;
 }
 #fileInput{display:none}
-body.light{
-  --bg:#f4f6fb;
-  --panel:#ffffff;
-  --panel2:#edf0f7;
-  --text:#172033;
-  --muted:#647087;
-  --border:#dce2ed;
+#fileNames{
+font-size:12px;
+color:var(--muted);
+padding:5px;
 }
-@media(max-width:500px){
-  .welcome{margin:35px 15px}
-  .message{max-width:94%}
-  header{padding:0 11px}
+.status{
+color:var(--muted);
+font-size:12px;
+padding:8px 2px;
+}
+.footer{
+text-align:center;
+font-size:11px;
+color:var(--muted);
+padding:8px;
+}
+.hidden{display:none!important}
+@media(max-width:700px){
+.sidebar{
+position:fixed;
+z-index:10;
+top:0;
+bottom:0;
+left:-280px;
+transition:.2s;
+}
+.sidebar.open{left:0}
+.top{padding:0 12px}
+.content{padding:12px}
+.welcome{padding-top:7vh}
+.suggestions{grid-template-columns:1fr}
+.composer-wrap{padding:10px}
+.bubble{font-size:14px}
 }
 </style>
 </head>
 
 <body>
+<div class="app">
 
-<header>
-  <div class="brand">Maynard <span>AI</span></div>
-  <div class="actions">
-    <button class="icon-btn" id="themeBtn">☀️</button>
-    <button class="icon-btn" id="newBtn">＋ New</button>
-  </div>
+<aside class="sidebar" id="sidebar">
+
+<div class="brand">
+<div class="logo">M</div>
+Maynard AI
+</div>
+
+<button class="btn new" id="newChat">＋ New Chat</button>
+
+<div class="section">AI MODES</div>
+
+<div class="modes" id="modes">
+<button class="btn mode active" data-mode="general">✦ General</button>
+<button class="btn mode" data-mode="education">📚 Education</button>
+<button class="btn mode" data-mode="writing">✍️ Writing</button>
+<button class="btn mode" data-mode="coding">💻 Coding</button>
+<button class="btn mode" data-mode="research">🔎 Research</button>
+<button class="btn mode" data-mode="business">📈 Business</button>
+<button class="btn mode" data-mode="creative">🎨 Creative</button>
+<button class="btn mode" data-mode="translator">🌍 Translator</button>
+<button class="btn mode" data-mode="summarizer">📄 Summarizer</button>
+<button class="btn mode" data-mode="assistant">🤖 Personal assistant</button>
+</div>
+
+<div class="sidebar-bottom">
+<button class="btn" id="historyBtn">▤ Chat history</button>
+<button class="btn" id="exportBtn">⇩ Export chat</button>
+<button class="btn" id="themeBtn">◐ Change theme</button>
+<button class="btn" id="clearBtn">Clear chat</button>
+</div>
+
+</aside>
+
+<main class="main">
+
+<header class="top">
+<div>
+<button id="menuBtn" aria-label="Open menu">☰</button>
+<strong id="modeTitle">General</strong>
+</div>
+<small>ULTIMATE 2.0</small>
 </header>
 
-<main>
+<section class="content">
 
-  <div class="toolbar">
-    <select id="mode">
-      <option>General Assistant</option>
-      <option>Education</option>
-      <option>Writing</option>
-      <option>Coding</option>
-      <option>Business</option>
-      <option>Research</option>
-    </select>
-  </div>
+<div class="welcome" id="welcome">
+<div class="biglogo">✦</div>
+<h1>Welcome to <span class="gradient">Maynard AI</span></h1>
+<p>Your multipurpose AI assistant. Ask, learn, create and explore.</p>
 
-  <section id="chat">
-    <div class="welcome" id="welcome">
-      <h1>Welcome to Maynard AI</h1>
-      <p>Your multipurpose AI assistant. Ask questions, learn, write, research, code and explore new ideas.</p>
-    </div>
-  </section>
+<div class="suggestions">
+<button class="suggestion" data-prompt="Teach me something interesting today.">
+📚 Learn something
+<small>Understand difficult topics</small>
+</button>
+<button class="suggestion" data-prompt="Help me write a professional message.">
+✍️ Writing assistant
+<small>Create polished writing</small>
+</button>
+<button class="suggestion" data-prompt="Help me create a website.">
+💻 Coding assistant
+<small>Build and understand code</small>
+</button>
+<button class="suggestion" data-prompt="Give me creative ideas for a new project.">
+💡 Creative ideas
+<small>Explore new possibilities</small>
+</button>
+</div>
+</div>
 
-  <section class="composer">
+<div class="messages" id="messages"></div>
 
-    <div class="attachments" id="attachments"></div>
+</section>
 
-    <div class="input-area">
-      <textarea id="message" placeholder="Message Maynard AI..."></textarea>
-      <button class="send" id="sendBtn">Send</button>
-    </div>
+<div class="composer-wrap">
+<div class="composer">
 
-    <div class="tools">
-      <button id="attachBtn">＋ Attach file</button>
-      <button id="voiceBtn">🎙 Voice</button>
-      <button id="clearBtn">Clear chat</button>
-    </div>
+<textarea id="messageInput"
+placeholder="Message Maynard AI..."
+rows="2"></textarea>
 
-    <input type="file" id="fileInput" multiple
-      accept="image/*,.pdf,.txt,.md,.csv,.tsv,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.rtf">
+<div id="fileNames"></div>
 
-    <div class="status" id="status">Ready to help you.</div>
+<div class="actions">
+<button id="attachBtn">＋ Attach</button>
+<input id="fileInput" type="file" multiple
+accept=".txt,.md,.csv,.tsv,image/png,image/jpeg,image/webp">
 
-  </section>
+<button id="voiceBtn">🎙 Voice</button>
+<button id="readBtn">🔊 Read</button>
+<button class="send" id="sendBtn">Send ↑</button>
+</div>
+
+<div class="status" id="status">Ready to help.</div>
+
+</div>
+<div class="footer">
+Maynard AI can make mistakes. Check important information.
+</div>
+</div>
 
 </main>
+</div>
 
 <script>
-const chat = document.getElementById("chat");
-const messageInput = document.getElementById("message");
-const sendBtn = document.getElementById("sendBtn");
-const fileInput = document.getElementById("fileInput");
-const attachments = document.getElementById("attachments");
-const statusText = document.getElementById("status");
-const modeSelect = document.getElementById("mode");
+const $ = id => document.getElementById(id);
 
-let files = [];
-let sessionId = crypto.randomUUID
-  ? crypto.randomUUID()
-  : String(Date.now());
+let mode = "general";
+let conversation = [];
+let attachments = [];
+let busy = false;
 
-function addMessage(text, type) {
-  const wrapper = document.createElement("div");
-  wrapper.className = "message " + type;
+const titles = {
+general:"General",
+education:"Education",
+writing:"Writing",
+coding:"Coding",
+research:"Research",
+business:"Business",
+creative:"Creative",
+translator:"Translator",
+summarizer:"Summarizer",
+assistant:"Personal assistant"
+};
 
-  const content = document.createElement("div");
-  content.textContent = text;
-  wrapper.appendChild(content);
-
-  if (type === "bot") {
-    const actions = document.createElement("div");
-    actions.className = "message-actions";
-
-    const copy = document.createElement("button");
-    copy.textContent = "Copy";
-    copy.onclick = async () => {
-      await navigator.clipboard.writeText(text);
-      copy.textContent = "Copied";
-    };
-
-    actions.appendChild(copy);
-    wrapper.appendChild(actions);
-  }
-
-  chat.appendChild(wrapper);
-  chat.scrollTop = chat.scrollHeight;
-  return wrapper;
+function escapeHTML(value){
+return String(value).replace(/[&<>"']/g, char => ({
+"&":"&amp;",
+"<":"&lt;",
+">":"&gt;",
+'"':"&quot;",
+"'":"&#39;"
+})[char]);
 }
 
-function showFiles() {
-  attachments.innerHTML = "";
-
-  files.forEach((item, index) => {
-    const chip = document.createElement("div");
-    chip.className = "file-chip";
-    chip.textContent = item.name + " ";
-
-    const remove = document.createElement("button");
-    remove.textContent = "×";
-    remove.style.border = "0";
-    remove.style.background = "transparent";
-    remove.style.color = "inherit";
-    remove.onclick = () => {
-      files.splice(index, 1);
-      showFiles();
-    };
-
-    chip.appendChild(remove);
-    attachments.appendChild(chip);
-  });
+function saveHistory(){
+try{
+localStorage.setItem(
+"maynard_ultimate_history",
+JSON.stringify(conversation.slice(-100))
+);
+}catch(error){}
 }
 
-fileInput.addEventListener("change", () => {
-  for (const file of fileInput.files) {
-    if (files.length >= 5) {
-      alert("Maximum 5 attachments allowed.");
-      break;
-    }
+function render(){
+$("messages").innerHTML = conversation.map(item => `
+<div class="msg ${item.role === "user" ? "user" : ""}">
+<div class="avatar">${item.role === "user" ? "Y" : "M"}</div>
+<div class="bubble">${escapeHTML(item.content)}</div>
+</div>
+`).join("");
 
-    if (file.size === 0) {
-      alert("This file is empty.");
-      continue;
-    }
+$("welcome").classList.toggle(
+"hidden",
+conversation.length > 0
+);
 
-    if (file.size > 4 * 1024 * 1024) {
-      alert("Each file must be no larger than 4 MB.");
-      continue;
-    }
+window.scrollTo({
+top:document.body.scrollHeight,
+behavior:"smooth"
+});
+}
 
-    const total = files.reduce(
-      (sum, item) => sum + item.size, 0
-    );
+function addMessage(role, content){
+conversation.push({role,content});
+render();
+saveHistory();
+}
 
-    if (total + file.size > 4 * 1024 * 1024) {
-      alert("Total attachments must not exceed 4 MB.");
-      break;
-    }
+function setMode(value){
+mode = value;
+document.querySelectorAll(".mode").forEach(button => {
+button.classList.toggle(
+"active",
+button.dataset.mode === value
+);
+});
+$("modeTitle").textContent = titles[value] || "General";
+}
 
-    files.push(file);
-  }
+function setStatus(message){
+$("status").textContent = message;
+}
 
-  fileInput.value = "";
-  showFiles();
+async function prepareFile(file){
+
+if(file.size > 2 * 1024 * 1024){
+throw new Error(file.name + " is larger than 2 MB.");
+}
+
+if(file.type.startsWith("image/")){
+
+if(![
+"image/jpeg",
+"image/png",
+"image/webp"
+].includes(file.type)){
+throw new Error("Use JPG, PNG or WEBP images.");
+}
+
+const data = await new Promise((resolve,reject)=>{
+const reader = new FileReader();
+reader.onload = () => resolve(reader.result);
+reader.onerror = reject;
+reader.readAsDataURL(file);
 });
 
-document.getElementById("attachBtn").onclick = () => {
-  fileInput.click();
+return {
+kind:"image",
+name:file.name,
+type:file.type,
+data
 };
-
-async function sendMessage() {
-  const message = messageInput.value.trim();
-
-  if (!message && files.length === 0) {
-    alert("Enter a message or attach a file.");
-    return;
-  }
-
-  addMessage(
-    message || "Please analyze my attachment.",
-    "user"
-  );
-
-  messageInput.value = "";
-  document.getElementById("welcome")?.remove();
-
-  const loading = addMessage("Maynard AI is thinking...", "bot");
-
-  sendBtn.disabled = true;
-  statusText.textContent = "Connecting to Maynard AI...";
-
-  try {
-    const form = new FormData();
-
-    form.append("message", message);
-    form.append("mode", modeSelect.value);
-    form.append("sessionId", sessionId);
-
-    files.forEach(file => {
-      form.append("files", file);
-    });
-
-    files = [];
-    showFiles();
-
-    const response = await fetch("/api/chat", {
-      method: "POST",
-      body: form
-    });
-
-    const result = await response.json();
-
-    loading.remove();
-
-    if (!response.ok) {
-      throw new Error(
-        result.error || "The AI server returned an error."
-      );
-    }
-
-    const reply = result.reply || result.message;
-
-    if (!reply) {
-      throw new Error("The AI returned an empty response.");
-    }
-
-    addMessage(reply, "bot");
-    statusText.textContent = "Ready to help you.";
-
-  } catch (error) {
-    loading.remove();
-
-    addMessage(
-      "Maynard AI could not complete your request.\n\n" +
-      error.message,
-      "bot"
-    );
-
-    statusText.textContent = "Connection error.";
-  } finally {
-    sendBtn.disabled = false;
-    messageInput.focus();
-  }
 }
 
-sendBtn.onclick = sendMessage;
+if(file.type === "application/pdf"){
+throw new Error("PDF attachments are not supported in this version.");
+}
 
-messageInput.addEventListener("keydown", event => {
-  if (event.key === "Enter" && !event.shiftKey) {
-    event.preventDefault();
-    sendMessage();
-  }
+const text = await file.text();
+
+return {
+kind:"text",
+name:file.name,
+text:text.slice(0,20000)
+};
+}
+
+async function sendMessage(){
+
+if(busy) return;
+
+const input = $("messageInput");
+const message = input.value.trim();
+
+if(!message && attachments.length === 0){
+setStatus("Please enter a message first.");
+return;
+}
+
+const currentFiles = attachments.slice();
+
+busy = true;
+$("sendBtn").disabled = true;
+
+input.value = "";
+attachments = [];
+$("fileNames").textContent = "";
+
+const displayMessage = message +
+(currentFiles.length
+? "\n[Attachments: " +
+currentFiles.map(file=>file.name).join(", ") + "]"
+: "");
+
+addMessage("user",displayMessage);
+
+setStatus("Maynard AI is thinking...");
+
+const history = conversation
+.slice(0,-1)
+.slice(-12)
+.map(item=>({
+role:item.role,
+content:item.content
+}));
+
+try{
+
+// THIS IS THE FRONTEND-TO-BACKEND CONNECTION.
+const response = await fetch("/api/chat",{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+message:message || "Please examine my attached files.",
+mode:mode,
+history:history,
+attachments:currentFiles
+})
 });
 
-document.getElementById("newBtn").onclick = () => {
-  chat.innerHTML = `
-    <div class="welcome" id="welcome">
-      <h1>Welcome to Maynard AI</h1>
-      <p>Your multipurpose AI assistant. What would you like to do?</p>
-    </div>
-  `;
+const raw = await response.text();
 
-  files = [];
-  showFiles();
-  sessionId = crypto.randomUUID
-    ? crypto.randomUUID()
-    : String(Date.now());
+let data;
+
+try{
+data = JSON.parse(raw);
+}catch(error){
+throw new Error(
+"Server returned an unexpected response. Check your Vercel deployment."
+);
+}
+
+if(!response.ok){
+throw new Error(
+data.error || "Server error: " + response.status
+);
+}
+
+if(!data.reply){
+throw new Error("The AI returned an empty response.");
+}
+
+addMessage("assistant",data.reply);
+
+setStatus(
+"Connected · " + (data.model || "Groq AI")
+);
+
+}catch(error){
+
+addMessage(
+"assistant",
+"Maynard AI could not complete your request.\n\n" +
+error.message +
+"\n\nPlease check your internet connection and try again."
+);
+
+setStatus("Request failed. Check the error above.");
+
+}finally{
+
+busy = false;
+$("sendBtn").disabled = false;
+input.focus();
+
+}
+}
+
+$("sendBtn").onclick = sendMessage;
+
+$("messageInput").addEventListener("keydown",event=>{
+if(event.key === "Enter" && !event.shiftKey){
+event.preventDefault();
+sendMessage();
+}
+});
+
+$("newChat").onclick = ()=>{
+conversation = [];
+saveHistory();
+render();
+setStatus("New conversation started.");
+$("messageInput").focus();
 };
 
-document.getElementById("clearBtn").onclick = () => {
-  chat.innerHTML = "";
+$("modes").onclick = event=>{
+const button = event.target.closest("[data-mode]");
+if(button){
+setMode(button.dataset.mode);
+}
 };
 
-document.getElementById("themeBtn").onclick = () => {
-  document.body.classList.toggle("light");
+$("menuBtn").onclick = ()=>{
+$("sidebar").classList.toggle("open");
 };
 
-document.getElementById("voiceBtn").onclick = () => {
-  const SpeechRecognition =
-    window.SpeechRecognition ||
-    window.webkitSpeechRecognition;
-
-  if (!SpeechRecognition) {
-    alert("Voice input is not supported in this browser. Try Chrome.");
-    return;
-  }
-
-  const recognition = new SpeechRecognition();
-  recognition.lang = "en-US";
-  recognition.interimResults = false;
-
-  recognition.onresult = event => {
-    messageInput.value +=
-      event.results[0][0].transcript;
-  };
-
-  recognition.onerror = () => {
-    statusText.textContent = "Voice input was not completed.";
-  };
-
-  recognition.start();
+$("attachBtn").onclick = ()=>{
+$("fileInput").click();
 };
+
+$("fileInput").onchange = async event=>{
+
+try{
+
+const selected = [...event.target.files];
+
+if(attachments.length + selected.length > 5){
+throw new Error("You can attach up to five files.");
+}
+
+for(const file of selected){
+attachments.push(await prepareFile(file));
+}
+
+$("fileNames").textContent =
+attachments.map(file=>"📎 "+file.name).join(" · ");
+
+setStatus("Files attached.");
+
+}catch(error){
+
+alert(error.message);
+
+}finally{
+
+event.target.value = "";
+
+}
+
+};
+
+document.querySelectorAll("[data-prompt]").forEach(button=>{
+button.onclick = ()=>{
+$("messageInput").value = button.dataset.prompt;
+$("messageInput").focus();
+};
+});
+
+$("clearBtn").onclick = ()=>{
+if(confirm("Clear this conversation?")){
+$("newChat").click();
+}
+};
+
+$("historyBtn").onclick = ()=>{
+try{
+const saved = JSON.parse(
+localStorage.getItem("maynard_ultimate_history") || "[]"
+);
+
+alert(
+saved.length
+? "Your latest conversation is saved on this device."
+: "No saved conversation found."
+);
+}catch(error){
+alert("Could not load chat history.");
+}
+};
+
+$("exportBtn").onclick = ()=>{
+
+if(!conversation.length){
+alert("There is no conversation to export.");
+return;
+}
+
+const content = conversation.map(item=>
+(item.role === "user" ? "You" : "Maynard AI") +
+":\n" + item.content
+).join("\n\n");
+
+const blob = new Blob([content],{
+type:"text/plain"
+});
+
+const url = URL.createObjectURL(blob);
+const link = document.createElement("a");
+
+link.href = url;
+link.download = "maynard-ai-chat.txt";
+link.click();
+
+URL.revokeObjectURL(url);
+
+};
+
+$("themeBtn").onclick = ()=>{
+
+const light = document.body.classList.toggle("light");
+
+const variables = {
+bg:light?"#f3f4fb":"#090b16",
+panel:light?"#ffffff":"#111629",
+panel2:light?"#e8e9f5":"#1b2140",
+text:light?"#17182a":"#f5f5ff",
+muted:light?"#60647c":"#a1a8c4",
+line:light?"#d9dbea":"#2a3150"
+};
+
+Object.entries(variables).forEach(([key,value])=>{
+document.documentElement.style.setProperty("--"+key,value);
+});
+
+};
+
+$("voiceBtn").onclick = ()=>{
+
+const SpeechRecognition =
+window.SpeechRecognition ||
+window.webkitSpeechRecognition;
+
+if(!SpeechRecognition){
+alert("Voice typing is not supported in this browser.");
+return;
+}
+
+const recognition = new SpeechRecognition();
+
+recognition.lang = "en-GH";
+recognition.interimResults = false;
+
+recognition.onresult = event=>{
+$("messageInput").value +=
+event.results[0][0].transcript;
+};
+
+recognition.onerror = ()=>{
+setStatus("Voice recognition failed.");
+};
+
+recognition.start();
+
+};
+
+$("readBtn").onclick = ()=>{
+
+const last = [...conversation]
+.reverse()
+.find(item=>item.role==="assistant");
+
+if(!last){
+alert("No AI response to read.");
+return;
+}
+
+if(!("speechSynthesis" in window)){
+alert("Read aloud is not supported.");
+return;
+}
+
+speechSynthesis.cancel();
+
+speechSynthesis.speak(
+new SpeechSynthesisUtterance(last.content)
+);
+
+};
+
+function loadHistory(){
+
+try{
+
+const saved = JSON.parse(
+localStorage.getItem("maynard_ultimate_history") || "[]"
+);
+
+if(Array.isArray(saved)){
+conversation = saved.filter(item=>
+item &&
+["user","assistant"].includes(item.role) &&
+typeof item.content === "string"
+);
+}
+
+}catch(error){
+
+conversation = [];
+
+}
+
+render();
+
+}
+
+if("serviceWorker" in navigator){
+window.addEventListener("load",()=>{
+navigator.serviceWorker.register("/sw.js").catch(()=>{});
+});
+}
+
+loadHistory();
 </script>
-
 </body>
 </html>
