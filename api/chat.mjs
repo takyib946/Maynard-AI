@@ -2,208 +2,119 @@
 export default {
   async fetch(request) {
     const json = (data, status = 200) =>
-      Response.json(data, { status });
+      new Response(JSON.stringify(data), {
+        status,
+        headers: { "Content-Type": "application/json" }
+      });
 
     if (request.method !== "POST") {
-      return json({ error: "Please use POST." }, 405);
+      return json({ error: "Only POST requests are allowed." }, 405);
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.GROQ_API_KEY;
+    const model =
+      process.env.GROQ_MODEL || "openai/gpt-oss-20b";
 
     if (!apiKey) {
-      return json({
-        error: "AI server is not configured. Add OPENAI_API_KEY in Vercel."
-      }, 500);
+      return json({ error: "Groq API key is not configured." }, 500);
     }
 
     try {
       const form = await request.formData();
+      const message = String(form.get("message") || "").trim();
+      const mode = String(form.get("mode") || "general");
 
-      const message = String(
-        form.get("message") || ""
-      ).trim();
-
-      const mode = String(
-        form.get("mode") || "General Assistant"
-      ).slice(0, 80);
-
-      const files = form.getAll("files").filter(
-        file => file && typeof file.arrayBuffer === "function"
-      );
-
-      if (!message && files.length === 0) {
-        return json({
-          error: "Enter a message or attach a file."
-        }, 400);
+      if (!message) {
+        return json({ error: "Please enter a message." }, 400);
       }
 
-      if (files.length > 5) {
-        return json({
-          error: "Maximum 5 attachments allowed."
-        }, 400);
-      }
-
-      const totalSize = files.reduce(
-        (total, file) => total + file.size, 0
-      );
-
-      if (totalSize > 4 * 1024 * 1024) {
-        return json({
-          error: "Attachments must total no more than 4 MB."
-        }, 413);
-      }
-
-      const mimeTypes = {
-        pdf: "application/pdf",
-        txt: "text/plain",
-        md: "text/markdown",
-        csv: "text/csv",
-        tsv: "text/tab-separated-values",
-        doc: "application/msword",
-        docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        ppt: "application/vnd.ms-powerpoint",
-        pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-        xls: "application/vnd.ms-excel",
-        xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        rtf: "application/rtf"
+      const modeInstructions = {
+        general: "You are Maynard AI, a helpful multipurpose assistant. Give clear, accurate and friendly answers.",
+        education: "You are Maynard AI Education, a patient tutor. Explain school subjects step by step and help students understand.",
+        writing: "You are Maynard AI Writing Assistant. Help create, improve and explain written content.",
+        coding: "You are Maynard AI Coding Assistant. Explain code clearly and provide practical, accurate programming help.",
+        business: "You are Maynard AI Business Assistant. Help with responsible business ideas, planning and communication.",
+        research: "You are Maynard AI Research Assistant. Give balanced explanations and distinguish known facts from uncertainty."
       };
 
-      const content = [{
-        type: "input_text",
-        text:
-          "Maynard AI mode: " + mode +
-          "\nUser message: " +
-          (message || "Please analyze my attachment.")
-      }];
+      let userMessage = message;
+      let totalSize = 0;
+      const files = form.getAll("files");
+
+      if (files.length > 5) {
+        return json({ error: "Please attach no more than 5 files." }, 400);
+      }
 
       for (const file of files) {
-        const filename = String(file.name || "attachment");
-        const extension = filename.split(".").pop().toLowerCase();
+        if (!file || typeof file.text !== "function") continue;
 
-        if (!file.size) {
+        totalSize += file.size;
+
+        if (totalSize > 4 * 1024 * 1024) {
+          return json({ error: "Attachments must be under 4 MB in total." }, 400);
+        }
+
+        const name = file.name || "attachment";
+        const extension = name.split(".").pop().toLowerCase();
+
+        const allowed = ["txt", "md", "csv", "tsv"];
+
+        if (!allowed.includes(extension)) {
           return json({
-            error: "One of your files is empty."
+            error: "This version supports TXT, MD, CSV and TSV attachments. Other file types are not supported yet."
           }, 400);
         }
 
-        const bytes = Buffer.from(await file.arrayBuffer());
-        const base64 = bytes.toString("base64");
-
-        if (file.type && file.type.startsWith("image/")) {
-          const allowedImages = [
-            "image/jpeg",
-            "image/png",
-            "image/webp"
-          ];
-
-          if (!allowedImages.includes(file.type)) {
-            return json({
-              error: "Use JPG, PNG or WEBP images."
-            }, 415);
-          }
-
-          content.push({
-            type: "input_image",
-            image_url: `data:${file.type};base64,${base64}`,
-            detail: "auto"
-          });
-
-        } else if (mimeTypes[extension]) {
-          content.push({
-            type: "input_file",
-            filename,
-            file_data:
-              `data:${mimeTypes[extension]};base64,${base64}`
-          });
-
-        } else {
-          return json({
-            error: "Unsupported file: " + filename
-          }, 415);
-        }
+        const content = await file.text();
+        userMessage += `\n\nAttachment: ${name}\n${content.slice(0, 20000)}`;
       }
 
-      const aiResponse = await fetch(
-        "https://api.openai.com/v1/responses",
+      const response = await fetch(
+        "https://api.groq.com/openai/v1/chat/completions",
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`
+            "Authorization": `Bearer ${apiKey}`,
+            "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            model: process.env.OPENAI_MODEL || "gpt-6-astra",
-
-            instructions: `
-You are Maynard AI, a helpful multipurpose AI assistant.
-
-Your areas of assistance include:
-- General questions and explanations.
-- Education and learning.
-- University and college assignments.
-- Writing and editing.
-- Programming and debugging.
-- Business ideas and planning.
-- Research and document analysis.
-- Understanding uploaded images.
-
-Always:
-- Give clear and accurate answers.
-- Use headings when helpful.
-- Explain difficult ideas in simple language.
-- Show calculation steps when appropriate.
-- Never invent facts, sources or references.
-- Say when information is uncertain.
-- Help students understand their work.
-
-For uploaded files:
-- Carefully examine the available content.
-- Explain relevant diagrams and questions.
-- Mention if a document is unclear or unreadable.
-
-Be helpful, respectful and natural.
-`,
-
-            input: [{
-              role: "user",
-              content
-            }],
-
-            max_output_tokens: 1800
+            model,
+            messages: [
+              {
+                role: "system",
+                content: modeInstructions[mode] || modeInstructions.general
+              },
+              {
+                role: "user",
+                content: userMessage
+              }
+            ],
+            max_completion_tokens: 1500
           })
         }
       );
 
-      const result = await aiResponse.json();
+      const result = await response.json();
 
-      if (!aiResponse.ok) {
+      if (!response.ok) {
+        console.error("Groq API error:", result);
         return json({
-          error:
-            result.error?.message ||
-            "The AI service could not complete your request."
-        }, 502);
+          error: result.error?.message || "Groq could not complete your request."
+        }, response.status);
       }
 
-      const reply = result.output_text ||
-        (result.output || [])
-          .filter(item => item.type === "message")
-          .flatMap(item => item.content || [])
-          .filter(part => part.type === "output_text")
-          .map(part => part.text)
-          .join("\n");
+      const reply = result.choices?.[0]?.message?.content;
 
       if (!reply) {
-        return json({
-          error: "The AI returned an empty response."
-        }, 502);
+        return json({ error: "The AI returned an empty response." }, 502);
       }
 
       return json({ reply });
 
     } catch (error) {
+      console.error("Maynard AI error:", error);
       return json({
-        error: "Server error: " +
-          (error.message || "Please try again.")
+        error: "Maynard AI encountered a problem. Please try again."
       }, 500);
     }
   }
