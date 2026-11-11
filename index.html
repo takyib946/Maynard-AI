@@ -6,67 +6,650 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#090d1b">
 <title>Maynard AI</title>
+
+<!-- MathJax mathematical equation engine -->
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true,
+    packages: {'[+]': ['ams']}
+  },
+  options: {
+    skipHtmlTags: [
+      'script','noscript','style','textarea',
+      'pre','code'
+    ]
+  },
+  chtml: {
+    scale: 1.08,
+    matchFontHeight: false
+  },
+  startup: {
+    typeset: false
+  }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+
+<!-- Markdown and HTML sanitization -->
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
+
 <style>
-:root{--bg:#080c19;--panel:rgba(17,25,48,.78);--panel2:rgba(25,36,65,.78);--line:rgba(160,180,255,.15);--text:#f4f6ff;--muted:#a5afca;--accent:#8b7cff;--accent2:#35d6cf;--user:linear-gradient(135deg,#6658dc,#397fdb);--ai:rgba(24,34,59,.92)}
-*{box-sizing:border-box}
-body{margin:0;min-height:100vh;color:var(--text);font-family:Inter,system-ui,Arial,sans-serif;background:radial-gradient(ellipse at 15% 15%,rgba(103,80,255,.22),transparent 38%),radial-gradient(ellipse at 85% 80%,rgba(20,205,194,.13),transparent 36%),linear-gradient(135deg,#080c19,#10162b 55%,#090e1d);background-attachment:fixed}
-button,input,textarea{font:inherit}
-button{cursor:pointer}
-.app{display:flex;min-height:100vh}
-.sidebar{width:265px;flex-shrink:0;padding:20px 15px;background:rgba(7,11,25,.78);border-right:1px solid var(--line);backdrop-filter:blur(22px);display:flex;flex-direction:column;gap:17px;z-index:5}
-.brand{display:flex;align-items:center;gap:11px;padding:8px 7px 17px}
-.logo{width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,#8b7cff,#30d7cc);display:grid;place-items:center;font-weight:900;color:#fff;box-shadow:0 8px 28px #7564ff55}
-.brand strong{font-size:19px;letter-spacing:.2px}.brand small{display:block;color:var(--muted);font-size:11px;margin-top:3px}
-.newchat,.mode,.sidebtn{width:100%;border:1px solid var(--line);border-radius:13px;background:rgba(255,255,255,.045);color:var(--text);padding:12px;text-align:left;transition:.2s}
-.newchat{background:linear-gradient(120deg,#6e5de4,#397cce);border:0;text-align:center;font-weight:700}
-.mode{border-color:transparent;color:#c1c9df;padding:10px 12px}.mode:hover,.mode.active,.sidebtn:hover{background:rgba(135,123,255,.16);border-color:#8b7cff55;color:#fff}
-.section{color:#7f8ba9;font-size:10px;font-weight:800;letter-spacing:1.4px;padding:3px 10px}
-.sidebottom{margin-top:auto;display:grid;gap:8px}
-.sidebtn{font-size:13px}
-.main{flex:1;min-width:0;display:flex;flex-direction:column;min-height:100vh}
-.topbar{height:68px;display:flex;align-items:center;justify-content:space-between;padding:0 25px;border-bottom:1px solid var(--line);background:rgba(8,12,25,.36);backdrop-filter:blur(18px);position:sticky;top:0;z-index:3}
-.top-left{display:flex;align-items:center;gap:12px}.topbar h2{font-size:15px;margin:0}.status{font-size:11px;color:#78e2c7;display:flex;align-items:center;gap:6px}.dot{width:7px;height:7px;border-radius:50%;background:#52e0ad;box-shadow:0 0 10px #52e0ad}
-.top-actions{display:flex;gap:8px}.iconbtn{border:1px solid var(--line);background:#ffffff08;color:#e8ebff;border-radius:10px;width:37px;height:37px}
-.chat{width:min(900px,100%);margin:0 auto;padding:28px 22px 160px;flex:1}
-.welcome{text-align:center;padding:clamp(40px,10vh,105px) 12px 45px}
-.welcome-logo{width:68px;height:68px;border-radius:23px;margin:0 auto 20px;background:linear-gradient(135deg,#8b7cff,#35d6cf);display:grid;place-items:center;font-size:26px;font-weight:900;box-shadow:0 12px 45px #7768ff55}
-.welcome h1{font-size:clamp(27px,5vw,42px);margin:0 0 12px;letter-spacing:-1px}.gradient{background:linear-gradient(90deg,#b3aaff,#53e5d8);background-clip:text;color:transparent}
-.welcome p{color:var(--muted);max-width:520px;margin:0 auto;line-height:1.7;font-size:14px}
-.suggestions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;max-width:650px;margin:28px auto 0}
-.suggestion{border:1px solid var(--line);border-radius:15px;background:rgba(255,255,255,.045);color:#e5e9ff;text-align:left;padding:15px;line-height:1.5;font-size:13px}.suggestion:hover{border-color:#8b7cff88;background:#8174ff16}
-.message{display:flex;margin:22px 0;gap:10px;align-items:flex-start;animation:appear .25s ease}
-@keyframes appear{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.message.user{justify-content:flex-end}
-.avatar{width:32px;height:32px;border-radius:11px;flex:0 0 32px;display:grid;place-items:center;font-size:12px;font-weight:800;background:linear-gradient(135deg,#8b7cff,#35d6cf);color:white}
-.message.user .avatar{order:2;background:linear-gradient(135deg,#397cce,#7564e8)}
-.bubble{max-width:min(78%,720px);padding:13px 16px;border:1px solid var(--line);border-radius:17px;background:var(--ai);line-height:1.72;font-size:14px;overflow-wrap:anywhere;box-shadow:0 8px 25px #00000018}
-.message.user .bubble{background:var(--user);border-color:#ffffff20;border-radius:17px 5px 17px 17px}
-.message.ai .bubble{border-radius:5px 17px 17px 17px}
-.bubble p{margin:0 0 11px}.bubble p:last-child{margin-bottom:0}.bubble h1,.bubble h2,.bubble h3{line-height:1.3;margin:17px 0 8px}.bubble ul,.bubble ol{padding-left:23px}.bubble li{margin:5px 0}.bubble pre{white-space:pre-wrap;overflow:auto;background:#080d1c;padding:13px;border-radius:10px;border:1px solid var(--line)}.bubble code{background:#ffffff12;padding:2px 5px;border-radius:5px}.bubble pre code{background:none;padding:0}.bubble blockquote{border-left:3px solid var(--accent);margin:10px 0;padding:5px 12px;color:#c6cce2}
-.bubble img.uploaded{display:block;max-width:min(100%,360px);max-height:300px;object-fit:contain;border-radius:12px;margin:0 0 10px;border:1px solid #ffffff25}
-.filetag{font-size:11px;padding:5px 9px;border-radius:8px;background:#ffffff16;display:inline-block;margin:3px}
-.message-tools{display:flex;gap:7px;margin-top:9px;opacity:.8}.tool{border:0;background:transparent;color:#aeb9d8;font-size:11px;padding:4px}.tool:hover{color:white}
-.typing{display:flex;gap:5px;padding:6px}.typing i{width:6px;height:6px;border-radius:50%;background:#aaa2ff;animation:bounce .8s infinite alternate}.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}@keyframes bounce{to{transform:translateY(-5px);opacity:.4}}
-.composer-wrap{position:fixed;bottom:0;left:265px;right:0;padding:18px 22px 17px;background:linear-gradient(transparent,rgba(8,12,25,.94) 25%);backdrop-filter:blur(10px);z-index:4}
-.composer{width:min(900px,100%);margin:auto;border:1px solid #9d9aff55;background:rgba(20,28,52,.93);border-radius:19px;padding:11px 12px 9px;box-shadow:0 12px 45px #0006,0 0 25px #7564ff16}
-.attachments{display:flex;gap:8px;flex-wrap:wrap;padding:2px 2px 8px}.preview{position:relative}.preview img{width:58px;height:58px;object-fit:cover;border-radius:9px;border:1px solid var(--line)}.remove{position:absolute;right:-6px;top:-6px;width:20px;height:20px;border:0;border-radius:50%;background:#e65b73;color:white;font-size:13px}
-.previewname{font-size:11px;color:#d4dcf7;background:#ffffff10;padding:8px;border-radius:8px}
-.compose-row{display:flex;align-items:flex-end;gap:8px}.compose-row textarea{flex:1;min-height:42px;max-height:150px;resize:none;background:transparent;border:0;outline:0;color:white;padding:10px 7px;font-size:14px;line-height:1.5}.compose-row textarea::placeholder{color:#8793b2}
-.actionbtn{width:38px;height:38px;border-radius:11px;border:1px solid var(--line);background:#ffffff0b;color:#e9edff;flex-shrink:0}.send{background:linear-gradient(135deg,#8170f1,#3c9ed3);border:0;font-size:17px;font-weight:800}
-.composer-note{text-align:center;font-size:10px;color:#7885a4;margin-top:8px}
-.hidden{display:none!important}
-.mobile-menu{display:none}
-@media(max-width:760px){.sidebar{position:fixed;left:-280px;top:0;bottom:0;width:265px;transition:left .25s;box-shadow:20px 0 60px #0008}.sidebar.open{left:0}.mobile-menu{display:inline-block}.topbar{padding:0 13px}.chat{padding:18px 12px 155px}.composer-wrap{left:0;padding:12px 10px 13px}.bubble{max-width:86%;font-size:13.5px}.welcome{padding-top:65px}.suggestions{grid-template-columns:1fr}.topbar h2{font-size:14px}}
+:root {
+  --bg:#080c19;
+  --panel:rgba(17,25,48,.82);
+  --panel2:rgba(25,36,65,.85);
+  --line:rgba(160,180,255,.15);
+  --text:#f4f6ff;
+  --muted:#a5afca;
+  --accent:#8b7cff;
+  --accent2:#35d6cf;
+  --user:linear-gradient(135deg,#6658dc,#397fdb);
+  --ai:rgba(24,34,59,.94);
+}
+
+* {box-sizing:border-box}
+
+body {
+  margin:0;
+  min-height:100vh;
+  color:var(--text);
+  font-family:Inter,system-ui,Arial,sans-serif;
+  background:
+    radial-gradient(ellipse at 15% 15%,rgba(103,80,255,.22),transparent 38%),
+    radial-gradient(ellipse at 85% 80%,rgba(20,205,194,.13),transparent 36%),
+    linear-gradient(135deg,#080c19,#10162b 55%,#090e1d);
+  background-attachment:fixed;
+}
+
+button,input,textarea {font:inherit}
+button {cursor:pointer}
+
+.app {
+  display:flex;
+  min-height:100vh;
+}
+
+.sidebar {
+  width:265px;
+  flex-shrink:0;
+  padding:20px 15px;
+  background:rgba(7,11,25,.78);
+  border-right:1px solid var(--line);
+  backdrop-filter:blur(22px);
+  display:flex;
+  flex-direction:column;
+  gap:17px;
+  z-index:5;
+}
+
+.brand {
+  display:flex;
+  align-items:center;
+  gap:11px;
+  padding:8px 7px 17px;
+}
+
+.logo {
+  width:42px;
+  height:42px;
+  border-radius:14px;
+  background:linear-gradient(135deg,#8b7cff,#30d7cc);
+  display:grid;
+  place-items:center;
+  font-weight:900;
+  color:white;
+  box-shadow:0 8px 28px #7564ff55;
+}
+
+.brand strong {
+  font-size:19px;
+}
+
+.brand small {
+  display:block;
+  color:var(--muted);
+  font-size:11px;
+  margin-top:3px;
+}
+
+.newchat,.mode,.sidebtn {
+  width:100%;
+  border:1px solid var(--line);
+  border-radius:13px;
+  background:rgba(255,255,255,.045);
+  color:var(--text);
+  padding:12px;
+  text-align:left;
+  transition:.2s;
+}
+
+.newchat {
+  background:linear-gradient(120deg,#6e5de4,#397cce);
+  border:0;
+  text-align:center;
+  font-weight:700;
+}
+
+.section {
+  color:#7f8ba9;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:1.4px;
+  padding:3px 10px;
+}
+
+.mode {
+  border-color:transparent;
+  color:#c1c9df;
+  padding:10px 12px;
+}
+
+.mode:hover,.mode.active,.sidebtn:hover {
+  background:rgba(135,123,255,.16);
+  border-color:#8b7cff55;
+  color:white;
+}
+
+.sidebottom {
+  margin-top:auto;
+  display:grid;
+  gap:8px;
+}
+
+.sidebtn {font-size:13px}
+
+.main {
+  flex:1;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  min-height:100vh;
+}
+
+.topbar {
+  height:68px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 25px;
+  border-bottom:1px solid var(--line);
+  background:rgba(8,12,25,.36);
+  backdrop-filter:blur(18px);
+  position:sticky;
+  top:0;
+  z-index:3;
+}
+
+.top-left {
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.topbar h2 {
+  font-size:15px;
+  margin:0;
+}
+
+.status {
+  font-size:11px;
+  color:#78e2c7;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+.dot {
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#52e0ad;
+  box-shadow:0 0 10px #52e0ad;
+}
+
+.top-actions {display:flex;gap:8px}
+
+.iconbtn {
+  border:1px solid var(--line);
+  background:#ffffff08;
+  color:#e8ebff;
+  border-radius:10px;
+  width:37px;
+  height:37px;
+}
+
+.chat {
+  width:min(900px,100%);
+  margin:0 auto;
+  padding:28px 22px 160px;
+  flex:1;
+}
+
+.welcome {
+  text-align:center;
+  padding:clamp(40px,10vh,105px) 12px 45px;
+}
+
+.welcome-logo {
+  width:68px;
+  height:68px;
+  border-radius:23px;
+  margin:0 auto 20px;
+  background:linear-gradient(135deg,#8b7cff,#35d6cf);
+  display:grid;
+  place-items:center;
+  font-size:26px;
+  font-weight:900;
+  box-shadow:0 12px 45px #7768ff55;
+}
+
+.welcome h1 {
+  font-size:clamp(27px,5vw,42px);
+  margin:0 0 12px;
+  letter-spacing:-1px;
+}
+
+.gradient {
+  background:linear-gradient(90deg,#b3aaff,#53e5d8);
+  background-clip:text;
+  color:transparent;
+}
+
+.welcome p {
+  color:var(--muted);
+  max-width:520px;
+  margin:0 auto;
+  line-height:1.7;
+  font-size:14px;
+}
+
+.suggestions {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:11px;
+  max-width:650px;
+  margin:28px auto 0;
+}
+
+.suggestion {
+  border:1px solid var(--line);
+  border-radius:15px;
+  background:rgba(255,255,255,.045);
+  color:#e5e9ff;
+  text-align:left;
+  padding:15px;
+  line-height:1.5;
+  font-size:13px;
+}
+
+.suggestion:hover {
+  border-color:#8b7cff88;
+  background:#8174ff16;
+}
+
+.message {
+  display:flex;
+  margin:22px 0;
+  gap:10px;
+  align-items:flex-start;
+  animation:appear .25s ease;
+}
+
+@keyframes appear {
+  from {opacity:0;transform:translateY(8px)}
+  to {opacity:1;transform:translateY(0)}
+}
+
+.message.user {justify-content:flex-end}
+
+.avatar {
+  width:32px;
+  height:32px;
+  border-radius:11px;
+  flex:0 0 32px;
+  display:grid;
+  place-items:center;
+  font-size:12px;
+  font-weight:800;
+  background:linear-gradient(135deg,#8b7cff,#35d6cf);
+  color:white;
+}
+
+.message.user .avatar {
+  order:2;
+  background:linear-gradient(135deg,#397cce,#7564e8);
+}
+
+.bubble {
+  max-width:min(78%,720px);
+  padding:13px 16px;
+  border:1px solid var(--line);
+  border-radius:17px;
+  background:var(--ai);
+  line-height:1.72;
+  font-size:14px;
+  overflow-wrap:anywhere;
+  box-shadow:0 8px 25px #00000018;
+}
+
+.message.user .bubble {
+  background:var(--user);
+  border-color:#ffffff20;
+  border-radius:17px 5px 17px 17px;
+}
+
+.message.ai .bubble {
+  border-radius:5px 17px 17px 17px;
+}
+
+/* Markdown formatting */
+
+.bubble p {margin:0 0 11px}
+.bubble p:last-child {margin-bottom:0}
+.bubble h1,.bubble h2,.bubble h3 {
+  line-height:1.3;
+  margin:17px 0 8px;
+}
+
+.bubble ul,.bubble ol {padding-left:23px}
+.bubble li {margin:5px 0}
+
+.bubble pre {
+  white-space:pre-wrap;
+  overflow:auto;
+  background:#080d1c;
+  padding:13px;
+  border-radius:10px;
+  border:1px solid var(--line);
+}
+
+.bubble code {
+  background:#ffffff12;
+  padding:2px 5px;
+  border-radius:5px;
+}
+
+.bubble pre code {
+  background:none;
+  padding:0;
+}
+
+.bubble blockquote {
+  border-left:3px solid var(--accent);
+  margin:10px 0;
+  padding:5px 12px;
+  color:#c6cce2;
+}
+
+.bubble table {
+  border-collapse:collapse;
+  width:100%;
+  display:block;
+  overflow-x:auto;
+  margin:12px 0;
+}
+
+.bubble th,.bubble td {
+  border:1px solid var(--line);
+  padding:9px;
+  text-align:left;
+}
+
+.bubble th {background:#ffffff12}
+
+/* Beautiful mathematical equations */
+
+.bubble mjx-container {
+  color:#e8e8ff !important;
+  max-width:100%;
+  overflow-x:auto;
+  overflow-y:hidden;
+}
+
+.bubble mjx-container[display="true"] {
+  display:block;
+  margin:18px 0 !important;
+  padding:15px 10px;
+  background:linear-gradient(120deg,rgba(139,124,255,.09),rgba(53,214,207,.055));
+  border:1px solid rgba(160,180,255,.13);
+  border-radius:13px;
+  text-align:center;
+}
+
+.bubble mjx-container[jax="CHTML"] {
+  outline:none;
+}
+
+.bubble mjx-math {
+  font-size:1.08em;
+}
+
+.bubble .MathJax {
+  max-width:100%;
+}
+
+.message.user .bubble mjx-container {
+  color:white !important;
+}
+
+.filetag {
+  font-size:11px;
+  padding:5px 9px;
+  border-radius:8px;
+  background:#ffffff16;
+  display:inline-block;
+  margin:3px;
+}
+
+.bubble img.uploaded {
+  display:block;
+  max-width:min(100%,360px);
+  max-height:300px;
+  object-fit:contain;
+  border-radius:12px;
+  margin:0 0 10px;
+  border:1px solid #ffffff25;
+}
+
+.message-tools {
+  display:flex;
+  gap:7px;
+  margin-top:9px;
+  opacity:.8;
+}
+
+.tool {
+  border:0;
+  background:transparent;
+  color:#aeb9d8;
+  font-size:11px;
+  padding:4px;
+}
+
+.tool:hover {color:white}
+
+.typing {
+  display:flex;
+  gap:5px;
+  padding:6px;
+}
+
+.typing i {
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:#aaa2ff;
+  animation:bounce .8s infinite alternate;
+}
+
+.typing i:nth-child(2) {animation-delay:.15s}
+.typing i:nth-child(3) {animation-delay:.3s}
+
+@keyframes bounce {
+  to {transform:translateY(-5px);opacity:.4}
+}
+
+.composer-wrap {
+  position:fixed;
+  bottom:0;
+  left:265px;
+  right:0;
+  padding:18px 22px 17px;
+  background:linear-gradient(transparent,rgba(8,12,25,.94) 25%);
+  backdrop-filter:blur(10px);
+  z-index:4;
+}
+
+.composer {
+  width:min(900px,100%);
+  margin:auto;
+  border:1px solid #9d9aff55;
+  background:rgba(20,28,52,.93);
+  border-radius:19px;
+  padding:11px 12px 9px;
+  box-shadow:0 12px 45px #0006,0 0 25px #7564ff16;
+}
+
+.attachments {
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  padding:2px 2px 8px;
+}
+
+.preview {position:relative}
+
+.preview img {
+  width:58px;
+  height:58px;
+  object-fit:cover;
+  border-radius:9px;
+  border:1px solid var(--line);
+}
+
+.remove {
+  position:absolute;
+  right:-6px;
+  top:-6px;
+  width:20px;
+  height:20px;
+  border:0;
+  border-radius:50%;
+  background:#e65b73;
+  color:white;
+  font-size:13px;
+}
+
+.previewname {
+  font-size:11px;
+  color:#d4dcf7;
+  background:#ffffff10;
+  padding:8px;
+  border-radius:8px;
+}
+
+.compose-row {
+  display:flex;
+  align-items:flex-end;
+  gap:8px;
+}
+
+.compose-row textarea {
+  flex:1;
+  min-height:42px;
+  max-height:150px;
+  resize:none;
+  background:transparent;
+  border:0;
+  outline:0;
+  color:white;
+  padding:10px 7px;
+  font-size:14px;
+  line-height:1.5;
+}
+
+.compose-row textarea::placeholder {color:#8793b2}
+
+.actionbtn {
+  width:38px;
+  height:38px;
+  border-radius:11px;
+  border:1px solid var(--line);
+  background:#ffffff0b;
+  color:#e9edff;
+  flex-shrink:0;
+}
+
+.send {
+  background:linear-gradient(135deg,#8170f1,#3c9ed3);
+  border:0;
+  font-size:17px;
+  font-weight:800;
+}
+
+.composer-note {
+  text-align:center;
+  font-size:10px;
+  color:#7885a4;
+  margin-top:8px;
+}
+
+.hidden {display:none!important}
+.mobile-menu {display:none}
+
+@media(max-width:760px) {
+  .sidebar {
+    position:fixed;
+    left:-280px;
+    top:0;
+    bottom:0;
+    width:265px;
+    transition:left .25s;
+    box-shadow:20px 0 60px #0008;
+  }
+
+  .sidebar.open {left:0}
+
+  .mobile-menu {display:inline-block}
+  .topbar {padding:0 13px}
+  .chat {padding:18px 12px 155px}
+  .composer-wrap {left:0;padding:12px 10px 13px}
+  .bubble {max-width:86%;font-size:13.5px}
+  .welcome {padding-top:65px}
+  .suggestions {grid-template-columns:1fr}
+
+  .bubble mjx-container[display="true"] {
+    padding:12px 5px;
+    margin:13px 0 !important;
+  }
+}
 </style>
 </head>
+
 <body>
+
 <div class="app">
+
 <aside class="sidebar" id="sidebar">
-  <div class="brand"><div class="logo">M</div><div><strong>Maynard AI</strong><small>Your intelligent assistant</small></div></div>
-  <button class="newchat" id="newChat">＋ New conversation</button>
+
+  <div class="brand">
+    <div class="logo">M</div>
+    <div>
+      <strong>Maynard AI</strong>
+      <small>Your intelligent assistant</small>
+    </div>
+  </div>
+
+  <button class="newchat" id="newChat">
+    ＋ New conversation
+  </button>
+
   <div class="section">ASSISTANT MODES</div>
+
   <div id="modes">
     <button class="mode active" data-mode="general">✦ General assistant</button>
     <button class="mode" data-mode="education">🎓 Education & homework</button>
@@ -78,130 +661,849 @@ button{cursor:pointer}
     <button class="mode" data-mode="translator">🌍 Translator</button>
     <button class="mode" data-mode="summarizer">📄 Summarizer</button>
   </div>
+
   <div class="sidebottom">
     <button class="sidebtn" id="exportBtn">⇩ Export conversation</button>
     <button class="sidebtn" id="clearBtn">⌫ Clear conversation</button>
     <button class="sidebtn" id="themeBtn">◐ Change appearance</button>
   </div>
+
 </aside>
+
 <main class="main">
+
   <header class="topbar">
     <div class="top-left">
       <button class="iconbtn mobile-menu" id="menuBtn">☰</button>
-      <div><h2 id="modeTitle">General assistant</h2><div class="status"><span class="dot"></span> Ready to help</div></div>
-    </div>
-    <div class="top-actions"><button class="iconbtn" id="voiceOutBtn" title="Read latest answer aloud">🔊</button></div>
-  </header>
-  <section class="chat" id="chat">
-    <div class="welcome" id="welcome">
-      <div class="welcome-logo">M</div>
-      <h1>Welcome to <span class="gradient">Maynard AI</span></h1>
-      <p>Ask questions, learn new things, solve problems and explore ideas. I'll explain answers clearly, step by step.</p>
-      <div class="suggestions">
-        <button class="suggestion" data-prompt="Explain a difficult school topic step by step, with examples.">🎓 Help me understand a school topic</button>
-        <button class="suggestion" data-prompt="Solve this mathematics problem step by step and explain every calculation: ">➗ Solve a mathematics question</button>
-        <button class="suggestion" data-prompt="Help me write and improve a professional piece of writing.">✍️ Help me write something</button>
-        <button class="suggestion" data-prompt="Teach me how to build a simple website, step by step.">💻 Teach me coding</button>
+
+      <div>
+        <h2 id="modeTitle">General assistant</h2>
+        <div class="status">
+          <span class="dot"></span>
+          Ready to help
+        </div>
       </div>
     </div>
+
+    <div class="top-actions">
+      <button class="iconbtn" id="voiceOutBtn" title="Read latest answer aloud">🔊</button>
+    </div>
+  </header>
+
+  <section class="chat" id="chat">
+
+    <div class="welcome" id="welcome">
+
+      <div class="welcome-logo">M</div>
+
+      <h1>
+        Welcome to <span class="gradient">Maynard AI</span>
+      </h1>
+
+      <p>
+        Ask questions, learn new things, solve problems and explore ideas.
+        I'll explain answers clearly, step by step.
+      </p>
+
+      <div class="suggestions">
+
+        <button class="suggestion" data-prompt="Explain a difficult school topic step by step, with examples.">
+          🎓 Help me understand a school topic
+        </button>
+
+        <button class="suggestion" data-prompt="Solve this mathematics problem step by step and explain every calculation: ">
+          ➗ Solve a mathematics question
+        </button>
+
+        <button class="suggestion" data-prompt="Help me write and improve a professional piece of writing.">
+          ✍️ Help me write something
+        </button>
+
+        <button class="suggestion" data-prompt="Teach me how to build a simple website, step by step.">
+          💻 Teach me coding
+        </button>
+
+      </div>
+    </div>
+
   </section>
+
 </main>
 </div>
+
 <div class="composer-wrap">
+
   <div class="composer">
+
     <div class="attachments" id="attachments"></div>
+
     <div class="compose-row">
-      <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp,.txt,.md,.csv,.tsv" multiple hidden>
+
+      <input
+        type="file"
+        id="fileInput"
+        accept="image/jpeg,image/png,image/webp,.txt,.md,.csv,.tsv"
+        multiple
+        hidden
+      >
+
       <button class="actionbtn" id="attachBtn" title="Attach image or text file">＋</button>
+
       <button class="actionbtn" id="micBtn" title="Voice input">🎙</button>
-      <textarea id="messageInput" rows="1" placeholder="Message Maynard AI..."></textarea>
+
+      <textarea
+        id="messageInput"
+        rows="1"
+        placeholder="Message Maynard AI..."
+      ></textarea>
+
       <button class="actionbtn send" id="sendBtn" title="Send message">➤</button>
+
     </div>
   </div>
-  <div class="composer-note">Maynard AI can make mistakes. Check important information.</div>
+
+  <div class="composer-note">
+    Maynard AI can make mistakes. Check important information.
+  </div>
+
 </div>
+
 <script>
-const $=id=>document.getElementById(id);
-const chat=$('chat'),input=$('messageInput'),attachmentsBox=$('attachments');
-let currentMode='general',pendingFiles=[],history=[],latestAnswer='',busy=false,dark=true;
-const modeNames={general:'General assistant',education:'Education & homework',writing:'Writing',coding:'Coding',research:'Research & explanations',business:'Business',creative:'Creative ideas',translator:'Translator',summarizer:'Summarizer'};
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function markdown(s){if(window.marked&&window.DOMPurify){return DOMPurify.sanitize(marked.parse(s||''));}return esc(s).replace(/\n/g,'<br>');}
-function scrollBottom(){window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});}
-function showWelcome(){ $('welcome')?.remove(); const w=document.createElement('div');w.className='welcome';w.id='welcome';w.innerHTML='<div class="welcome-logo">M</div><h1>Welcome to <span class="gradient">Maynard AI</span></h1><p>Ask questions, learn new things, solve problems and explore ideas. I will explain answers clearly, step by step.</p><div class="suggestions"><button class="suggestion" data-prompt="Explain a difficult school topic step by step, with examples.">🎓 Help me understand a school topic</button><button class="suggestion" data-prompt="Solve this mathematics problem step by step and explain every calculation: ">➗ Solve a mathematics question</button><button class="suggestion" data-prompt="Help me write and improve a professional piece of writing.">✍️ Help me write something</button><button class="suggestion" data-prompt="Teach me how to build a simple website, step by step.">💻 Teach me coding</button></div>';chat.appendChild(w);}
-function addMessage(role,content,files=[]){
- $('welcome')?.remove();
- const wrap=document.createElement('div');wrap.className='message '+(role==='user'?'user':'ai');
- const avatar=document.createElement('div');avatar.className='avatar';avatar.textContent=role==='user'?'YOU':'M';
- const bubble=document.createElement('div');bubble.className='bubble';
- if(role==='user'){
-   files.forEach(f=>{if(f.type.startsWith('image/')){const im=document.createElement('img');im.className='uploaded';im.src=f.data;im.alt=f.name;bubble.appendChild(im);}else{const tag=document.createElement('span');tag.className='filetag';tag.textContent='📄 '+f.name;bubble.appendChild(tag);}});
-   const t=document.createElement('div');t.textContent=content;bubble.appendChild(t);
- }else{bubble.innerHTML=markdown(content);}
- wrap.append(avatar,bubble);
- if(role==='ai'){
-   const tools=document.createElement('div');tools.className='message-tools';
-   const copy=document.createElement('button');copy.className='tool';copy.textContent='Copy answer';copy.onclick=()=>navigator.clipboard?.writeText(content);
-   const speak=document.createElement('button');speak.className='tool';speak.textContent='Read aloud';speak.onclick=()=>speakText(content);
-   tools.append(copy,speak);bubble.appendChild(tools);
- }
- chat.appendChild(wrap);scrollBottom();return wrap;
+const $ = id => document.getElementById(id);
+
+const chat = $('chat');
+const input = $('messageInput');
+const attachmentsBox = $('attachments');
+
+let currentMode = 'general';
+let pendingFiles = [];
+let history = [];
+let latestAnswer = '';
+let busy = false;
+
+const modeNames = {
+  general:'General assistant',
+  education:'Education & homework',
+  writing:'Writing',
+  coding:'Coding',
+  research:'Research & explanations',
+  business:'Business',
+  creative:'Creative ideas',
+  translator:'Translator',
+  summarizer:'Summarizer'
+};
+
+/* Safe text formatting */
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g,c => ({
+    '&':'&amp;',
+    '<':'&lt;',
+    '>':'&gt;',
+    '"':'&quot;',
+    "'":'&#39;'
+  }[c]));
 }
-function showTyping(){const w=document.createElement('div');w.className='message ai';w.id='typing';w.innerHTML='<div class="avatar">M</div><div class="bubble"><div class="typing"><i></i><i></i><i></i></div></div>';chat.appendChild(w);scrollBottom();}
-function renderPending(){attachmentsBox.innerHTML='';pendingFiles.forEach((f,i)=>{const d=document.createElement('div');d.className='preview';if(f.type.startsWith('image/')){const im=document.createElement('img');im.src=f.data;d.appendChild(im);}else{const n=document.createElement('span');n.className='previewname';n.textContent=f.name;d.appendChild(n);}const b=document.createElement('button');b.className='remove';b.textContent='×';b.onclick=()=>{pendingFiles.splice(i,1);renderPending();};d.appendChild(b);attachmentsBox.appendChild(d);});}
-function resizeImage(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onerror=reject;reader.onload=()=>{const img=new Image();img.onload=()=>{const scale=Math.min(1,1280/Math.max(img.width,img.height));const c=document.createElement('canvas');c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);c.getContext('2d').drawImage(img,0,0,c.width,c.height);resolve({name:file.name,type:'image/jpeg',data:c.toDataURL('image/jpeg',.72)});};img.onerror=reject;img.src=reader.result;};reader.readAsDataURL(file);});}
-async function prepareFile(file){
- if(pendingFiles.length>=5){alert('You can attach up to 5 files.');return;}
- if(file.size>12*1024*1024){alert('This file is too large. Please choose a file under 12 MB.');return;}
- if(file.type.startsWith('image/')){
-   if(!['image/jpeg','image/png','image/webp'].includes(file.type)){alert('Use a JPG, PNG or WEBP image.');return;}
-   try{pendingFiles.push(await resizeImage(file));renderPending();}catch(e){alert('Could not read this image. Try another one.');}
- }else if(/\.(txt|md|csv|tsv)$/i.test(file.name)){
-   const text=await file.text();if(text.length>20000){alert('Text files must be 20,000 characters or less.');return;}
-   pendingFiles.push({name:file.name,type:'text/plain',text});renderPending();
- }else{alert('Supported files: JPG, PNG, WEBP, TXT, MD, CSV and TSV.');}
+
+/* Markdown formatting */
+
+function markdown(s) {
+  if(window.marked && window.DOMPurify) {
+    return DOMPurify.sanitize(marked.parse(s || ''));
+  }
+
+  return esc(s).replace(/\n/g,'<br>');
 }
-async function sendMessage(){
- if(busy)return;
- const message=input.value.trim();if(!message&&!pendingFiles.length)return;
- const files=[...pendingFiles];const payloadFiles=files.map(f=>f.type.startsWith('image/')?{name:f.name,type:f.type,data:f.data}:{name:f.name,type:'text/plain',text:f.text});
- const shownFiles=files.map(f=>({...f}));
- addMessage('user',message,shownFiles);
- input.value='';input.style.height='auto';pendingFiles=[];renderPending();busy=true;$('sendBtn').disabled=true;showTyping();
- try{
-   const response=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,mode:currentMode,history:history.slice(-12),attachments:payloadFiles})});
-   const data=await response.json();
-   $('typing')?.remove();
-   if(!response.ok||!data.success)throw new Error(data.error||'The assistant could not complete your request.');
-   latestAnswer=data.reply||'I could not create a response. Please try again.';
-   addMessage('ai',latestAnswer);
-   history.push({role:'user',content:message||'Please examine the attached file.'},{role:'assistant',content:latestAnswer});
-   history=history.slice(-24);try{localStorage.setItem('maynard_history',JSON.stringify(history));}catch(e){}
- }catch(err){
-   $('typing')?.remove();addMessage('ai','**Sorry, I could not complete that request.**\n\n'+(err.message||'Please check your internet connection and try again.'));
- }finally{busy=false;$('sendBtn').disabled=false;input.focus();}
+
+/* MathJax equation formatting */
+
+function renderMath(element) {
+  if(!window.MathJax || !element) return;
+
+  window.MathJax.startup.promise
+    .then(() => window.MathJax.typesetPromise([element]))
+    .catch(error => {
+      console.warn('Math formatting error:',error);
+    });
 }
-function newConversation(){history=[];latestAnswer='';chat.innerHTML='';showWelcome();try{localStorage.removeItem('maynard_history');}catch(e){}}
-function setMode(mode){
- currentMode=mode;$('modeTitle').textContent=modeNames[mode]||'General assistant';
- document.querySelectorAll('.mode').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
- newConversation();$('sidebar').classList.remove('open');
+
+/* Refresh mathematical formatting after MathJax loads */
+
+window.addEventListener('load', () => {
+  if(!window.MathJax) return;
+
+  window.MathJax.startup.promise.then(() => {
+    document.querySelectorAll('.bubble').forEach(renderMath);
+  }).catch(error => console.warn(error));
+});
+
+function scrollBottom() {
+  window.scrollTo({
+    top:document.body.scrollHeight,
+    behavior:'smooth'
+  });
 }
-function speakText(text){if(!('speechSynthesis'in window)){alert('Read aloud is not supported in this browser.');return;}speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.rate=1;speechSynthesis.speak(u);}
-$('sendBtn').onclick=sendMessage;
-input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}});
-input.addEventListener('input',()=>{input.style.height='auto';input.style.height=Math.min(input.scrollHeight,150)+'px';});
-$('attachBtn').onclick=()=>$('fileInput').click();
-$('fileInput').onchange=async e=>{for(const f of e.target.files)await prepareFile(f);e.target.value='';};
-$('newChat').onclick=newConversation;$('clearBtn').onclick=()=>{if(confirm('Clear this conversation?'))newConversation();};
-document.querySelectorAll('.mode').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
-document.querySelectorAll('.suggestion').forEach(b=>b.onclick=()=>{input.value=b.dataset.prompt||'';input.focus();});
-$('menuBtn').onclick=()=>$('sidebar').classList.toggle('open');
-$('voiceOutBtn').onclick=()=>{if(latestAnswer)speakText(latestAnswer);else alert('There is no answer to read yet.');};
-$('exportBtn').onclick=()=>{const text=history.map(m=>(m.role==='user'?'You':'Maynard AI')+':\n'+m.content).join('\n\n');if(!text){alert('There is no conversation to export.');return;}const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/plain'}));a.download='Maynard-AI-conversation.txt';a.click();URL.revokeObjectURL(a.href);};
-$('themeBtn').onclick=()=>{document.body.classList.toggle('light');if(document.body.classList.contains('light')){document.body.style.background='linear-gradient(135deg,#edf0ff,#e3f7f5)';document.body.style.color='#151a30';}else{document.body.style.background='';document.body.style.color='';}};
-$('micBtn').onclick=()=>{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){alert('Voice typing is not supported in this browser. You can use your phone keyboard microphone instead.');return;}const rec=new SR();rec.lang='en-US';rec.onresult=e=>{input.value+=(input.value?' ':'')+e.results[0][0].transcript;input.focus();};rec.onerror=()=>alert('Voice input did not work. Please try again.');rec.start();};
-try{const saved=JSON.parse(localStorage.getItem('maynard_history')||'[]');if(saved.length){history=saved;chat.innerHTML='';saved.forEach(m=>addMessage(m.role==='assistant'?'ai':'user',m.content));}}catch(e){}
+
+function showWelcome() {
+  $('welcome')?.remove();
+
+  const w = document.createElement('div');
+  w.className = 'welcome';
+  w.id = 'welcome';
+
+  w.innerHTML = `
+    <div class="welcome-logo">M</div>
+    <h1>Welcome to <span class="gradient">Maynard AI</span></h1>
+    <p>Ask questions, learn new things, solve problems and explore ideas. I will explain answers clearly, step by step.</p>
+    <div class="suggestions">
+      <button class="suggestion" data-prompt="Explain a difficult school topic step by step, with examples.">🎓 Help me understand a school topic</button>
+      <button class="suggestion" data-prompt="Solve this mathematics problem step by step and explain every calculation: ">➗ Solve a mathematics question</button>
+      <button class="suggestion" data-prompt="Help me write and improve a professional piece of writing.">✍️ Help me write something</button>
+      <button class="suggestion" data-prompt="Teach me how to build a simple website, step by step.">💻 Teach me coding</button>
+    </div>
+  `;
+
+  chat.appendChild(w);
+}
+
+function addMessage(role,content,files=[]) {
+
+  $('welcome')?.remove();
+
+  const wrap = document.createElement('div');
+
+  wrap.className =
+    'message ' + (role === 'user' ? 'user' : 'ai');
+
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar';
+  avatar.textContent = role === 'user' ? 'YOU' : 'M';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+
+  if(role === 'user') {
+
+    files.forEach(f => {
+
+      if(f.type.startsWith('image/')) {
+
+        const im = document.createElement('img');
+
+        im.className = 'uploaded';
+        im.src = f.data;
+        im.alt = f.name;
+
+        bubble.appendChild(im);
+
+      } else {
+
+        const tag = document.createElement('span');
+
+        tag.className = 'filetag';
+        tag.textContent = '📄 ' + f.name;
+
+        bubble.appendChild(tag);
+
+      }
+
+    });
+
+    const t = document.createElement('div');
+    t.textContent = content;
+
+    bubble.appendChild(t);
+
+  } else {
+
+    bubble.innerHTML = markdown(content);
+
+    /* Format all mathematical equations */
+    renderMath(bubble);
+
+  }
+
+  wrap.append(avatar,bubble);
+
+  if(role === 'ai') {
+
+    const tools = document.createElement('div');
+    tools.className = 'message-tools';
+
+    const copy = document.createElement('button');
+    copy.className = 'tool';
+    copy.textContent = 'Copy answer';
+
+    copy.onclick = () => {
+      if(navigator.clipboard) {
+        navigator.clipboard.writeText(content)
+          .catch(() => alert('Could not copy the answer.'));
+      }
+    };
+
+    const speak = document.createElement('button');
+    speak.className = 'tool';
+    speak.textContent = 'Read aloud';
+
+    speak.onclick = () => speakText(content);
+
+    tools.append(copy,speak);
+    bubble.appendChild(tools);
+
+  }
+
+  chat.appendChild(wrap);
+
+  scrollBottom();
+
+  return wrap;
+}
+
+function showTyping() {
+
+  const w = document.createElement('div');
+
+  w.className = 'message ai';
+  w.id = 'typing';
+
+  w.innerHTML = `
+    <div class="avatar">M</div>
+    <div class="bubble">
+      <div class="typing">
+        <i></i><i></i><i></i>
+      </div>
+    </div>
+  `;
+
+  chat.appendChild(w);
+
+  scrollBottom();
+}
+
+function renderPending() {
+
+  attachmentsBox.innerHTML = '';
+
+  pendingFiles.forEach((f,i) => {
+
+    const d = document.createElement('div');
+    d.className = 'preview';
+
+    if(f.type.startsWith('image/')) {
+
+      const im = document.createElement('img');
+      im.src = f.data;
+
+      d.appendChild(im);
+
+    } else {
+
+      const n = document.createElement('span');
+      n.className = 'previewname';
+      n.textContent = f.name;
+
+      d.appendChild(n);
+
+    }
+
+    const b = document.createElement('button');
+
+    b.className = 'remove';
+    b.textContent = '×';
+
+    b.onclick = () => {
+      pendingFiles.splice(i,1);
+      renderPending();
+    };
+
+    d.appendChild(b);
+    attachmentsBox.appendChild(d);
+
+  });
+}
+
+/* Resize images to reduce memory usage */
+
+function resizeImage(file) {
+
+  return new Promise((resolve,reject) => {
+
+    const reader = new FileReader();
+
+    reader.onerror = reject;
+
+    reader.onload = () => {
+
+      const img = new Image();
+
+      img.onload = () => {
+
+        const scale = Math.min(
+          1,
+          1280 / Math.max(img.width,img.height)
+        );
+
+        const c = document.createElement('canvas');
+
+        c.width = Math.round(img.width * scale);
+        c.height = Math.round(img.height * scale);
+
+        c.getContext('2d').drawImage(
+          img,0,0,c.width,c.height
+        );
+
+        resolve({
+          name:file.name,
+          type:'image/jpeg',
+          data:c.toDataURL('image/jpeg',.72)
+        });
+
+      };
+
+      img.onerror = reject;
+      img.src = reader.result;
+
+    };
+
+    reader.readAsDataURL(file);
+
+  });
+}
+
+async function prepareFile(file) {
+
+  if(pendingFiles.length >= 5) {
+    alert('You can attach up to 5 files.');
+    return;
+  }
+
+  if(file.size > 12 * 1024 * 1024) {
+    alert('This file is too large. Please choose a file under 12 MB.');
+    return;
+  }
+
+  if(file.type.startsWith('image/')) {
+
+    if(![
+      'image/jpeg',
+      'image/png',
+      'image/webp'
+    ].includes(file.type)) {
+
+      alert('Use a JPG, PNG or WEBP image.');
+      return;
+    }
+
+    try {
+
+      pendingFiles.push(await resizeImage(file));
+      renderPending();
+
+    } catch(e) {
+
+      alert('Could not read this image. Try another one.');
+
+    }
+
+  } else if(/\.(txt|md|csv|tsv)$/i.test(file.name)) {
+
+    const text = await file.text();
+
+    if(text.length > 20000) {
+      alert('Text files must be 20,000 characters or less.');
+      return;
+    }
+
+    pendingFiles.push({
+      name:file.name,
+      type:'text/plain',
+      text
+    });
+
+    renderPending();
+
+  } else {
+
+    alert('Supported files: JPG, PNG, WEBP, TXT, MD, CSV and TSV.');
+
+  }
+
+}
+
+/* Send messages to existing Groq backend */
+
+async function sendMessage() {
+
+  if(busy) return;
+
+  const message = input.value.trim();
+
+  if(!message && !pendingFiles.length) return;
+
+  const files = [...pendingFiles];
+
+  const payloadFiles = files.map(f => {
+
+    if(f.type.startsWith('image/')) {
+      return {
+        name:f.name,
+        type:f.type,
+        data:f.data
+      };
+    }
+
+    return {
+      name:f.name,
+      type:'text/plain',
+      text:f.text
+    };
+
+  });
+
+  const shownFiles = files.map(f => ({...f}));
+
+  addMessage('user',message,shownFiles);
+
+  input.value = '';
+  input.style.height = 'auto';
+
+  pendingFiles = [];
+  renderPending();
+
+  busy = true;
+  $('sendBtn').disabled = true;
+
+  showTyping();
+
+  try {
+
+    const response = await fetch('/api/chat', {
+
+      method:'POST',
+
+      headers:{
+        'Content-Type':'application/json'
+      },
+
+      body:JSON.stringify({
+        message,
+        mode:currentMode,
+        history:history.slice(-12),
+        attachments:payloadFiles
+      })
+
+    });
+
+    const data = await response.json();
+
+    $('typing')?.remove();
+
+    if(!response.ok || !data.success) {
+      throw new Error(
+        data.error || 'The assistant could not complete your request.'
+      );
+    }
+
+    latestAnswer = data.reply ||
+      'I could not create a response. Please try again.';
+
+    addMessage('ai',latestAnswer);
+
+    history.push(
+      {role:'user',content:message || 'Please examine the attached file.'},
+      {role:'assistant',content:latestAnswer}
+    );
+
+    history = history.slice(-24);
+
+    try {
+      localStorage.setItem(
+        'maynard_history',
+        JSON.stringify(history)
+      );
+    } catch(e) {}
+
+  } catch(err) {
+
+    $('typing')?.remove();
+
+    addMessage(
+      'ai',
+      '**Sorry, I could not complete that request.**\n\n' +
+      (err.message || 'Please check your internet connection and try again.')
+    );
+
+  } finally {
+
+    busy = false;
+    $('sendBtn').disabled = false;
+    input.focus();
+
+  }
+
+}
+
+/* Conversation controls */
+
+function newConversation() {
+
+  history = [];
+  latestAnswer = '';
+
+  chat.innerHTML = '';
+
+  showWelcome();
+
+  try {
+    localStorage.removeItem('maynard_history');
+  } catch(e) {}
+
+}
+
+function setMode(mode) {
+
+  currentMode = mode;
+
+  $('modeTitle').textContent =
+    modeNames[mode] || 'General assistant';
+
+  document.querySelectorAll('.mode').forEach(b => {
+    b.classList.toggle(
+      'active',
+      b.dataset.mode === mode
+    );
+  });
+
+  newConversation();
+
+  $('sidebar').classList.remove('open');
+
+}
+
+function speakText(text) {
+
+  if(!('speechSynthesis' in window)) {
+    alert('Read aloud is not supported in this browser.');
+    return;
+  }
+
+  speechSynthesis.cancel();
+
+  /* Remove Markdown and LaTeX delimiters before reading */
+  const plain = text
+    .replace(/\$\$([\s\S]*?)\$\$/g,'Mathematical equation: $1')
+    .replace(/\$([^$]+)\$/g,'$1')
+    .replace(/\\\[[\s\S]*?\\\]/g,'Mathematical equation')
+    .replace(/\\\([\s\S]*?\\\)/g,'mathematical expression')
+    .replace(/[#*_`]/g,'');
+
+  const u = new SpeechSynthesisUtterance(plain);
+
+  u.rate = 1;
+
+  speechSynthesis.speak(u);
+
+}
+
+/* Button actions */
+
+$('sendBtn').onclick = sendMessage;
+
+input.addEventListener('keydown',e => {
+
+  if(e.key === 'Enter' && !e.shiftKey) {
+
+    e.preventDefault();
+    sendMessage();
+
+  }
+
+});
+
+input.addEventListener('input',() => {
+
+  input.style.height = 'auto';
+
+  input.style.height =
+    Math.min(input.scrollHeight,150) + 'px';
+
+});
+
+$('attachBtn').onclick = () => $('fileInput').click();
+
+$('fileInput').onchange = async e => {
+
+  for(const f of e.target.files) {
+    await prepareFile(f);
+  }
+
+  e.target.value = '';
+
+};
+
+$('newChat').onclick = newConversation;
+
+$('clearBtn').onclick = () => {
+
+  if(confirm('Clear this conversation?')) {
+    newConversation();
+  }
+
+};
+
+document.querySelectorAll('.mode').forEach(b => {
+
+  b.onclick = () => setMode(b.dataset.mode);
+
+});
+
+document.querySelectorAll('.suggestion').forEach(b => {
+
+  b.onclick = () => {
+
+    input.value = b.dataset.prompt || '';
+    input.focus();
+
+  };
+
+});
+
+$('menuBtn').onclick = () => {
+  $('sidebar').classList.toggle('open');
+};
+
+$('voiceOutBtn').onclick = () => {
+
+  if(latestAnswer) {
+    speakText(latestAnswer);
+  } else {
+    alert('There is no answer to read yet.');
+  }
+
+};
+
+$('exportBtn').onclick = () => {
+
+  const text = history.map(m => {
+
+    return (
+      (m.role === 'user' ? 'You' : 'Maynard AI') +
+      ':\n' + m.content
+    );
+
+  }).join('\n\n');
+
+  if(!text) {
+    alert('There is no conversation to export.');
+    return;
+  }
+
+  const a = document.createElement('a');
+
+  a.href = URL.createObjectURL(
+    new Blob([text],{type:'text/plain'})
+  );
+
+  a.download = 'Maynard-AI-conversation.txt';
+
+  a.click();
+
+  URL.revokeObjectURL(a.href);
+
+};
+
+$('themeBtn').onclick = () => {
+
+  document.body.classList.toggle('light');
+
+  if(document.body.classList.contains('light')) {
+
+    document.body.style.background =
+      'linear-gradient(135deg,#edf0ff,#e3f7f5)';
+
+    document.body.style.color = '#151a30';
+
+  } else {
+
+    document.body.style.background = '';
+    document.body.style.color = '';
+
+  }
+
+};
+
+/* Voice input */
+
+$('micBtn').onclick = () => {
+
+  const SR =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+  if(!SR) {
+
+    alert(
+      'Voice typing is not supported in this browser. ' +
+      'You can use your phone keyboard microphone instead.'
+    );
+
+    return;
+
+  }
+
+  const rec = new SR();
+
+  rec.lang = 'en-US';
+
+  rec.onresult = e => {
+
+    input.value +=
+      (input.value ? ' ' : '') +
+      e.results[0][0].transcript;
+
+    input.focus();
+
+  };
+
+  rec.onerror = () => {
+    alert('Voice input did not work. Please try again.');
+  };
+
+  rec.start();
+
+};
+
+/* Restore saved text conversation */
+
+try {
+
+  const saved = JSON.parse(
+    localStorage.getItem('maynard_history') || '[]'
+  );
+
+  if(saved.length) {
+
+    history = saved;
+
+    chat.innerHTML = '';
+
+    saved.forEach(m => {
+
+      addMessage(
+        m.role === 'assistant' ? 'ai' : 'user',
+        m.content
+      );
+
+    });
+
+    latestAnswer =
+      [...saved].reverse().find(m => m.role === 'assistant')?.content || '';
+
+  }
+
+} catch(e) {}
+
 </script>
+
 </body>
 </html>
