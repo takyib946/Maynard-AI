@@ -5,7 +5,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#090b16">
-<title>Maynard AI Ultimate</title>
+<meta name="description" content="Maynard AI - Your multipurpose AI assistant">
+<title>Maynard AI Ultimate 2.0</title>
 <link rel="manifest" href="/manifest.webmanifest">
 
 <style>
@@ -18,7 +19,9 @@
 --line:#2a3150;
 --accent:#9875ff;
 }
+
 *{box-sizing:border-box}
+
 body{
 margin:0;
 background:var(--bg);
@@ -26,9 +29,15 @@ color:var(--text);
 font-family:system-ui,Arial,sans-serif;
 min-height:100vh;
 }
+
 button,textarea{font:inherit}
 button{cursor:pointer;color:var(--text)}
-.app{display:flex;min-height:100vh}
+
+.app{
+display:flex;
+min-height:100vh;
+}
+
 .sidebar{
 width:255px;
 background:#0d1020;
@@ -38,6 +47,7 @@ display:flex;
 flex-direction:column;
 gap:15px;
 }
+
 .brand{
 font-size:21px;
 font-weight:800;
@@ -45,6 +55,7 @@ display:flex;
 align-items:center;
 gap:10px;
 }
+
 .logo{
 width:40px;
 height:40px;
@@ -54,6 +65,7 @@ place-items:center;
 background:linear-gradient(135deg,#a779ff,#348fff);
 font-size:23px;
 }
+
 .btn{
 padding:11px;
 border:1px solid var(--line);
@@ -61,27 +73,36 @@ border-radius:12px;
 background:var(--panel);
 text-align:left;
 }
+
 .btn:hover,.mode.active{
 background:var(--panel2);
 border-color:var(--accent);
 }
+
 .new{
 background:linear-gradient(120deg,#8058e9,#397eea);
 border:0;
 text-align:center;
 font-weight:700;
 }
+
 .section{
 font-size:11px;
 letter-spacing:1.5px;
 color:var(--muted);
 }
-.modes{display:grid;gap:7px}
+
+.modes{
+display:grid;
+gap:7px;
+}
+
 .sidebar-bottom{
 margin-top:auto;
 display:grid;
 gap:8px;
 }
+
 .main{
 flex:1;
 min-width:0;
@@ -89,40 +110,52 @@ display:flex;
 flex-direction:column;
 min-height:100vh;
 }
+
 .top{
 height:65px;
+flex:none;
 border-bottom:1px solid var(--line);
 display:flex;
 align-items:center;
 justify-content:space-between;
 padding:0 20px;
 }
+
 .top button{
 background:none;
 border:0;
 font-size:20px;
 }
+
 .content{
 width:min(900px,100%);
 margin:auto;
 padding:25px 18px;
 flex:1;
+min-width:0;
 }
+
 .welcome{
 text-align:center;
 padding:9vh 10px 30px;
 }
+
 .biglogo{font-size:50px}
+
 .welcome h1{
 font-size:clamp(27px,5vw,43px);
 margin:8px 0;
 }
+
 .gradient{
 background:linear-gradient(90deg,#b18cff,#64b8ff);
 background-clip:text;
+-webkit-background-clip:text;
 color:transparent;
 }
+
 .welcome p{color:var(--muted)}
+
 .suggestions{
 display:grid;
 grid-template-columns:repeat(2,minmax(0,1fr));
@@ -130,6 +163,7 @@ gap:10px;
 max-width:650px;
 margin:25px auto;
 }
+
 .suggestion{
 background:var(--panel);
 border:1px solid var(--line);
@@ -137,21 +171,26 @@ border-radius:14px;
 padding:15px;
 text-align:left;
 }
+
 .suggestion small{
 display:block;
 color:var(--muted);
 margin-top:5px;
 }
+
 .messages{
 display:grid;
-gap:18px;
+gap:20px;
 padding-bottom:25px;
 }
+
 .msg{
 display:flex;
 gap:11px;
 align-items:flex-start;
+min-width:0;
 }
+
 .avatar{
 width:35px;
 height:35px;
@@ -162,7 +201,9 @@ display:grid;
 place-items:center;
 font-weight:bold;
 }
+
 .user .avatar{background:#49378a}
+
 .bubble{
 background:var(--panel);
 border:1px solid var(--line);
@@ -172,17 +213,59 @@ line-height:1.7;
 white-space:pre-wrap;
 overflow-wrap:anywhere;
 max-width:100%;
+min-width:0;
 }
+
 .user .bubble{
 background:#211b3c;
 border-color:#44356c;
 }
+
+.image-grid{
+display:flex;
+flex-wrap:wrap;
+gap:9px;
+margin-top:12px;
+}
+
+.image-preview{
+width:min(220px,100%);
+border:1px solid var(--line);
+border-radius:12px;
+overflow:hidden;
+background:#090b16;
+}
+
+.image-preview img{
+display:block;
+width:100%;
+max-height:220px;
+object-fit:contain;
+}
+
+.image-name{
+padding:6px 8px;
+font-size:11px;
+color:var(--muted);
+overflow-wrap:anywhere;
+}
+
+.file-chip{
+font-size:12px;
+padding:7px 10px;
+background:var(--panel2);
+border-radius:9px;
+border:1px solid var(--line);
+}
+
 .composer-wrap{
 position:sticky;
 bottom:0;
 background:linear-gradient(transparent,var(--bg) 18%);
 padding:15px 18px 20px;
+z-index:2;
 }
+
 .composer{
 width:min(850px,100%);
 margin:auto;
@@ -191,6 +274,7 @@ border:1px solid #343b5d;
 border-radius:18px;
 padding:12px;
 }
+
 textarea{
 width:100%;
 min-height:55px;
@@ -202,43 +286,103 @@ background:transparent;
 color:var(--text);
 padding:8px;
 }
+
 .actions{
 display:flex;
 align-items:center;
 gap:8px;
 flex-wrap:wrap;
 }
+
 .actions button{
 border:1px solid var(--line);
 border-radius:10px;
 padding:9px 12px;
 background:var(--panel2);
 }
+
 .actions .send{
 margin-left:auto;
 background:linear-gradient(120deg,#8b62f3,#397eea);
 border:0;
 font-weight:bold;
 }
+
+button:disabled{
+opacity:.5;
+cursor:not-allowed;
+}
+
 #fileInput{display:none}
+
 #fileNames{
 font-size:12px;
 color:var(--muted);
 padding:5px;
 }
+
+.attachment-list{
+display:flex;
+flex-wrap:wrap;
+gap:9px;
+padding:7px 2px;
+}
+
+.attachment-item{
+position:relative;
+width:90px;
+border:1px solid var(--line);
+border-radius:10px;
+overflow:hidden;
+background:var(--panel2);
+}
+
+.attachment-item img{
+width:100%;
+height:75px;
+object-fit:cover;
+display:block;
+}
+
+.attachment-item .filename{
+font-size:10px;
+padding:4px;
+white-space:nowrap;
+overflow:hidden;
+text-overflow:ellipsis;
+}
+
+.remove-file{
+position:absolute;
+top:3px;
+right:3px;
+width:23px;
+height:23px;
+border:0;
+border-radius:50%;
+background:#a92d42;
+color:white;
+font-weight:bold;
+padding:0;
+}
+
 .status{
 color:var(--muted);
 font-size:12px;
 padding:8px 2px;
 }
+
 .footer{
 text-align:center;
 font-size:11px;
 color:var(--muted);
 padding:8px;
 }
+
 .hidden{display:none!important}
+
 @media(max-width:700px){
+
 .sidebar{
 position:fixed;
 z-index:10;
@@ -246,14 +390,24 @@ top:0;
 bottom:0;
 left:-280px;
 transition:.2s;
+overflow-y:auto;
 }
+
 .sidebar.open{left:0}
+
 .top{padding:0 12px}
+
 .content{padding:12px}
+
 .welcome{padding-top:7vh}
+
 .suggestions{grid-template-columns:1fr}
+
 .composer-wrap{padding:10px}
+
 .bubble{font-size:14px}
+
+.image-preview{width:min(190px,100%)}
 }
 </style>
 </head>
@@ -268,7 +422,9 @@ transition:.2s;
 Maynard AI
 </div>
 
-<button class="btn new" id="newChat">＋ New Chat</button>
+<button class="btn new" id="newChat">
+＋ New Chat
+</button>
 
 <div class="section">AI MODES</div>
 
@@ -307,27 +463,37 @@ Maynard AI
 <section class="content">
 
 <div class="welcome" id="welcome">
+
 <div class="biglogo">✦</div>
-<h1>Welcome to <span class="gradient">Maynard AI</span></h1>
+
+<h1>
+Welcome to <span class="gradient">Maynard AI</span>
+</h1>
+
 <p>Your multipurpose AI assistant. Ask, learn, create and explore.</p>
 
 <div class="suggestions">
+
 <button class="suggestion" data-prompt="Teach me something interesting today.">
 📚 Learn something
 <small>Understand difficult topics</small>
 </button>
+
 <button class="suggestion" data-prompt="Help me write a professional message.">
 ✍️ Writing assistant
 <small>Create polished writing</small>
 </button>
+
 <button class="suggestion" data-prompt="Help me create a website.">
 💻 Coding assistant
 <small>Build and understand code</small>
 </button>
+
 <button class="suggestion" data-prompt="Give me creative ideas for a new project.">
 💡 Creative ideas
 <small>Explore new possibilities</small>
 </button>
+
 </div>
 </div>
 
@@ -336,30 +502,44 @@ Maynard AI
 </section>
 
 <div class="composer-wrap">
+
 <div class="composer">
 
-<textarea id="messageInput"
+<textarea
+id="messageInput"
 placeholder="Message Maynard AI..."
-rows="2"></textarea>
+rows="2"
+></textarea>
+
+<div id="attachmentPreview" class="attachment-list"></div>
 
 <div id="fileNames"></div>
 
 <div class="actions">
+
 <button id="attachBtn">＋ Attach</button>
-<input id="fileInput" type="file" multiple
-accept=".txt,.md,.csv,.tsv,image/png,image/jpeg,image/webp">
+
+<input
+id="fileInput"
+type="file"
+multiple
+accept=".txt,.md,.csv,.tsv,image/png,image/jpeg,image/webp"
+>
 
 <button id="voiceBtn">🎙 Voice</button>
 <button id="readBtn">🔊 Read</button>
 <button class="send" id="sendBtn">Send ↑</button>
+
 </div>
 
 <div class="status" id="status">Ready to help.</div>
 
 </div>
+
 <div class="footer">
 Maynard AI can make mistakes. Check important information.
 </div>
+
 </div>
 
 </main>
@@ -397,58 +577,189 @@ return String(value).replace(/[&<>"']/g, char => ({
 }
 
 function saveHistory(){
+
 try{
+
+// Do not save large Base64 image data to local storage.
+// This helps prevent phone storage and memory problems.
+
+const safeConversation = conversation.map(item=>({
+role:item.role,
+content:item.content,
+attachments:(item.attachments || []).map(file=>({
+name:file.name,
+kind:file.kind
+}))
+}));
+
 localStorage.setItem(
 "maynard_ultimate_history",
-JSON.stringify(conversation.slice(-100))
+JSON.stringify(safeConversation.slice(-100))
 );
-}catch(error){}
+
+}catch(error){
+console.warn("Could not save history:",error);
+}
+
 }
 
 function render(){
-$("messages").innerHTML = conversation.map(item => `
-<div class="msg ${item.role === "user" ? "user" : ""}">
-<div class="avatar">${item.role === "user" ? "Y" : "M"}</div>
-<div class="bubble">${escapeHTML(item.content)}</div>
+
+$("messages").innerHTML = conversation.map(item=>{
+
+const isUser = item.role === "user";
+
+const images = (item.attachments || [])
+.filter(file=>
+file.kind === "image" &&
+typeof file.data === "string" &&
+file.data.startsWith("data:image/")
+)
+.map(file=>`
+<div class="image-preview">
+<img
+src="${escapeHTML(file.data)}"
+alt="${escapeHTML(file.name || "Uploaded picture")}"
+loading="lazy"
+>
+<div class="image-name">${escapeHTML(file.name || "Uploaded picture")}</div>
 </div>
 `).join("");
+
+const otherFiles = (item.attachments || [])
+.filter(file=>file.kind !== "image")
+.map(file=>`
+<div class="file-chip">📎 ${escapeHTML(file.name)}</div>
+`).join("");
+
+return `
+<div class="msg ${isUser ? "user" : ""}">
+<div class="avatar">${isUser ? "Y" : "M"}</div>
+<div class="bubble">
+${escapeHTML(item.content)}
+${images ? `<div class="image-grid">${images}</div>` : ""}
+${otherFiles ? `<div class="image-grid">${otherFiles}</div>` : ""}
+</div>
+</div>
+`;
+
+}).join("");
 
 $("welcome").classList.toggle(
 "hidden",
 conversation.length > 0
 );
 
-window.scrollTo({
-top:document.body.scrollHeight,
-behavior:"smooth"
-});
 }
 
-function addMessage(role, content){
-conversation.push({role,content});
+function addMessage(role,content,files=[]){
+
+conversation.push({
+role,
+content,
+attachments:files
+});
+
 render();
 saveHistory();
+
 }
 
 function setMode(value){
+
+if(!titles[value]) return;
+
 mode = value;
-document.querySelectorAll(".mode").forEach(button => {
+
+document.querySelectorAll(".mode").forEach(button=>{
 button.classList.toggle(
 "active",
 button.dataset.mode === value
 );
 });
-$("modeTitle").textContent = titles[value] || "General";
+
+$("modeTitle").textContent = titles[value];
+
+// Each mode starts a fresh conversation
+// and returns the user to the welcome screen.
+
+conversation = [];
+
+render();
+saveHistory();
+
+attachments = [];
+updateAttachmentPreview();
+
+$("messageInput").value = "";
+
+$("sidebar").classList.remove("open");
+
+setStatus(
+titles[value] + " mode selected. Start a new conversation."
+);
+
+window.scrollTo({
+top:0,
+behavior:"smooth"
+});
+
 }
 
 function setStatus(message){
 $("status").textContent = message;
 }
 
+function updateAttachmentPreview(){
+
+$("attachmentPreview").innerHTML = attachments.map((file,index)=>{
+
+if(file.kind === "image"){
+
+return `
+<div class="attachment-item">
+<img
+src="${escapeHTML(file.data)}"
+alt="${escapeHTML(file.name)}"
+>
+<button
+class="remove-file"
+type="button"
+data-remove="${index}"
+aria-label="Remove attachment"
+>×</button>
+<div class="filename">${escapeHTML(file.name)}</div>
+</div>
+`;
+
+}
+
+return `
+<div class="file-chip">
+📎 ${escapeHTML(file.name)}
+<button
+type="button"
+data-remove="${index}"
+>×</button>
+</div>
+`;
+
+}).join("");
+
+$("fileNames").textContent = attachments.length
+? attachments.length + " attachment(s) ready to send"
+: "";
+
+}
+
 async function prepareFile(file){
 
-if(file.size > 2 * 1024 * 1024){
-throw new Error(file.name + " is larger than 2 MB.");
+if(file.size > 12 * 1024 * 1024){
+
+throw new Error(
+file.name + " is larger than 12 MB. Choose a smaller file."
+);
+
 }
 
 if(file.type.startsWith("image/")){
@@ -458,26 +769,111 @@ if(![
 "image/png",
 "image/webp"
 ].includes(file.type)){
+
 throw new Error("Use JPG, PNG or WEBP images.");
+
 }
 
-const data = await new Promise((resolve,reject)=>{
-const reader = new FileReader();
-reader.onload = () => resolve(reader.result);
-reader.onerror = reject;
-reader.readAsDataURL(file);
+const imageURL = URL.createObjectURL(file);
+
+try{
+
+const image = new Image();
+image.src = imageURL;
+
+await new Promise((resolve,reject)=>{
+
+image.onload = resolve;
+
+image.onerror = ()=>reject(
+new Error("Could not open this image.")
+);
+
 });
+
+const MAX_SIDE = 1280;
+
+const scale = Math.min(
+1,
+MAX_SIDE / Math.max(image.width,image.height)
+);
+
+const canvas = document.createElement("canvas");
+
+canvas.width = Math.max(
+1,
+Math.round(image.width * scale)
+);
+
+canvas.height = Math.max(
+1,
+Math.round(image.height * scale)
+);
+
+const context = canvas.getContext("2d",{
+alpha:false
+});
+
+if(!context){
+
+throw new Error("Image processing is unavailable.");
+
+}
+
+// White background prevents transparent images
+// from becoming black after JPEG conversion.
+
+context.fillStyle = "#ffffff";
+
+context.fillRect(
+0,
+0,
+canvas.width,
+canvas.height
+);
+
+context.drawImage(
+image,
+0,
+0,
+canvas.width,
+canvas.height
+);
+
+const data = canvas.toDataURL(
+"image/jpeg",
+0.72
+);
+
+if(data.length > 2800000){
+
+throw new Error(
+"Image is still too large. Choose a smaller picture."
+);
+
+}
 
 return {
 kind:"image",
 name:file.name,
-type:file.type,
+type:"image/jpeg",
 data
 };
+
+}finally{
+
+URL.revokeObjectURL(imageURL);
+
+}
+
 }
 
 if(file.type === "application/pdf"){
-throw new Error("PDF attachments are not supported in this version.");
+
+throw new Error(
+"PDF attachments are not supported in this version."
+);
+
 }
 
 const text = await file.text();
@@ -487,6 +883,7 @@ kind:"text",
 name:file.name,
 text:text.slice(0,20000)
 };
+
 }
 
 async function sendMessage(){
@@ -497,26 +894,43 @@ const input = $("messageInput");
 const message = input.value.trim();
 
 if(!message && attachments.length === 0){
-setStatus("Please enter a message first.");
+
+setStatus("Please enter a message or attach a file.");
 return;
+
 }
 
 const currentFiles = attachments.slice();
 
+const imageCount = currentFiles.filter(
+file=>file.kind === "image"
+).length;
+
+if(imageCount > 5){
+
+setStatus("You can attach up to five files.");
+return;
+
+}
+
 busy = true;
+
 $("sendBtn").disabled = true;
+$("attachBtn").disabled = true;
 
 input.value = "";
 attachments = [];
-$("fileNames").textContent = "";
 
-const displayMessage = message +
-(currentFiles.length
-? "\n[Attachments: " +
-currentFiles.map(file=>file.name).join(", ") + "]"
-: "");
+updateAttachmentPreview();
 
-addMessage("user",displayMessage);
+const displayMessage = message ||
+"Please examine my attached files.";
+
+addMessage(
+"user",
+displayMessage,
+currentFiles
+);
 
 setStatus("Maynard AI is thinking...");
 
@@ -530,18 +944,27 @@ content:item.content
 
 try{
 
-// THIS IS THE FRONTEND-TO-BACKEND CONNECTION.
 const response = await fetch("/api/chat",{
+
 method:"POST",
+
 headers:{
 "Content-Type":"application/json"
 },
+
 body:JSON.stringify({
-message:message || "Please examine my attached files.",
+
+message:message ||
+"Please examine my attached files.",
+
 mode:mode,
+
 history:history,
+
 attachments:currentFiles
+
 })
+
 });
 
 const raw = await response.text();
@@ -549,21 +972,29 @@ const raw = await response.text();
 let data;
 
 try{
+
 data = JSON.parse(raw);
+
 }catch(error){
+
 throw new Error(
 "Server returned an unexpected response. Check your Vercel deployment."
 );
+
 }
 
 if(!response.ok){
+
 throw new Error(
 data.error || "Server error: " + response.status
 );
+
 }
 
 if(!data.reply){
+
 throw new Error("The AI returned an empty response.");
+
 }
 
 addMessage("assistant",data.reply);
@@ -586,66 +1017,132 @@ setStatus("Request failed. Check the error above.");
 }finally{
 
 busy = false;
+
 $("sendBtn").disabled = false;
+$("attachBtn").disabled = false;
+
 input.focus();
 
 }
+
 }
 
+// Send button
 $("sendBtn").onclick = sendMessage;
 
+// Enter to send; Shift + Enter for new line
 $("messageInput").addEventListener("keydown",event=>{
+
 if(event.key === "Enter" && !event.shiftKey){
+
 event.preventDefault();
 sendMessage();
+
 }
+
 });
 
+// New chat
 $("newChat").onclick = ()=>{
+
+if(busy) return;
+
 conversation = [];
-saveHistory();
+attachments = [];
+
+$("messageInput").value = "";
+
+updateAttachmentPreview();
+
 render();
+saveHistory();
+
 setStatus("New conversation started.");
+
+$("sidebar").classList.remove("open");
+
 $("messageInput").focus();
+
 };
 
+// Mode selection
 $("modes").onclick = event=>{
+
 const button = event.target.closest("[data-mode]");
+
 if(button){
 setMode(button.dataset.mode);
 }
+
 };
 
+// Mobile menu
 $("menuBtn").onclick = ()=>{
+
 $("sidebar").classList.toggle("open");
+
 };
 
+// Attachment button
 $("attachBtn").onclick = ()=>{
+
+if(!busy){
 $("fileInput").click();
+}
+
 };
 
-$("fileInput").onchange = async event=>{
+// Remove attachment
+$("attachmentPreview").onclick = event=>{
 
-try{
+const button = event.target.closest("[data-remove]");
+
+if(!button) return;
+
+const index = Number(button.dataset.remove);
+
+if(Number.isInteger(index)){
+
+attachments.splice(index,1);
+
+updateAttachmentPreview();
+
+}
+
+};
+
+// File selection
+$("fileInput").onchange = async event=>{
 
 const selected = [...event.target.files];
 
+try{
+
 if(attachments.length + selected.length > 5){
+
 throw new Error("You can attach up to five files.");
+
 }
+
+setStatus("Preparing your attachments...");
 
 for(const file of selected){
-attachments.push(await prepareFile(file));
+
+const prepared = await prepareFile(file);
+
+attachments.push(prepared);
+
+updateAttachmentPreview();
+
 }
 
-$("fileNames").textContent =
-attachments.map(file=>"📎 "+file.name).join(" · ");
-
-setStatus("Files attached.");
+setStatus("Attachments ready. You can now send your message.");
 
 }catch(error){
 
 alert(error.message);
+
+setStatus("Attachment preparation failed.");
 
 }finally{
 
@@ -655,81 +1152,125 @@ event.target.value = "";
 
 };
 
+// Welcome screen suggestions
 document.querySelectorAll("[data-prompt]").forEach(button=>{
+
 button.onclick = ()=>{
+
 $("messageInput").value = button.dataset.prompt;
+
 $("messageInput").focus();
+
 };
+
 });
 
+// Clear conversation
 $("clearBtn").onclick = ()=>{
+
+if(busy) return;
+
 if(confirm("Clear this conversation?")){
+
 $("newChat").click();
+
 }
+
 };
 
+// Local history information
 $("historyBtn").onclick = ()=>{
+
 try{
+
 const saved = JSON.parse(
 localStorage.getItem("maynard_ultimate_history") || "[]"
 );
 
 alert(
 saved.length
-? "Your latest conversation is saved on this device."
+? "Your latest conversation is saved on this device. Image previews are kept for the current session."
 : "No saved conversation found."
 );
+
 }catch(error){
+
 alert("Could not load chat history.");
+
 }
+
 };
 
+// Export chat
 $("exportBtn").onclick = ()=>{
 
 if(!conversation.length){
+
 alert("There is no conversation to export.");
 return;
+
 }
 
-const content = conversation.map(item=>
+const content = conversation.map(item=>{
+
+const files = (item.attachments || [])
+.map(file=>"[Attachment: " + file.name + "]")
+.join("\n");
+
+return (
 (item.role === "user" ? "You" : "Maynard AI") +
-":\n" + item.content
-).join("\n\n");
+":\n" +
+item.content +
+(files ? "\n" + files : "")
+);
+
+}).join("\n\n");
 
 const blob = new Blob([content],{
 type:"text/plain"
 });
 
 const url = URL.createObjectURL(blob);
+
 const link = document.createElement("a");
 
 link.href = url;
 link.download = "maynard-ai-chat.txt";
+
 link.click();
 
-URL.revokeObjectURL(url);
+setTimeout(()=>URL.revokeObjectURL(url),1000);
 
 };
 
+// Theme switch
 $("themeBtn").onclick = ()=>{
 
 const light = document.body.classList.toggle("light");
 
 const variables = {
+
 bg:light?"#f3f4fb":"#090b16",
 panel:light?"#ffffff":"#111629",
 panel2:light?"#e8e9f5":"#1b2140",
 text:light?"#17182a":"#f5f5ff",
 muted:light?"#60647c":"#a1a8c4",
 line:light?"#d9dbea":"#2a3150"
+
 };
 
 Object.entries(variables).forEach(([key,value])=>{
-document.documentElement.style.setProperty("--"+key,value);
+
+document.documentElement.style.setProperty(
+"--"+key,
+value
+);
+
 });
 
 };
 
+// Voice input
 $("voiceBtn").onclick = ()=>{
 
 const SpeechRecognition =
@@ -737,8 +1278,10 @@ window.SpeechRecognition ||
 window.webkitSpeechRecognition;
 
 if(!SpeechRecognition){
+
 alert("Voice typing is not supported in this browser.");
 return;
+
 }
 
 const recognition = new SpeechRecognition();
@@ -747,18 +1290,23 @@ recognition.lang = "en-GH";
 recognition.interimResults = false;
 
 recognition.onresult = event=>{
+
 $("messageInput").value +=
 event.results[0][0].transcript;
+
 };
 
 recognition.onerror = ()=>{
+
 setStatus("Voice recognition failed.");
+
 };
 
 recognition.start();
 
 };
 
+// Read last AI response
 $("readBtn").onclick = ()=>{
 
 const last = [...conversation]
@@ -766,13 +1314,17 @@ const last = [...conversation]
 .find(item=>item.role==="assistant");
 
 if(!last){
+
 alert("No AI response to read.");
 return;
+
 }
 
 if(!("speechSynthesis" in window)){
+
 alert("Read aloud is not supported.");
 return;
+
 }
 
 speechSynthesis.cancel();
@@ -783,6 +1335,10 @@ new SpeechSynthesisUtterance(last.content)
 
 };
 
+// Load previous text history.
+// Image previews are intentionally not stored in localStorage
+// to avoid using excessive phone memory.
+
 function loadHistory(){
 
 try{
@@ -792,11 +1348,21 @@ localStorage.getItem("maynard_ultimate_history") || "[]"
 );
 
 if(Array.isArray(saved)){
-conversation = saved.filter(item=>
+
+conversation = saved
+.filter(item=>
 item &&
 ["user","assistant"].includes(item.role) &&
 typeof item.content === "string"
-);
+)
+.map(item=>({
+
+role:item.role,
+content:item.content,
+attachments:[]
+
+}));
+
 }
 
 }catch(error){
@@ -809,13 +1375,24 @@ render();
 
 }
 
+// Service worker
 if("serviceWorker" in navigator){
+
 window.addEventListener("load",()=>{
-navigator.serviceWorker.register("/sw.js").catch(()=>{});
+
+navigator.serviceWorker
+.register("/sw.js")
+.catch(error=>{
+console.warn("Service worker registration failed:",error);
 });
+
+});
+
 }
 
+// Start application
 loadHistory();
+
 </script>
 </body>
 </html>
