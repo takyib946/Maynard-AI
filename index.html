@@ -3,558 +3,701 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Maynard AI - Your intelligent multilingual assistant with mathematical notation and image understanding.">
-<meta name="theme-color" content="#030312">
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#090d1b">
 <title>Maynard AI</title>
+
+<!-- MathJax 3: Professional mathematical equation rendering -->
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)'], ['$', '$']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    processEscapes: true,
+    processEnvironments: true,
+    packages: {'[+]': ['ams']}
+  },
+  options: {
+    skipHtmlTags: [
+      'script', 'noscript', 'style',
+      'textarea', 'pre', 'code'
+    ]
+  },
+  chtml: {
+    scale: 1.05,
+    matchFontHeight: false
+  },
+  startup: {
+    typeset: false
+  }
+};
+</script>
+
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
 
 <style>
 :root {
-  --bg:#030312;
-  --bar:#05051a;
-  --panel:#080820;
-  --line:#1b1b40;
-  --btn:#232a40;
-  --user:#101044;
-  --ink:#f2f4fa;
-  --muted:#8a90a8;
-  --accent:#7886ff;
-  --err:#ff8a80;
+  --bg: #080c19;
+  --panel: rgba(17,25,48,.88);
+  --panel2: rgba(25,36,65,.9);
+  --line: rgba(160,180,255,.15);
+  --text: #f4f6ff;
+  --muted: #a5afca;
+  --accent: #8b7cff;
+  --accent2: #35d6cf;
 }
 
 * {
-  box-sizing:border-box;
+  box-sizing: border-box;
 }
 
-html,body {
-  height:100%;
-  margin:0;
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  display:flex;
-  flex-direction:column;
-  background:radial-gradient(120% 40% at 0% 0%,#10104a 0%,var(--bg) 55%);
-  color:var(--ink);
-  font:16px/1.6 Roboto,system-ui,sans-serif;
+  margin: 0;
+  min-height: 100vh;
+  color: var(--text);
+  font-family: Inter, system-ui, Arial, sans-serif;
+  background:
+    radial-gradient(ellipse at 15% 15%, rgba(103,80,255,.22), transparent 38%),
+    radial-gradient(ellipse at 85% 80%, rgba(20,205,194,.13), transparent 36%),
+    linear-gradient(135deg,#080c19,#10162b 55%,#090e1d);
+  background-attachment: fixed;
+}
+
+button, input, textarea {
+  font: inherit;
 }
 
 button {
-  font:inherit;
-  color:inherit;
-  cursor:pointer;
-  border:0;
+  cursor: pointer;
 }
 
-button:focus-visible,
-textarea:focus-visible,
-input:focus-visible {
-  outline:2px solid var(--accent);
-  outline-offset:2px;
+.app {
+  display: flex;
+  min-height: 100vh;
 }
 
-/* HEADER */
+/* SIDEBAR */
 
-header {
-  display:flex;
-  align-items:center;
-  gap:14px;
-  padding:14px 16px;
-  background:var(--bar);
-  border-bottom:1px solid var(--line);
+.sidebar {
+  width: 265px;
+  flex-shrink: 0;
+  padding: 20px 15px;
+  background: rgba(7,11,25,.86);
+  border-right: 1px solid var(--line);
+  backdrop-filter: blur(22px);
+  display: flex;
+  flex-direction: column;
+  gap: 17px;
+  z-index: 10;
 }
 
-header h1 {
-  flex:1;
-  margin:0;
-  font-size:1.1rem;
-  font-weight:700;
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 8px 7px 17px;
 }
 
-#menu {
-  width:40px;
-  height:38px;
-  background:#171735;
-  border-radius:10px;
-  font-size:1.2rem;
+.logo, .welcome-logo {
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  color: white;
+  background: linear-gradient(135deg,#8b7cff,#30d7cc);
+  box-shadow: 0 8px 28px #7564ff55;
 }
 
-#voice {
-  padding:10px 14px;
-  background:var(--btn);
-  border-radius:10px;
-  font-weight:500;
+.logo {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
 }
 
-#voice[aria-pressed="true"] {
-  background:#3a4a9a;
+.brand strong {
+  font-size: 19px;
 }
 
-/* DRAWER */
-
-#scrim {
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.55);
-  opacity:0;
-  pointer-events:none;
-  transition:opacity .2s;
-  z-index:20;
+.brand small {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 3px;
 }
 
-#scrim.open {
-  opacity:1;
-  pointer-events:auto;
+.newchat, .mode, .sidebtn {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: rgba(255,255,255,.045);
+  color: var(--text);
+  padding: 12px;
+  text-align: left;
+  transition: .2s;
 }
 
-#drawer {
-  position:fixed;
-  top:0;
-  bottom:0;
-  left:0;
-  width:min(86vw,320px);
-  background:var(--bar);
-  border-right:1px solid var(--line);
-  padding:16px;
-  overflow-y:auto;
-  transform:translateX(-100%);
-  transition:transform .2s;
-  z-index:21;
-  visibility:hidden;
+.newchat {
+  background: linear-gradient(120deg,#6e5de4,#397cce);
+  border: 0;
+  text-align: center;
+  font-weight: 700;
 }
 
-#drawer.open {
-  transform:none;
-  visibility:visible;
+.section {
+  color: #7f8ba9;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+  padding: 3px 10px;
 }
 
-#drawer h2 {
-  margin:18px 0 6px;
-  font-size:.85rem;
-  font-weight:500;
-  color:var(--muted);
+.modes {
+  display: grid;
+  gap: 3px;
 }
 
-.wide {
-  width:100%;
-  padding:12px;
-  background:var(--user);
-  border-radius:10px;
-  font-weight:600;
-  text-align:left;
+.mode {
+  border-color: transparent;
+  color: #c1c9df;
+  padding: 10px 12px;
 }
 
-.wide.ghost {
-  background:var(--btn);
-  margin-top:18px;
+.mode:hover, .mode.active, .sidebtn:hover {
+  background: rgba(135,123,255,.16);
+  border-color: #8b7cff55;
+  color: white;
 }
 
-.item {
-  display:flex;
-  align-items:center;
+.sidebottom {
+  margin-top: auto;
+  display: grid;
+  gap: 8px;
 }
 
-.item button:first-child {
-  flex:1;
-  padding:9px 10px;
-  text-align:left;
-  background:none;
-  border-radius:8px;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
+.sidebtn {
+  font-size: 13px;
 }
 
-.item button[aria-current="true"] {
-  background:var(--user);
+/* MAIN AREA */
+
+.main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
-.item .del {
-  padding:6px 10px;
-  background:none;
-  color:var(--muted);
+.topbar {
+  height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 25px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(8,12,25,.55);
+  backdrop-filter: blur(18px);
+  position: sticky;
+  top: 0;
+  z-index: 5;
 }
 
-.empty {
-  color:var(--muted);
-  font-size:.9rem;
-  padding:4px 10px;
+.top-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbar h2 {
+  font-size: 15px;
+  margin: 0;
+}
+
+.top-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.iconbtn {
+  border: 1px solid var(--line);
+  background: #ffffff08;
+  color: #e8ebff;
+  border-radius: 10px;
+  min-width: 38px;
+  height: 38px;
+  padding: 0 10px;
+}
+
+.menu-button {
+  display: none;
 }
 
 /* CHAT */
 
-#log {
-  flex:1;
-  overflow-y:auto;
-  padding:16px;
-  display:flex;
-  flex-direction:column;
-  gap:20px;
+.chat {
+  width: min(900px,100%);
+  margin: 0 auto;
+  padding: 28px 22px 170px;
+  flex: 1;
 }
 
-.row {
-  display:flex;
-  gap:12px;
-  align-items:flex-start;
-  max-width:100%;
+.welcome {
+  text-align: center;
+  padding: clamp(40px,10vh,105px) 12px 45px;
 }
 
-.row.user {
-  flex-direction:row-reverse;
-  align-self:flex-end;
+.welcome-logo {
+  width: 68px;
+  height: 68px;
+  border-radius: 23px;
+  margin: 0 auto 20px;
+  font-size: 26px;
+}
+
+.welcome h1 {
+  font-size: clamp(27px,5vw,42px);
+  margin: 0 0 12px;
+  letter-spacing: -1px;
+}
+
+.gradient {
+  background: linear-gradient(90deg,#b3aaff,#53e5d8);
+  background-clip: text;
+  color: transparent;
+}
+
+.welcome p {
+  color: var(--muted);
+  max-width: 520px;
+  margin: 0 auto;
+  line-height: 1.7;
+  font-size: 14px;
+}
+
+.suggestions {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 11px;
+  max-width: 650px;
+  margin: 28px auto 0;
+}
+
+.suggestion {
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: rgba(255,255,255,.045);
+  color: #e5e9ff;
+  text-align: left;
+  padding: 15px;
+  line-height: 1.5;
+  font-size: 13px;
+}
+
+.suggestion:hover {
+  border-color: #8b7cff88;
+  background: #8174ff16;
+}
+
+/* MESSAGES */
+
+.message {
+  display: flex;
+  margin: 22px 0;
+  gap: 10px;
+  align-items: flex-start;
+  animation: appear .25s ease;
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message.user {
+  justify-content: flex-end;
 }
 
 .avatar {
-  flex:none;
-  min-width:44px;
-  height:44px;
-  padding:0 10px;
-  display:grid;
-  place-items:center;
-  border-radius:12px;
-  background:#071a2a;
-  font-weight:700;
-  font-size:.9rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 11px;
+  flex: 0 0 32px;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 800;
+  background: linear-gradient(135deg,#8b7cff,#35d6cf);
+  color: white;
 }
 
-.row.user .avatar {
-  background:#0a0a2a;
+.message.user .avatar {
+  order: 2;
+  background: linear-gradient(135deg,#397cce,#7564e8);
 }
 
-.col {
-  min-width:0;
-  max-width:min(85%,600px);
+.message-body {
+  min-width: 0;
+  max-width: min(82%,720px);
 }
 
 .bubble {
-  padding:14px 18px;
-  border-radius:18px;
-  border:1px solid var(--line);
-  white-space:pre-wrap;
-  overflow-wrap:anywhere;
+  padding: 13px 16px;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: rgba(24,34,59,.96);
+  line-height: 1.72;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+  box-shadow: 0 8px 25px #00000018;
 }
 
-.row.assistant .bubble {
-  background:var(--panel);
+.message.user .bubble {
+  background: linear-gradient(135deg,#6658dc,#397fdb);
+  border-color: #ffffff20;
+  border-radius: 17px 5px 17px 17px;
 }
 
-.row.user .bubble {
-  background:var(--user);
-}
-
-.bubble.error {
-  color:var(--err);
-}
-
-.bubble code {
-  background:#0d0d33;
-  padding:2px 5px;
-  border-radius:5px;
-  font:.9em ui-monospace,Menlo,monospace;
-}
-
-.bubble pre {
-  margin:10px 0;
-  padding:12px;
-  background:#02020c;
-  border:1px solid var(--line);
-  border-radius:10px;
-  overflow-x:auto;
-  white-space:pre;
-}
-
-.bubble pre code {
-  background:none;
-  padding:0;
-}
-
-/* MATHEMATICAL NOTATION */
-
-.math-display {
-  display:block;
-  width:100%;
-  overflow-x:auto;
-  overflow-y:hidden;
-  padding:17px 12px;
-  margin:14px 0;
-  background:#0b0b2a;
-  border:1px solid #252554;
-  border-radius:12px;
-  color:#ffffff;
-  text-align:center;
-  font-family:"Cambria Math","STIX Two Math","Times New Roman",serif;
-  font-size:1.3rem;
-  line-height:2;
-  white-space:pre-wrap;
-  overflow-wrap:anywhere;
-}
-
-.math-inline {
-  display:inline;
-  color:#b9c4ff;
-  font-family:"Cambria Math","STIX Two Math","Times New Roman",serif;
-  font-size:1.08em;
-  font-weight:500;
-}
-
-.math-display::-webkit-scrollbar {
-  height:4px;
-}
-
-.math-display::-webkit-scrollbar-thumb {
-  background:#5555a0;
-  border-radius:10px;
+.message.assistant .bubble {
+  border-radius: 5px 17px 17px 17px;
 }
 
 .bubble p {
-  margin:7px 0;
+  margin: 0 0 11px;
 }
 
-.bubble ul,
-.bubble ol {
-  padding-left:24px;
+.bubble p:last-child {
+  margin-bottom: 0;
+}
+
+.bubble h1, .bubble h2, .bubble h3 {
+  line-height: 1.3;
+  margin: 17px 0 8px;
+}
+
+.bubble ul, .bubble ol {
+  padding-left: 23px;
 }
 
 .bubble li {
-  margin:5px 0;
+  margin: 5px 0;
 }
 
-.bubble strong {
-  color:#ffffff;
+.bubble pre {
+  white-space: pre-wrap;
+  overflow: auto;
+  background: #080d1c;
+  padding: 13px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
 }
 
-.thumbs {
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-  margin-bottom:8px;
+.bubble code {
+  background: #ffffff12;
+  padding: 2px 5px;
+  border-radius: 5px;
 }
 
-.thumbs img {
-  max-width:100%;
-  max-height:220px;
-  border-radius:10px;
+.bubble pre code {
+  background: none;
+  padding: 0;
 }
 
-.note {
-  color:var(--muted);
-  font-size:.85rem;
-  margin-bottom:6px;
+.bubble blockquote {
+  border-left: 3px solid var(--accent);
+  margin: 10px 0;
+  padding: 5px 12px;
+  color: #c6cce2;
 }
 
-.actions {
-  display:flex;
-  gap:18px;
-  padding:6px 8px;
+.bubble table {
+  border-collapse: collapse;
+  width: 100%;
+  display: block;
+  overflow-x: auto;
+  margin: 12px 0;
 }
 
-.actions button {
-  background:none;
-  color:var(--muted);
-  font-size:.9rem;
-  padding:2px 0;
+.bubble th, .bubble td {
+  border: 1px solid var(--line);
+  padding: 9px;
+  text-align: left;
 }
 
-/* COMPOSER */
-
-form#composer {
-  margin:0 12px;
-  padding:14px;
-  background:var(--panel);
-  border:1px solid var(--line);
-  border-radius:20px;
+.bubble th {
+  background: #ffffff12;
 }
 
-#hint {
-  color:var(--err);
-  font-size:.85rem;
-  min-height:0;
+/* PROFESSIONAL MATHJAX DISPLAY */
+
+.bubble mjx-container {
+  color: #f0efff !important;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
-#chips {
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
+.bubble mjx-container[display="true"] {
+  display: block;
+  margin: 17px 0 !important;
+  padding: 15px 10px;
+  background: linear-gradient(
+    120deg,
+    rgba(139,124,255,.09),
+    rgba(53,214,207,.05)
+  );
+  border: 1px solid rgba(160,180,255,.15);
+  border-radius: 13px;
+  text-align: center;
 }
 
-#chips:not(:empty) {
-  margin-bottom:8px;
+.bubble mjx-math {
+  font-size: 1.04em;
 }
 
-.chip {
-  position:relative;
+.message.user .bubble mjx-container {
+  color: white !important;
 }
 
-.chip img {
-  width:64px;
-  height:64px;
-  object-fit:cover;
-  border-radius:10px;
-  border:1px solid var(--line);
-  display:block;
+.uploaded-image {
+  display: block;
+  max-width: min(100%,360px);
+  max-height: 300px;
+  object-fit: contain;
+  border-radius: 12px;
+  margin: 8px 0 0;
+  border: 1px solid #ffffff25;
 }
 
-.chip button {
-  position:absolute;
-  top:-6px;
-  right:-6px;
-  width:22px;
-  height:22px;
-  border-radius:50%;
-  background:#444;
-  font-size:.75rem;
-  line-height:1;
+.message-tools {
+  display: flex;
+  gap: 7px;
+  margin-top: 8px;
+  opacity: .85;
 }
 
-textarea {
-  width:100%;
-  min-height:44px;
-  max-height:160px;
-  resize:none;
-  border:0;
-  background:none;
-  color:var(--ink);
-  font:inherit;
-  padding:4px;
+.tool {
+  border: 0;
+  background: transparent;
+  color: #aeb9d8;
+  font-size: 11px;
+  padding: 4px;
 }
 
-textarea::placeholder {
-  color:var(--muted);
+.tool:hover {
+  color: white;
 }
 
-.tools {
-  display:flex;
-  align-items:center;
-  gap:10px;
-  margin-top:8px;
+/* TYPING */
+
+.typing {
+  display: flex;
+  gap: 5px;
+  padding: 6px;
 }
 
-.tools .icon {
-  width:52px;
-  height:48px;
-  background:var(--btn);
-  border-radius:12px;
-  font-size:1.2rem;
+.typing i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #aaa2ff;
+  animation: bounce .8s infinite alternate;
 }
 
-.tools .icon.on {
-  background:#a33;
+.typing i:nth-child(2) {
+  animation-delay: .15s;
 }
 
-.tools .icon:disabled {
-  opacity:.4;
-  cursor:default;
+.typing i:nth-child(3) {
+  animation-delay: .3s;
 }
 
-#send {
-  margin-left:auto;
-  padding:13px 22px;
-  background:#252c78;
-  border-radius:12px;
-  font-weight:700;
+@keyframes bounce {
+  to {
+    transform: translateY(-5px);
+    opacity: .4;
+  }
 }
 
-footer {
-  padding:10px 16px calc(12px + env(safe-area-inset-bottom,0px));
-  text-align:center;
-  color:var(--muted);
-  font-size:.8rem;
+.hidden {
+  display: none !important;
 }
 
-/* SETTINGS */
+/* MESSAGE COMPOSER */
 
-dialog {
-  width:min(92vw,440px);
-  background:var(--bar);
-  color:var(--ink);
-  border:1px solid var(--line);
-  border-radius:16px;
-  padding:20px;
+.composer-wrap {
+  position: fixed;
+  bottom: 0;
+  left: 265px;
+  right: 0;
+  padding: 18px 22px 17px;
+  background: linear-gradient(
+    transparent,
+    rgba(8,12,25,.96) 25%
+  );
+  backdrop-filter: blur(10px);
+  z-index: 4;
 }
 
-dialog::backdrop {
-  background:rgba(0,0,0,.6);
+.composer {
+  width: min(900px,100%);
+  margin: auto;
+  border: 1px solid #9d9aff55;
+  background: rgba(20,28,52,.96);
+  border-radius: 19px;
+  padding: 11px 12px 9px;
+  box-shadow: 0 12px 45px #0006,0 0 25px #7564ff16;
 }
 
-dialog h2 {
-  margin:0 0 10px;
-  font-size:1.1rem;
+.attachments {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 2px 2px 8px;
 }
 
-dialog label {
-  display:block;
-  margin-top:12px;
-  font-size:.9rem;
-  color:var(--muted);
+.attachment-item {
+  font-size: 11px;
+  color: #d4dcf7;
+  background: #ffffff10;
+  padding: 7px 9px;
+  border-radius: 8px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
-dialog input {
-  width:100%;
-  margin-top:4px;
-  padding:10px;
-  font:inherit;
-  color:var(--ink);
-  background:var(--bg);
-  border:1px solid var(--line);
-  border-radius:8px;
+.attachment-item button {
+  background: transparent;
+  border: 0;
+  color: #ff9292;
+  font-size: 15px;
 }
 
-dialog p {
-  font-size:.85rem;
-  color:var(--muted);
-  margin:10px 0 0;
+.compose-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
 }
 
-dialog a {
-  color:var(--accent);
+.compose-row textarea {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  max-height: 150px;
+  resize: none;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  color: white;
+  padding: 10px 7px;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
-.dlg-actions {
-  display:flex;
-  gap:10px;
-  margin-top:16px;
+.compose-row textarea::placeholder {
+  color: #8793b2;
 }
 
-.dlg-actions button {
-  padding:10px 16px;
-  border-radius:10px;
-  background:var(--btn);
+.actionbtn {
+  min-width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: #ffffff0b;
+  color: #e9edff;
+  padding: 0 10px;
 }
 
-.dlg-actions .primary {
-  background:#2a3bd0;
-  font-weight:700;
-  margin-left:auto;
+.sendbtn {
+  background: linear-gradient(135deg,#8b7cff,#397cce);
+  border: 0;
+  font-weight: 700;
+  border-radius: 11px;
+  padding: 0 16px;
+  height: 38px;
+  color: white;
 }
 
-@media(max-width:480px) {
-  #log {
-    padding:12px;
+.sendbtn:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.status {
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 10px;
+}
+
+/* MOBILE RESPONSIVE */
+
+@media(max-width:760px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: -280px;
+    transition: left .25s;
+    box-shadow: 10px 0 30px #0006;
+  }
+
+  .sidebar.open {
+    left: 0;
+  }
+
+  .menu-button {
+    display: inline-block;
+  }
+
+  .topbar {
+    padding: 0 12px;
+  }
+
+  .chat {
+    padding: 18px 12px 160px;
   }
 
   .bubble {
-    padding:12px;
+    padding: 12px;
   }
 
-  .col {
-    max-width:88%;
+  .message-body {
+    max-width: 88%;
   }
 
-  .math-display {
-    font-size:1.15rem;
+  .composer-wrap {
+    left: 0;
+    padding: 10px;
   }
-}
 
-@media(prefers-reduced-motion:reduce) {
-  #scrim,#drawer {
-    transition:none;
+  .suggestions {
+    grid-template-columns: 1fr;
   }
-}
 
-@media(prefers-reduced-motion:no-preference) {
-  #log {
-    scroll-behavior:smooth;
+  .bubble mjx-container[display="true"] {
+    padding: 10px 5px;
+    margin: 12px 0 !important;
+  }
+
+  .bubble mjx-math {
+    font-size: 1em;
+  }
+
+  .sendbtn {
+    padding: 0 11px;
+    font-size: 12px;
   }
 }
 </style>
@@ -562,2165 +705,1231 @@ dialog a {
 
 <body>
 
-<header>
-  <button id="menu" type="button" aria-label="Open menu" aria-expanded="false">☰</button>
-  <h1 id="title">General Assistant</h1>
-  <button id="voice" type="button" aria-pressed="false">🔊 Voice</button>
-</header>
+<div class="app">
 
-<div id="scrim"></div>
+  <aside class="sidebar" id="sidebar">
 
-<aside id="drawer" aria-label="Menu">
+    <div class="brand">
+      <div class="logo">M</div>
+      <div>
+        <strong>Maynard AI</strong>
+        <small>Your intelligent assistant</small>
+      </div>
+    </div>
 
-  <button id="newChat" class="wide" type="button">＋ New chat</button>
+    <button class="newchat" id="newChat">
+      ＋ New conversation
+    </button>
 
-  <h2>Assistants</h2>
-  <div id="assistants"></div>
+    <div>
+      <div class="section">ASSISTANT MODES</div>
 
-  <h2>Recent chats</h2>
-  <div id="recent"></div>
+      <div class="modes" id="modes">
+        <button class="mode active" data-mode="general">🌐 General</button>
+        <button class="mode" data-mode="education">🎓 Education</button>
+        <button class="mode" data-mode="writing">✍️ Writing</button>
+        <button class="mode" data-mode="coding">💻 Coding</button>
+        <button class="mode" data-mode="research">🔎 Research</button>
+        <button class="mode" data-mode="business">💼 Business</button>
+        <button class="mode" data-mode="creative">🎨 Creative</button>
+        <button class="mode" data-mode="translator">🌍 Translator</button>
+        <button class="mode" data-mode="summarizer">📄 Summarizer</button>
+      </div>
+    </div>
 
-  <button id="openSettings" class="wide ghost" type="button">⚙️ Settings</button>
+    <div class="sidebottom">
+      <button class="sidebtn" id="exportBtn">
+        ⬇ Export conversation
+      </button>
 
-</aside>
+      <button class="sidebtn" id="clearBtn">
+        🗑 Clear conversation
+      </button>
+    </div>
 
-<main id="log" aria-live="polite"></main>
+  </aside>
 
-<form id="composer">
+  <main class="main">
 
-  <div id="hint" role="status"></div>
+    <header class="topbar">
 
-  <div id="chips"></div>
+      <div class="top-left">
+        <button
+          class="iconbtn menu-button"
+          id="menuBtn"
+          aria-label="Open menu"
+        >☰</button>
 
-  <textarea
-    id="input"
-    rows="1"
-    placeholder="Message Maynard AI..."
-    aria-label="Message"
-  ></textarea>
+        <h2 id="modeTitle">General Assistant</h2>
+      </div>
 
-  <div class="tools">
+      <div class="top-actions">
+        <button class="iconbtn" id="voiceToggle">
+          🔊 Voice
+        </button>
+      </div>
 
-    <button class="icon" id="attach" type="button" aria-label="Attach images">📎</button>
+    </header>
 
-    <button class="icon" id="mic" type="button" aria-label="Dictate">🎙️</button>
+    <section class="chat" id="chat">
 
-    <input id="file" type="file" accept="image/*" multiple hidden>
+      <div class="welcome" id="welcome">
 
-    <button id="send" type="submit">Send ➤</button>
+        <div class="welcome-logo">M</div>
 
-  </div>
+        <h1>
+          Welcome to
+          <span class="gradient">Maynard AI</span>
+        </h1>
 
-</form>
+        <p>
+          Your intelligent multipurpose assistant.
+          Ask questions, learn, write, code, translate
+          and explore ideas.
+        </p>
 
-<footer>
-  Maynard AI can make mistakes. Check important answers.
-</footer>
+        <div class="suggestions">
 
-<dialog id="settings">
+          <button
+            class="suggestion"
+            data-prompt="Explain quadratic equations step by step with examples."
+          >
+            🎓 <strong>Learn something</strong><br>
+            Understand a difficult topic.
+          </button>
 
-  <h2>Settings</h2>
+          <button
+            class="suggestion"
+            data-prompt="Help me write a professional letter."
+          >
+            ✍️ <strong>Write something</strong><br>
+            Create polished writing.
+          </button>
 
-  <label>
-    Your own Anthropic API key (optional)
-    <input id="keyInput" type="password" autocomplete="off" placeholder="sk-ant-...">
-  </label>
+          <button
+            class="suggestion"
+            data-prompt="Help me build a simple website using HTML, CSS and JavaScript."
+          >
+            💻 <strong>Build something</strong><br>
+            Get help with coding.
+          </button>
 
-  <label>
-    Model
-    <input id="modelInput" type="text" autocomplete="off">
-  </label>
+          <button
+            class="suggestion"
+            data-prompt="Give me five creative ideas for a new project."
+          >
+            💡 <strong>Explore ideas</strong><br>
+            Discover creative possibilities.
+          </button>
 
-  <p>
-    Leave the key blank to use this site's built-in assistant.
-    If you enter a key, it is stored in this browser and sent to Anthropic.
-    Get one at
-    <a href="https://console.anthropic.com/" target="_blank" rel="noopener">console.anthropic.com</a>.
-  </p>
+        </div>
+      </div>
 
-  <div class="dlg-actions">
+      <div id="messages"></div>
 
-    <button id="clearData" type="button">Delete saved chats</button>
+    </section>
 
-    <button id="saveSettings" class="primary" type="button">Save</button>
+    <div class="composer-wrap">
 
-  </div>
+      <div class="composer">
 
-</dialog>
+        <div class="attachments" id="attachmentList"></div>
+
+        <div class="compose-row">
+
+          <button class="actionbtn" id="attachBtn" title="Attach file">
+            📎
+          </button>
+
+          <button class="actionbtn" id="micBtn" title="Voice input">
+            🎙
+          </button>
+
+          <textarea
+            id="messageInput"
+            rows="1"
+            placeholder="Message Maynard AI..."
+          ></textarea>
+
+          <button class="sendbtn" id="sendBtn">
+            Send ➤
+          </button>
+
+          <input
+            type="file"
+            id="fileInput"
+            accept="image/jpeg,image/png,image/webp,.txt,.md,.csv,.tsv"
+            multiple
+            hidden
+          >
+
+        </div>
+      </div>
+
+      <div class="status">
+        Maynard AI can make mistakes. Check important answers.
+      </div>
+
+    </div>
+
+  </main>
+</div>
 
 <script>
-(() => {
 "use strict";
 
-/* ==========================================
-   MAYNARD AI CONFIGURATION
-========================================== */
-
-const API_URL = "https://api.anthropic.com/v1/messages";
-
-const DEFAULT_MODEL = "claude-sonnet-5-5";
-
-const MAX_IMAGES = 4;
-
-
-/* ==========================================
-   ASSISTANTS
-========================================== */
-
-const ASSISTANTS = [
-
-  {
-    id:"general",
-    name:"General Assistant",
-    icon:"💬",
-
-    greeting:"Hello! I'm Maynard AI. How can I help you today?",
-
-    system:`You are Maynard AI, a helpful, intelligent, accurate and friendly multilingual general assistant.
-
-Answer clearly and naturally.
-
-Support different subjects including education, science, technology, business, mathematics, programming, creativity and everyday questions.
-
-Use clear formatting, headings and examples when helpful.
-
-Be honest about limitations.`
-  },
-
-  {
-    id:"writer",
-    name:"Writing Helper",
-    icon:"✍️",
-
-    greeting:"What are we writing? Share your draft or tell me what you need.",
-
-    system:`You are Maynard AI Writing Helper.
-
-Help users write, rewrite, proofread and improve content.
-
-Support emails, essays, articles, stories, speeches, reports, letters and professional documents.
-
-Preserve the user's intended meaning.
-
-Use appropriate grammar, vocabulary, tone and formatting.`
-  },
-
-  {
-    id:"coder",
-    name:"Coding Helper",
-    icon:"💻",
-
-    greeting:"Welcome to Coding Helper. Share your code or describe your project.",
-
-    system:`You are Maynard AI Coding Helper.
-
-You are an experienced programming tutor and software development assistant.
-
-Support HTML, CSS, JavaScript, Python, Java, PHP, SQL, React, Node.js and other programming languages.
-
-Provide complete working code when requested.
-
-Explain important sections and identify errors.
-
-Never pretend code has been tested when it has not.`
-  },
-
-  {
-    id:"tutor",
-    name:"Study Tutor",
-    icon:"🎓",
-
-    greeting:"Welcome to Study Tutor. What subject are you studying?",
-
-    system:`You are Maynard AI Study Tutor.
-
-Teach concepts step by step using simple explanations, examples and clear definitions.
-
-Support school and university subjects.
-
-Help learners understand concepts rather than simply memorize answers.
-
-Create revision notes and practice questions when requested.
-
-Explain difficult topics patiently.`
-  },
-
-  {
-    id:"math",
-    name:"Math Solver",
-    icon:"➗",
-
-    greeting:"Welcome to Math Solver. Send a mathematics question or upload a picture.",
-
-    system:`You are Maynard AI Math Solver and Mathematics Tutor.
-
-Solve mathematics questions accurately and explain every important step.
-
-MANDATORY FORMATTING:
-
-1. Identify the given information.
-2. State the method or formula.
-3. Show the substitution.
-4. Show each calculation on a separate line.
-5. Explain the reasoning.
-6. Give the final answer clearly.
-7. Verify the result whenever possible.
-
-MATHEMATICAL NOTATION:
-
-Use readable mathematical symbols such as:
-
-× ÷ ± √ ∛ π θ α β
-≤ ≥ ≠ ≈ ∞ ∑ ∫ ∂
-→ ⇒ ∈ ∉ ∴
-
-Use proper powers:
-x², x³, x⁴, xⁿ.
-
-Use subscripts:
-a₁, a₂, x₁, x₂.
-
-Use clear fractions:
-(a + b)/(c + d).
-
-Use standard algebraic notation:
-2x + 5 = 15.
-
-Use quadratic notation:
-ax² + bx + c = 0.
-
-Avoid writing unnecessary LaTeX commands.
-
-When using display equations, put them between $$ and $$.
-
-Put every important equation on its own line.
-
-Do not compress multiple calculation steps into one paragraph.
-
-Make mathematics readable on mobile screens.`
-  },
-
-  {
-    id:"translator",
-    name:"Translator",
-    icon:"🌐",
-
-    greeting:"Welcome to Translator. Which language would you like to use?",
-
-    system:`You are Maynard AI Translator.
-
-Translate naturally and accurately.
-
-Support English, Twi, Akan, French, Spanish, German and other languages.
-
-Preserve the original meaning, tone and context.
-
-If the target language is unclear, ask the user.`
-  }
-
-];
-
-
-/* ==========================================
-   LOCAL STORAGE
-========================================== */
-
-const store = {
-
-  get(key, fallback) {
-    try {
-      const value = localStorage.getItem(key);
-      return value ? JSON.parse(value) : fallback;
-    } catch(error) {
-      return fallback;
-    }
-  },
-
-  set(key, value) {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-    } catch(error) {
-      console.warn("Storage unavailable:", error);
-    }
-  }
-
+/* =========================================
+   ELEMENTS AND SETTINGS
+========================================= */
+
+const $ = id => document.getElementById(id);
+
+const chat = $("messages");
+const messageInput = $("messageInput");
+const sendBtn = $("sendBtn");
+const fileInput = $("fileInput");
+const attachmentList = $("attachmentList");
+
+const modeNames = {
+  general: "General Assistant",
+  education: "Education Assistant",
+  writing: "Writing Assistant",
+  coding: "Coding Assistant",
+  research: "Research Assistant",
+  business: "Business Assistant",
+  creative: "Creative Assistant",
+  translator: "Translator",
+  summarizer: "Summarizer"
 };
 
-
-/* ==========================================
-   ELEMENTS
-========================================== */
-
-const $ = selector => document.querySelector(selector);
-
-const log = $("#log");
-const input = $("#input");
-const form = $("#composer");
-
-const sendBtn = $("#send");
-const voiceBtn = $("#voice");
-const micBtn = $("#mic");
-
-const chipsEl = $("#chips");
-const hintEl = $("#hint");
-
-const drawer = $("#drawer");
-const scrim = $("#scrim");
-const dlg = $("#settings");
-
-
-/* ==========================================
-   APPLICATION STATE
-========================================== */
-
-let settings = Object.assign(
-  {
-    key:"",
-    model:DEFAULT_MODEL
-  },
-  store.get("maynard.settings", {})
-);
-
-let chats = store.get("maynard.chats", []);
-
-let assistant =
-  ASSISTANTS.find(
-    a => a.id === store.get("maynard.assistant","general")
-  ) || ASSISTANTS[0];
-
-let chat;
-
-let pending = [];
-
+let currentMode = "general";
+let conversation = [];
+let attachments = [];
 let busy = false;
-let controller = null;
-let autoSpeak = false;
-let hintTimer = 0;
+let voiceEnabled = false;
+let mathReady = false;
+let mathQueue = Promise.resolve();
 
+/* =========================================
+   MATHEMATICS INSTRUCTIONS
+========================================= */
 
-/* ==========================================
-   CHAT MANAGEMENT
-========================================== */
+const mathInstructions = `
 
-function newChat() {
+IMPORTANT MATHEMATICS RESPONSE RULES:
 
-  return {
-    id:Date.now().toString(36),
-    assistantId:assistant.id,
-    title:"New chat",
-    messages:[]
-  };
+When solving a mathematical problem, provide a complete,
+accurate, well-organised educational solution.
 
+Use this structure whenever appropriate:
+
+### Problem
+Rewrite the given question clearly.
+
+### Step 1: Identify the given information
+State the equation, values or conditions.
+
+### Step 2: Choose the method
+Explain which mathematical method will be used and why.
+
+### Step 3: Solve step by step
+Show every important calculation.
+Write equations on separate lines.
+Explain what happens at each step.
+Do not skip important algebraic operations.
+
+### Step 4: Verify the answer
+Substitute the result into the original equation
+when verification is possible.
+
+### Final Answer
+State the answer clearly in bold ordinary text
+or in a clean, unboxed mathematical equation.
+
+MATHEMATICAL FORMATTING RULES:
+
+1. Use MathJax-compatible LaTeX.
+2. Use \\( ... \\) for inline equations.
+3. Use \\[ ... \\] for display equations.
+4. Use \\dfrac for readable fractions.
+5. Use \\sqrt for square roots.
+6. Use proper superscripts and subscripts.
+7. Use aligned environments only inside display delimiters.
+8. Never output raw LaTeX environments without delimiters.
+9. NEVER use \\boxed{} or \\fbox{}.
+10. Do not put the final answer inside a box.
+11. Do not use programming-style slash notation for ordinary fractions.
+12. Keep explanations detailed, readable and suitable for students.
+13. Check calculations before presenting the final answer.
+
+Do not use unnecessary explanations.
+Do not skip working.
+`;
+
+/* =========================================
+   SAVE CONVERSATION
+========================================= */
+
+function saveHistory() {
+  try {
+    localStorage.setItem(
+      "maynard_history",
+      JSON.stringify(conversation.slice(-50))
+    );
+  } catch (error) {
+    console.warn("Could not save conversation:", error);
+  }
 }
 
+/* =========================================
+   HTML SECURITY
+========================================= */
 
-/* ==========================================
-   SAFE HTML ESCAPING
-========================================== */
-
-function esc(value) {
-
-  return String(value)
-    .replace(/&/g,"&amp;")
-    .replace(/</g,"&lt;")
-    .replace(/>/g,"&gt;")
-    .replace(/"/g,"&quot;")
-    .replace(/'/g,"&#039;");
-
+function escapeHTML(value) {
+  return String(value).replace(/[&<>"']/g, c => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;"
+  })[c]);
 }
 
+/* =========================================
+   REMOVE BOXED LATEX ANSWERS
+========================================= */
 
-/* ==========================================
-   MATHEMATICAL NOTATION ENGINE
-========================================== */
+function removeBoxedLatex(source) {
+  let text = String(source);
+  let searchFrom = 0;
 
-function convertMathNotation(text) {
+  while (true) {
+    const start = text.indexOf("\\boxed", searchFrom);
 
-  // Convert square roots and fractions before
-  // replacing the main mathematical commands.
+    if (start === -1) break;
 
-  text = text.replace(
-    /\\sqrt(?:\[(\d+)\])?\{([^{}]+)\}/g,
-    (_, degree, value) => {
-      return degree
-        ? `ᵏ√(${value})`.replace("ᵏ", degree)
-        : `√(${value})`;
+    let open = text.indexOf("{", start + 6);
+
+    if (open === -1) break;
+
+    let depth = 1;
+    let end = open + 1;
+
+    while (end < text.length && depth > 0) {
+      if (text[end] === "{") depth++;
+      if (text[end] === "}") depth--;
+      end++;
     }
-  );
 
-  text = text.replace(
-    /\\frac\{([^{}]+)\}\{([^{}]+)\}/g,
-    "($1)/($2)"
-  );
+    if (depth !== 0) {
+      searchFrom = open + 1;
+      continue;
+    }
 
-  text = text.replace(
-    /\\dfrac\{([^{}]+)\}\{([^{}]+)\}/g,
-    "($1)/($2)"
-  );
+    const inside = text.slice(open + 1, end - 1);
 
-  text = text.replace(
-    /\\tfrac\{([^{}]+)\}\{([^{}]+)\}/g,
-    "($1)/($2)"
-  );
+    text =
+      text.slice(0, start) +
+      inside +
+      text.slice(end);
 
-  const symbols = {
-
-    "\\times":"×",
-    "\\div":"÷",
-    "\\cdot":"·",
-    "\\pm":"±",
-    "\\mp":"∓",
-
-    "\\neq":"≠",
-    "\\ne":"≠",
-
-    "\\leq":"≤",
-    "\\le":"≤",
-
-    "\\geq":"≥",
-    "\\ge":"≥",
-
-    "\\approx":"≈",
-    "\\equiv":"≡",
-
-    "\\infty":"∞",
-    "\\pi":"π",
-
-    "\\theta":"θ",
-    "\\alpha":"α",
-    "\\beta":"β",
-    "\\gamma":"γ",
-    "\\delta":"δ",
-
-    "\\Delta":"Δ",
-    "\\lambda":"λ",
-    "\\mu":"μ",
-    "\\sigma":"σ",
-    "\\omega":"ω",
-
-    "\\Sigma":"Σ",
-    "\\Omega":"Ω",
-
-    "\\sum":"∑",
-    "\\int":"∫",
-    "\\oint":"∮",
-
-    "\\partial":"∂",
-    "\\nabla":"∇",
-
-    "\\rightarrow":"→",
-    "\\leftarrow":"←",
-    "\\Rightarrow":"⇒",
-    "\\Leftrightarrow":"⇔",
-
-    "\\in":"∈",
-    "\\notin":"∉",
-    "\\subset":"⊂",
-    "\\supset":"⊃",
-
-    "\\therefore":"∴",
-    "\\because":"∵",
-
-    "\\degree":"°",
-    "\\circ":"°",
-
-    "\\emptyset":"∅",
-    "\\forall":"∀",
-    "\\exists":"∃"
-
-  };
-
-  for (const [command,symbol] of Object.entries(symbols)) {
-
-    text = text.split(command).join(symbol);
-
+    searchFrom = start + inside.length;
   }
 
-
-  // Superscripts
-
-  const superscripts = {
-
-    "0":"⁰",
-    "1":"¹",
-    "2":"²",
-    "3":"³",
-    "4":"⁴",
-    "5":"⁵",
-    "6":"⁶",
-    "7":"⁷",
-    "8":"⁸",
-    "9":"⁹",
-
-    "+":"⁺",
-    "-":"⁻",
-    "=":"⁼",
-
-    "n":"ⁿ",
-    "i":"ⁱ"
-
-  };
-
-
-  text = text.replace(
-    /\^\{([^{}]+)\}|\^([0-9n+-])/g,
-
-    (match,grouped,single) => {
-
-      const value = grouped || single;
-
-      return [...value]
-        .map(character => superscripts[character] || character)
-        .join("");
-
-    }
-  );
-
-
-  // Subscripts
-
-  const subscripts = {
-
-    "0":"₀",
-    "1":"₁",
-    "2":"₂",
-    "3":"₃",
-    "4":"₄",
-    "5":"₅",
-    "6":"₆",
-    "7":"₇",
-    "8":"₈",
-    "9":"₉",
-
-    "+":"₊",
-    "-":"₋",
-    "=":"₌",
-
-    "i":"ᵢ",
-    "n":"ₙ"
-
-  };
-
-
-  text = text.replace(
-    /_\{([^{}]+)\}|_([0-9in+-])/g,
-
-    (match,grouped,single) => {
-
-      const value = grouped || single;
-
-      return [...value]
-        .map(character => subscripts[character] || character)
-        .join("");
-
-    }
-  );
-
-
-  // Common LaTeX formatting commands.
-
-  text = text.replace(
-    /\\(?:mathrm|mathbf|mathit|text|operatorname)\{([^{}]*)\}/g,
-    "$1"
-  );
-
-  text = text.replace(
-    /\\(?:quad|qquad|,|;|!|:)/g,
-    " "
-  );
-
-  text = text.replace(
-    /\\(?:left|right)/g,
-    ""
-  );
-
-  // Remove remaining simple braces.
-
-  text = text.replace(/[{}]/g,"");
-
-  return text;
-
+  return text.replace(/\\fbox\s*\{([^{}]*)\}/g, "$1");
 }
 
+/* =========================================
+   MATHEMATICAL ENVIRONMENT FIXER
 
-/* ==========================================
-   MARKDOWN AND MATH RENDERER
-========================================== */
+   Handles raw environments such as:
+   \begin{aligned}
+   ...
+   \end{aligned}
 
-function md(text) {
+   These are wrapped in display delimiters
+   so MathJax can render them correctly.
+========================================= */
 
-  return String(text).split("```").map((part,index) => {
+function normalizeMathSource(source) {
+  let text = removeBoxedLatex(source);
 
-    // Preserve code blocks.
+  const environments = [
+    "aligned",
+    "alignedat",
+    "gathered",
+    "cases",
+    "array",
+    "matrix",
+    "pmatrix",
+    "bmatrix",
+    "Bmatrix",
+    "vmatrix",
+    "Vmatrix",
+    "equation",
+    "equation*",
+    "align",
+    "align*",
+    "gather",
+    "gather*"
+  ];
 
-    if (index % 2) {
+  const hasMathDelimiters =
+    text.includes("\\[") ||
+    text.includes("$$");
 
-      return "<pre><code>" +
-        esc(part.replace(/^[A-Za-z0-9+#-]*\n/,"")) +
-        "</code></pre>";
+  if (!hasMathDelimiters) {
+    const names = environments.join("|");
 
+    const pattern = new RegExp(
+      "\\\\begin\\{(" + names + ")\\}" +
+      "[\\s\\S]*?" +
+      "\\\\end\\{\\1\\}",
+      "g"
+    );
+
+    text = text.replace(pattern, match => {
+      return "\\[\n" + match + "\n\\]";
+    });
+  }
+
+  return text;
+}
+
+/* =========================================
+   PROTECT MATHEMATICS BEFORE MARKDOWN
+
+   Markdown can interfere with LaTeX.
+   This function protects math expressions
+   until Markdown has finished processing.
+========================================= */
+
+function protectMath(source) {
+  const saved = [];
+
+  let text = normalizeMathSource(source);
+
+  const patterns = [
+    /\$\$[\s\S]+?\$\$/g,
+    /\\\[[\s\S]+?\\\]/g,
+    /\\\([\s\S]+?\\\)/g,
+    /(?<!\\)\$(?!\$)[^\n$]+(?<!\\)\$(?!\$)/g
+  ];
+
+  for (const pattern of patterns) {
+    text = text.replace(pattern, match => {
+      const token = `MATHPROTECTEDTOKEN${saved.length}END`;
+
+      saved.push(match);
+
+      return token;
+    });
+  }
+
+  return {
+    text,
+    saved
+  };
+}
+
+/* =========================================
+   RESTORE MATHEMATICAL EXPRESSIONS
+========================================= */
+
+function restoreMathTokens(root, saved) {
+  const walker = document.createTreeWalker(
+    root,
+    NodeFilter.SHOW_TEXT
+  );
+
+  const nodes = [];
+
+  while (walker.nextNode()) {
+    nodes.push(walker.currentNode);
+  }
+
+  for (const node of nodes) {
+    let value = node.nodeValue;
+    let changed = false;
+
+    saved.forEach((math, index) => {
+      const token = `MATHPROTECTEDTOKEN${index}END`;
+
+      if (value.includes(token)) {
+        value = value.split(token).join(math);
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      node.nodeValue = value;
     }
+  }
+}
 
-    const mathBlocks = [];
+/* =========================================
+   MARKDOWN RENDERING
+========================================= */
 
+function formatMarkdown(source) {
+  const protectedContent = protectMath(source);
 
-    function stashMath(value,display) {
+  let html;
 
-      mathBlocks.push({
-
-        value:convertMathNotation(value),
-        display
-
-      });
-
-      return "\uE000" + (mathBlocks.length - 1) + "\uE001";
-
-    }
-
-
-    let processed = part;
-
-
-    // Display equations.
-
-    processed = processed.replace(
-      /\$\$([\s\S]+?)\$\$/g,
-      (_,value) => stashMath(value,true)
-    );
-
-
-    processed = processed.replace(
-      /\\\[([\s\S]+?)\\\]/g,
-      (_,value) => stashMath(value,true)
-    );
-
-
-    // Inline equations.
-
-    processed = processed.replace(
-      /\\\(([\s\S]+?)\\\)/g,
-      (_,value) => stashMath(value,false)
-    );
-
-
-    processed = processed.replace(
-      /\$(?!\s)([^$\n]+?)(?<!\s)\$(?!\d)/g,
-      (_,value) => stashMath(value,false)
-    );
-
-
-    // Escape HTML before formatting.
-
-    let html = esc(processed);
-
-
-    // Markdown formatting.
-
-    html = html
-
-      .replace(
-        /`([^`\n]+)`/g,
-        "<code>$1</code>"
-      )
-
-      .replace(
-        /\*\*([^*\n]+)\*\*/g,
-        "<strong>$1</strong>"
-      )
-
-      .replace(
-        /\*([^*\n]+)\*/g,
-        "<em>$1</em>"
-      );
-
-
-    // Restore mathematical expressions.
-
-    html = html.replace(
-      /\uE000(\d+)\uE001/g,
-
-      (_,number) => {
-
-        const math = mathBlocks[Number(number)];
-
-        if (!math) return "";
-
-        const className = math.display
-          ? "math-display"
-          : "math-inline";
-
-        return `<span class="${className}">${esc(math.value)}</span>`;
-
+  if (window.marked && window.DOMPurify) {
+    html = marked.parse(
+      protectedContent.text,
+      {
+        breaks: true,
+        gfm: true
       }
     );
 
-
-    return html;
-
-  }).join("");
-
-}
-
-
-function setBody(element,text) {
-
-  element.dataset.raw = text;
-
-  element.innerHTML = md(text);
-
-}
-
-
-/* ==========================================
-   NOTIFICATIONS
-========================================== */
-
-function flash(message) {
-
-  hintEl.textContent = message;
-
-  clearTimeout(hintTimer);
-
-  hintTimer = setTimeout(() => {
-
-    hintEl.textContent = "";
-
-  },4000);
-
-}
-
-
-/* ==========================================
-   VOICE
-========================================== */
-
-function speak(text) {
-
-  if (!("speechSynthesis" in window)) {
-
-    flash("Voice reading is not supported in this browser.");
-    return;
-
+    html = DOMPurify.sanitize(html);
+  } else {
+    html = escapeHTML(protectedContent.text)
+      .replace(/\n/g, "<br>");
   }
 
-  speechSynthesis.cancel();
+  const container = document.createElement("div");
 
-  speechSynthesis.speak(
-    new SpeechSynthesisUtterance(text)
+  container.innerHTML = html;
+
+  restoreMathTokens(
+    container,
+    protectedContent.saved
   );
 
+  return container.innerHTML;
 }
 
+/* =========================================
+   MATHJAX RENDERING QUEUE
 
-/* ==========================================
-   BUTTON CREATION
-========================================== */
+   Ensures equations are typeset in order.
+========================================= */
 
-function actionButton(label,onClick) {
+function renderMath(element) {
+  if (
+    !mathReady ||
+    !window.MathJax ||
+    !MathJax.typesetPromise
+  ) {
+    return;
+  }
 
-  const button = document.createElement("button");
+  mathQueue = mathQueue.then(async () => {
+    try {
+      MathJax.typesetClear([element]);
 
-  button.type = "button";
+      await MathJax.typesetPromise([element]);
 
-  button.textContent = label;
-
-  button.addEventListener("click",() => onClick(button));
-
-  return button;
-
+    } catch (error) {
+      console.warn("Math rendering error:", error);
+    }
+  });
 }
 
+/* =========================================
+   ADD MESSAGE
+========================================= */
 
-/* ==========================================
-   MESSAGE DISPLAY
-========================================== */
-
-function addMessage(role,text,images,note) {
-
+function addMessage(role, content, options = {}) {
   const row = document.createElement("div");
 
-  row.className = "row " + role;
-
+  row.className =
+    "message " +
+    (role === "user" ? "user" : "assistant");
 
   const avatar = document.createElement("div");
 
   avatar.className = "avatar";
-
   avatar.textContent = role === "user" ? "You" : "M";
 
+  const body = document.createElement("div");
 
-  const col = document.createElement("div");
-
-  col.className = "col";
-
+  body.className = "message-body";
 
   const bubble = document.createElement("div");
 
   bubble.className = "bubble";
+  bubble.innerHTML = formatMarkdown(content);
 
+  body.appendChild(bubble);
 
-  // Display attached images.
+  if (options.images) {
+    options.images.forEach(file => {
+      const image = document.createElement("img");
 
-  if (images && images.length) {
+      image.className = "uploaded-image";
+      image.src = file.data;
+      image.alt = file.name || "Uploaded image";
 
-    const group = document.createElement("div");
-
-    group.className = "thumbs";
-
-    images.forEach(src => {
-
-      const image = new Image();
-
-      image.src = src;
-
-      image.alt = "Attached image";
-
-      group.append(image);
-
+      bubble.appendChild(image);
     });
-
-    bubble.append(group);
-
   }
-
-
-  if (note) {
-
-    const messageNote = document.createElement("div");
-
-    messageNote.className = "note";
-
-    messageNote.textContent = note;
-
-    bubble.append(messageNote);
-
-  }
-
-
-  const body = document.createElement("div");
-
-  setBody(body,text);
-
-  bubble.append(body);
-
-  col.append(bubble);
-
-
-  // Assistant actions.
 
   if (role === "assistant") {
+    const tools = document.createElement("div");
 
-    const actions = document.createElement("div");
+    tools.className = "message-tools";
 
-    actions.className = "actions";
+    const copy = document.createElement("button");
 
+    copy.className = "tool";
+    copy.textContent = "Copy";
 
-    actions.append(
+    copy.onclick = () => copyText(content, copy);
 
-      actionButton("Copy",async button => {
+    const speak = document.createElement("button");
 
-        try {
+    speak.className = "tool";
+    speak.textContent = "Read aloud";
 
-          await navigator.clipboard.writeText(
-            body.dataset.raw || ""
-          );
+    speak.onclick = () => speakText(content);
 
-          button.textContent = "Copied";
+    tools.append(copy, speak);
 
-        } catch(error) {
-
-          button.textContent = "Can't copy";
-
-        }
-
-        setTimeout(() => {
-
-          button.textContent = "Copy";
-
-        },1500);
-
-      }),
-
-      actionButton("Read aloud",() => {
-
-        speak(body.dataset.raw || "");
-
-      })
-
-    );
-
-
-    col.append(actions);
-
+    body.appendChild(tools);
   }
 
+  row.append(avatar, body);
 
-  row.append(avatar,col);
+  chat.appendChild(row);
 
-  log.append(row);
+  renderMath(bubble);
 
-  log.scrollTop = log.scrollHeight;
+  $("welcome").classList.add("hidden");
 
-  return {body,bubble};
+  chat.scrollTop = chat.scrollHeight;
 
+  return row;
 }
 
+/* =========================================
+   RENDER SAVED CONVERSATION
+========================================= */
 
-/* ==========================================
-   RENDER CHAT
-========================================== */
+function renderConversation() {
+  chat.innerHTML = "";
 
-function renderChat() {
+  if (!conversation.length) {
+    $("welcome").classList.remove("hidden");
+    return;
+  }
 
-  log.textContent = "";
+  $("welcome").classList.add("hidden");
 
-  $("#title").textContent = assistant.name;
-
-
-  addMessage(
-    "assistant",
-    assistant.greeting
-  );
-
-
-  chat.messages.forEach(message => {
-
-    const lost =
-      message.imgs &&
-      !(message.images && message.images.length);
-
-    addMessage(
-
-      message.role,
-
-      message.text,
-
-      message.images,
-
-      lost
-        ? "🖼 " + message.imgs + " image(s) not saved"
-        : ""
-
-    );
-
+  conversation.forEach(item => {
+    addMessage(item.role, item.content);
   });
-
 }
 
+/* =========================================
+   COPY MESSAGE
+========================================= */
 
-/* ==========================================
-   DRAWER
-========================================== */
+async function copyText(value, button) {
+  try {
+    await navigator.clipboard.writeText(value);
 
-function openDrawer(open) {
+    button.textContent = "Copied!";
 
-  drawer.classList.toggle("open",open);
+    setTimeout(() => {
+      button.textContent = "Copy";
+    }, 1400);
 
-  scrim.classList.toggle("open",open);
-
-  $("#menu").setAttribute(
-    "aria-expanded",
-    String(open)
-  );
-
-  if (open) renderDrawer();
-
+  } catch {
+    alert("Copy is not available in this browser.");
+  }
 }
 
+/* =========================================
+   VOICE OUTPUT
+========================================= */
 
-function renderDrawer() {
+function speakText(value) {
+  if (!("speechSynthesis" in window)) {
+    alert("Speech output is not supported in this browser.");
+    return;
+  }
 
-  const box = $("#assistants");
+  speechSynthesis.cancel();
 
-  box.textContent = "";
+  const clean = String(value)
+    .replace(/```[\s\S]*?```/g, " code omitted ")
+    .replace(
+      /\\\[([\s\S]*?)\\\]|\\\(([\s\S]*?)\\\)|\$\$([\s\S]*?)\$\$|\$([^$]+)\$/g,
+      " mathematical expression "
+    )
+    .replace(/[#*`_\\{}$]/g, " ")
+    .replace(/\s+/g, " ");
 
+  const utterance = new SpeechSynthesisUtterance(clean);
 
-  ASSISTANTS.forEach(a => {
+  utterance.lang = "en-US";
+  utterance.rate = 1;
 
+  speechSynthesis.speak(utterance);
+}
+
+/* =========================================
+   TYPING INDICATOR
+========================================= */
+
+function showTyping() {
+  const row = document.createElement("div");
+
+  row.className = "message assistant";
+  row.id = "typingIndicator";
+
+  row.innerHTML = `
+    <div class="avatar">M</div>
+    <div class="message-body">
+      <div class="bubble">
+        <div class="typing">
+          <i></i><i></i><i></i>
+        </div>
+        <small>Maynard AI is thinking...</small>
+      </div>
+    </div>
+  `;
+
+  chat.appendChild(row);
+
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function removeTyping() {
+  $("typingIndicator")?.remove();
+}
+
+/* =========================================
+   IMAGE RESIZING
+========================================= */
+
+function resizeImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onerror = reject;
+
+    reader.onload = () => {
+      const img = new Image();
+
+      img.onerror = reject;
+
+      img.onload = () => {
+        const max = 1280;
+
+        const scale = Math.min(
+          1,
+          max / Math.max(img.width, img.height)
+        );
+
+        const canvas = document.createElement("canvas");
+
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+
+        const context = canvas.getContext("2d");
+
+        context.drawImage(
+          img,
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        );
+
+        resolve(
+          canvas.toDataURL("image/jpeg", .75)
+        );
+      };
+
+      img.src = reader.result;
+    };
+
+    reader.readAsDataURL(file);
+  });
+}
+
+/* =========================================
+   ATTACHMENT LIST
+========================================= */
+
+function updateAttachmentList() {
+  attachmentList.innerHTML = "";
+
+  attachments.forEach((file, index) => {
     const item = document.createElement("div");
 
-    item.className = "item";
+    item.className = "attachment-item";
 
+    const name = document.createElement("span");
 
-    const button = document.createElement("button");
-
-    button.type = "button";
-
-    button.textContent = a.icon + "  " + a.name;
-
-
-    if (a.id === assistant.id) {
-
-      button.setAttribute("aria-current","true");
-
-    }
-
-
-    button.addEventListener("click",() => {
-
-      assistant = a;
-
-      store.set("maynard.assistant",a.id);
-
-      startNewChat();
-
-    });
-
-
-    item.append(button);
-
-    box.append(item);
-
-  });
-
-
-  const recent = $("#recent");
-
-  recent.textContent = "";
-
-
-  if (!chats.length) {
-
-    const empty = document.createElement("div");
-
-    empty.className = "empty";
-
-    empty.textContent = "No saved chats yet.";
-
-    recent.append(empty);
-
-  }
-
-
-  chats.forEach(c => {
-
-    const item = document.createElement("div");
-
-    item.className = "item";
-
-
-    const button = document.createElement("button");
-
-    button.type = "button";
-
-    button.textContent = c.title;
-
-
-    if (c.id === chat.id) {
-
-      button.setAttribute("aria-current","true");
-
-    }
-
-
-    button.addEventListener("click",() => {
-
-      if (busy) {
-
-        return flash("Wait for the reply to finish, or press Stop.");
-
-      }
-
-
-      chat = JSON.parse(JSON.stringify(c));
-
-      assistant =
-        ASSISTANTS.find(a => a.id === c.assistantId) ||
-        ASSISTANTS[0];
-
-
-      pending = [];
-
-      renderChips();
-
-      renderChat();
-
-      openDrawer(false);
-
-    });
-
-
-    const del = document.createElement("button");
-
-    del.type = "button";
-
-    del.className = "del";
-
-    del.textContent = "✕";
-
-    del.setAttribute(
-      "aria-label",
-      "Delete chat " + c.title
-    );
-
-
-    del.addEventListener("click",() => {
-
-      chats = chats.filter(x => x.id !== c.id);
-
-      store.set("maynard.chats",chats);
-
-      if (c.id === chat.id) {
-
-        startNewChat();
-
-      } else {
-
-        renderDrawer();
-
-      }
-
-    });
-
-
-    item.append(button,del);
-
-    recent.append(item);
-
-  });
-
-}
-
-
-/* ==========================================
-   NEW CHAT
-========================================== */
-
-function startNewChat() {
-
-  if (busy && controller) {
-
-    controller.abort();
-
-  }
-
-  chat = newChat();
-
-  pending = [];
-
-  renderChips();
-
-  renderChat();
-
-  openDrawer(false);
-
-}
-
-
-/* ==========================================
-   SAVE CHAT
-========================================== */
-
-function saveChat() {
-
-  const slim = Object.assign({},chat,{
-
-    messages:chat.messages.map(message => ({
-
-      role:message.role,
-
-      text:message.text,
-
-      imgs:
-        (message.images && message.images.length) ||
-        message.imgs ||
-        0
-
-    }))
-
-  });
-
-
-  const index = chats.findIndex(
-    c => c.id === chat.id
-  );
-
-
-  if (index >= 0) {
-
-    chats[index] = slim;
-
-  } else {
-
-    chats.unshift(slim);
-
-  }
-
-
-  chats = chats.slice(0,30);
-
-  store.set("maynard.chats",chats);
-
-}
-
-
-/* ==========================================
-   IMAGE PROCESSING
-========================================== */
-
-async function toDataUrl(file) {
-
-  const bitmap = await createImageBitmap(file);
-
-  const scale = Math.min(
-    1,
-    1568 / Math.max(bitmap.width,bitmap.height)
-  );
-
-
-  const canvas = document.createElement("canvas");
-
-  canvas.width = Math.round(bitmap.width * scale);
-
-  canvas.height = Math.round(bitmap.height * scale);
-
-
-  const context = canvas.getContext("2d");
-
-  context.fillStyle = "#fff";
-
-  context.fillRect(
-    0,
-    0,
-    canvas.width,
-    canvas.height
-  );
-
-
-  context.drawImage(
-    bitmap,
-    0,
-    0,
-    canvas.width,
-    canvas.height
-  );
-
-
-  if (bitmap.close) bitmap.close();
-
-
-  return canvas.toDataURL("image/jpeg",0.85);
-
-}
-
-
-async function addFiles(files) {
-
-  for (const file of files) {
-
-    if (!file.type.startsWith("image/")) {
-
-      flash("Only image files can be attached.");
-
-      continue;
-
-    }
-
-
-    if (pending.length >= MAX_IMAGES) {
-
-      flash("You can attach up to " + MAX_IMAGES + " images.");
-
-      break;
-
-    }
-
-
-    try {
-
-      pending.push(await toDataUrl(file));
-
-    } catch(error) {
-
-      flash("Couldn't read " + file.name + ".");
-
-    }
-
-  }
-
-
-  renderChips();
-
-}
-
-
-/* ==========================================
-   IMAGE PREVIEW
-========================================== */
-
-function renderChips() {
-
-  chipsEl.textContent = "";
-
-
-  pending.forEach((src,index) => {
-
-    const wrapper = document.createElement("div");
-
-    wrapper.className = "chip";
-
-
-    const image = new Image();
-
-    image.src = src;
-
-    image.alt = "Attached image " + (index + 1);
-
+    name.textContent = file.name;
 
     const remove = document.createElement("button");
 
     remove.type = "button";
-
-    remove.textContent = "✕";
+    remove.textContent = "×";
 
     remove.setAttribute(
       "aria-label",
-      "Remove image " + (index + 1)
+      "Remove " + file.name
     );
 
+    remove.onclick = () => {
+      attachments.splice(index, 1);
 
-    remove.addEventListener("click",() => {
-
-      pending.splice(index,1);
-
-      renderChips();
-
-    });
-
-
-    wrapper.append(image,remove);
-
-    chipsEl.append(wrapper);
-
-  });
-
-}
-
-
-/* ==========================================
-   API MESSAGE PREPARATION
-========================================== */
-
-function apiMessages() {
-
-  return chat.messages.map(message => {
-
-    const content = [];
-
-
-    (message.images || []).forEach(src => {
-
-      const parts = src.split(",");
-
-      content.push({
-
-        type:"image",
-
-        source:{
-
-          type:"base64",
-
-          media_type:parts[0].slice(
-            5,
-            parts[0].indexOf(";")
-          ),
-
-          data:parts[1]
-
-        }
-
-      });
-
-    });
-
-
-    if (
-      message.imgs &&
-      !(message.images && message.images.length)
-    ) {
-
-      content.push({
-
-        type:"text",
-
-        text:
-          "[Earlier, the user attached " +
-          message.imgs +
-          " image(s) that are no longer available.]"
-
-      });
-
-    }
-
-
-    if (message.text) {
-
-      content.push({
-
-        type:"text",
-
-        text:message.text
-
-      });
-
-    }
-
-
-    return {
-
-      role:message.role,
-
-      content
-
+      updateAttachmentList();
     };
 
+    item.append(name, remove);
+
+    attachmentList.appendChild(item);
   });
-
 }
 
+/* =========================================
+   FILE ATTACHMENT
+========================================= */
 
-/* ==========================================
-   SYSTEM INSTRUCTIONS
-========================================== */
+$("attachBtn").onclick = () => {
+  fileInput.click();
+};
 
-function getSystemPrompt() {
+fileInput.onchange = async () => {
+  for (const file of Array.from(fileInput.files || [])) {
 
-  return assistant.system + `
+    if (attachments.length >= 5) {
+      alert("You can attach up to five files.");
+      break;
+    }
 
-ADDITIONAL RESPONSE RULES:
+    const isImage = [
+      "image/jpeg",
+      "image/png",
+      "image/webp"
+    ].includes(file.type);
 
-- Be accurate and helpful.
-- Organize long answers clearly.
-- Use readable Markdown.
-- Use headings when appropriate.
-- Avoid unnecessary repetition.
-- Explain important steps.
+    const isText = /\.(txt|md|csv|tsv)$/i.test(file.name);
 
-MATHEMATICAL NOTATION:
+    if (!isImage && !isText) {
+      alert(
+        "Supported files: JPG, PNG, WEBP, TXT, MD, CSV and TSV."
+      );
+      continue;
+    }
 
-- Use standard Unicode mathematical symbols.
-- Use x², x³, xⁿ for powers.
-- Use √ for square roots.
-- Use × and ÷ for multiplication and division.
-- Use π, θ, α and β where appropriate.
-- Use ≤, ≥, ≠ and ≈ where appropriate.
-- Use readable fractions such as (a + b)/(c + d).
-- Put important equations between $$ and $$.
-- Put every calculation step on a separate line.
-- Avoid unnecessary LaTeX commands.
-- Explain mathematical operations clearly.
-- Check final answers whenever possible.
-
-Today's date is ${new Date().toDateString()}.
-`;
-
-}
-
-
-/* ==========================================
-   STREAMING API
-========================================== */
-
-async function streamReply(messages,onText,signal) {
-
-  const system = getSystemPrompt();
-
-
-  // Use the existing Groq/backend integration
-  // when no personal Anthropic key is supplied.
-
-  const response = !settings.key
-
-    ? await fetch("/api/chat",{
-
-        method:"POST",
-
-        signal,
-
-        headers:{
-
-          "content-type":"application/json"
-
-        },
-
-        body:JSON.stringify({
-
-          messages,
-
-          system
-
-        })
-
-      })
-
-
-    // Optional direct Anthropic connection.
-
-    : await fetch(API_URL,{
-
-        method:"POST",
-
-        signal,
-
-        headers:{
-
-          "content-type":"application/json",
-
-          "x-api-key":settings.key,
-
-          "anthropic-version":"2023-06-01",
-
-          "anthropic-dangerous-direct-browser-access":"true"
-
-        },
-
-        body:JSON.stringify({
-
-          model:settings.model || DEFAULT_MODEL,
-
-          max_tokens:4096,
-
-          stream:true,
-
-          system,
-
-          messages
-
-        })
-
-      });
-
-
-  if (!response.ok) {
-
-    let message = "Request failed (" + response.status + ")";
+    if (file.size > 12 * 1024 * 1024) {
+      alert("Each file must be smaller than 12 MB.");
+      continue;
+    }
 
     try {
+      const data = isImage
+        ? await resizeImage(file)
+        : (await file.text()).slice(0, 20000);
 
-      const data = await response.json();
+      attachments.push({
+        name: file.name,
+        type: isImage
+          ? "image/jpeg"
+          : (file.type || "text/plain"),
+        data
+      });
 
-      message =
-        data.error?.message ||
-        data.message ||
-        message;
-
-    } catch(error) {}
-
-    throw new Error(message);
-
-  }
-
-
-  const reader = response.body.getReader();
-
-  const decoder = new TextDecoder();
-
-  let buffer = "";
-
-  let output = "";
-
-
-  for (;;) {
-
-    const {done,value} = await reader.read();
-
-    if (done) break;
-
-
-    buffer += decoder.decode(
-      value,
-      {stream:true}
-    );
-
-
-    const lines = buffer.split("\n");
-
-    buffer = lines.pop();
-
-
-    for (const line of lines) {
-
-      if (!line.startsWith("data:")) continue;
-
-
-      const raw = line.slice(5).trim();
-
-      if (!raw || raw === "[DONE]") continue;
-
-
-      let event;
-
-      try {
-
-        event = JSON.parse(raw);
-
-      } catch(error) {
-
-        continue;
-
-      }
-
-
-      // Anthropic streaming.
-
-      if (
-        event.type === "content_block_delta" &&
-        event.delta?.text
-      ) {
-
-        output += event.delta.text;
-
-        onText(output);
-
-      }
-
-
-      // Groq/OpenAI-compatible streaming.
-
-      if (event.choices?.[0]?.delta?.content) {
-
-        const content =
-          event.choices[0].delta.content;
-
-        if (typeof content === "string") {
-
-          output += content;
-
-          onText(output);
-
-        }
-
-      }
-
-
-      if (event.type === "error") {
-
-        throw new Error(
-          event.error?.message || "Stream error"
-        );
-
-      }
-
+    } catch {
+      alert("Could not read " + file.name);
     }
-
   }
 
+  updateAttachmentList();
 
-  return output;
+  fileInput.value = "";
+};
 
+/* =========================================
+   DETECT MATHEMATICS QUESTIONS
+========================================= */
+
+function isMathQuestion(message) {
+  return /solve|calculate|simplify|factoris|factoriz|quadratic|equation|simultaneous|differentiat|integrat|find the value|find x|evaluate|expand|algebra|geometry|trigonometry|probability|matrix|matrices|fraction|percentage|indices|logarithm|theorem/i.test(message)
+    || /[=±√∫∑≤≥]/.test(message)
+    || /[a-z]\s*[\^²³]\s*\d*/i.test(message);
 }
 
-
-/* ==========================================
-   BUSY STATE
-========================================== */
-
-function setBusy(value) {
-
-  busy = value;
-
-  sendBtn.textContent = value
-    ? "Stop ■"
-    : "Send ➤";
-
-}
-
-
-/* ==========================================
+/* =========================================
    SEND MESSAGE
-========================================== */
+========================================= */
 
-async function send() {
+async function sendMessage() {
+  if (busy) return;
 
-  if (busy) {
+  const message = messageInput.value.trim();
 
-    if (controller) controller.abort();
+  if (!message && !attachments.length) return;
 
-    return;
+  const currentAttachments = attachments.slice();
 
-  }
+  attachments = [];
 
+  updateAttachmentList();
 
-  const text = input.value.trim();
+  const displayText =
+    message || "Please examine my attachment.";
 
+  conversation.push({
+    role: "user",
+    content: displayText
+  });
 
-  if (!text && !pending.length) return;
+  addMessage("user", displayText, {
+    images: currentAttachments.filter(file =>
+      file.type.startsWith("image/")
+    )
+  });
 
+  messageInput.value = "";
 
-  const message = {
+  messageInput.style.height = "44px";
 
-    role:"user",
+  saveHistory();
 
-    text,
+  busy = true;
 
-    images:pending.slice()
+  sendBtn.disabled = true;
 
-  };
-
-
-  chat.messages.push(message);
-
-
-  if (chat.title === "New chat") {
-
-    chat.title = (text || "Image chat").slice(0,40);
-
-  }
-
-
-  addMessage(
-    "user",
-    text,
-    message.images
-  );
-
-
-  input.value = "";
-
-  input.style.height = "auto";
-
-  pending = [];
-
-  renderChips();
-
-
-  const view = addMessage(
-    "assistant",
-    "Thinking..."
-  );
-
-
-  controller = new AbortController();
-
-  setBusy(true);
-
-
-  let output = "";
-
+  showTyping();
 
   try {
+    const history = conversation
+      .slice(-13, -1)
+      .map(item => ({
+        role: item.role,
+        content: item.content
+      }));
 
-    await streamReply(
+    /*
+      Add stronger mathematics instructions
+      to mathematical questions without changing
+      the message displayed in the chat.
+    */
 
-      apiMessages(),
+    let apiMessage = message;
 
-      text => {
+    if (
+      currentMode === "education" ||
+      isMathQuestion(message)
+    ) {
+      apiMessage += "\n\n" + mathInstructions;
+    }
 
-        output = text;
+    const response = await fetch("/api/chat", {
+      method: "POST",
 
-        setBody(view.body,text);
-
-        log.scrollTop = log.scrollHeight;
-
+      headers: {
+        "Content-Type": "application/json"
       },
 
-      controller.signal
-
-    );
-
-
-    if (!output.trim()) {
-
-      view.body.textContent =
-        "I couldn't generate a response. Please try again.";
-
-    }
-
-
-  } catch(error) {
-
-    if (error.name !== "AbortError") {
-
-      view.bubble.classList.add("error");
-
-
-      if (!output) {
-
-        view.body.textContent =
-          "⚠️ " + error.message;
-
-      } else {
-
-        view.body.textContent +=
-          "\n\n⚠️ " + error.message;
-
-      }
-
-    } else if (!output) {
-
-      view.body.textContent = "Stopped.";
-
-    }
-
-  } finally {
-
-    setBusy(false);
-
-    controller = null;
-
-  }
-
-
-  if (output) {
-
-    chat.messages.push({
-
-      role:"assistant",
-
-      text:output
-
+      body: JSON.stringify({
+        message: apiMessage,
+        mode: currentMode,
+        history,
+        attachments: currentAttachments
+      })
     });
 
+    const result = await response.json();
 
-    if (autoSpeak) {
+    removeTyping();
 
-      speak(output);
-
+    if (!response.ok || !result.success) {
+      throw new Error(
+        result.error ||
+        "Maynard AI could not complete your request."
+      );
     }
 
-  }
+    /*
+      Remove boxed formatting from the reply
+      before displaying and saving it.
+    */
 
+    const cleanReply = removeBoxedLatex(result.reply);
 
-  saveChat();
+    conversation.push({
+      role: "assistant",
+      content: cleanReply
+    });
 
-}
+    addMessage("assistant", cleanReply);
 
+    saveHistory();
 
-/* ==========================================
-   SETTINGS
-========================================== */
+    if (voiceEnabled) {
+      speakText(cleanReply);
+    }
 
-function openSettings() {
+  } catch (error) {
+    removeTyping();
 
-  openDrawer(false);
-
-  $("#keyInput").value = settings.key;
-
-  $("#modelInput").value = settings.model;
-
-  dlg.showModal();
-
-}
-
-
-$("#openSettings").addEventListener(
-  "click",
-  openSettings
-);
-
-
-$("#saveSettings").addEventListener(
-  "click",
-  () => {
-
-    settings = {
-
-      key:$("#keyInput").value.trim(),
-
-      model:
-        $("#modelInput").value.trim() ||
-        DEFAULT_MODEL
-
-    };
-
-
-    store.set(
-      "maynard.settings",
-      settings
+    addMessage(
+      "assistant",
+      "I couldn't complete that request.\n\n" +
+      (error.message || "Please try again.")
     );
 
+  } finally {
+    busy = false;
 
-    dlg.close();
+    sendBtn.disabled = false;
 
-    flash("Settings saved.");
-
+    messageInput.focus();
   }
-);
+}
 
+/* =========================================
+   SEND BUTTON AND ENTER KEY
+========================================= */
 
-$("#clearData").addEventListener(
-  "click",
-  () => {
+sendBtn.onclick = sendMessage;
 
-    if (!confirm("Delete all saved chats?")) return;
-
-    chats = [];
-
-    store.set("maynard.chats",chats);
-
-    dlg.close();
-
-    startNewChat();
-
-  }
-);
-
-
-/* ==========================================
-   COMPOSER EVENTS
-========================================== */
-
-form.addEventListener(
-  "submit",
-  event => {
-
+messageInput.addEventListener("keydown", event => {
+  if (event.key === "Enter" && !event.shiftKey) {
     event.preventDefault();
 
-    send();
-
+    sendMessage();
   }
-);
+});
 
+messageInput.addEventListener("input", () => {
+  messageInput.style.height = "44px";
 
-input.addEventListener(
-  "keydown",
-  event => {
+  messageInput.style.height =
+    Math.min(messageInput.scrollHeight, 150) + "px";
+});
 
-    if (
-      event.key === "Enter" &&
-      !event.shiftKey
-    ) {
+/* =========================================
+   ASSISTANT MODE SELECTION
+========================================= */
 
-      event.preventDefault();
+$("modes").addEventListener("click", event => {
+  const button = event.target.closest(".mode");
 
-      form.requestSubmit();
+  if (!button) return;
 
-    }
+  currentMode = button.dataset.mode;
 
+  document.querySelectorAll(".mode").forEach(item => {
+    item.classList.toggle("active", item === button);
+  });
+
+  $("modeTitle").textContent = modeNames[currentMode];
+
+  $("sidebar").classList.remove("open");
+});
+
+/* =========================================
+   WELCOME SUGGESTIONS
+========================================= */
+
+$("welcome").addEventListener("click", event => {
+  const button = event.target.closest(".suggestion");
+
+  if (!button) return;
+
+  messageInput.value = button.dataset.prompt;
+
+  sendMessage();
+});
+
+/* =========================================
+   NEW CHAT
+========================================= */
+
+$("newChat").onclick = () => {
+  if (busy) return;
+
+  conversation = [];
+  attachments = [];
+
+  updateAttachmentList();
+
+  saveHistory();
+
+  chat.innerHTML = "";
+
+  $("welcome").classList.remove("hidden");
+
+  $("sidebar").classList.remove("open");
+};
+
+/* =========================================
+   CLEAR CONVERSATION
+========================================= */
+
+$("clearBtn").onclick = () => {
+  if (busy || !confirm("Clear this conversation?")) {
+    return;
   }
-);
 
+  conversation = [];
+  attachments = [];
 
-input.addEventListener(
-  "input",
-  () => {
+  updateAttachmentList();
 
-    input.style.height = "auto";
+  saveHistory();
 
-    input.style.height =
-      Math.min(input.scrollHeight,160) + "px";
+  chat.innerHTML = "";
 
+  $("welcome").classList.remove("hidden");
+};
+
+/* =========================================
+   EXPORT CONVERSATION
+========================================= */
+
+$("exportBtn").onclick = () => {
+  if (!conversation.length) {
+    alert("There is no conversation to export.");
+    return;
   }
-);
 
+  const output = conversation.map(item =>
+    (item.role === "user" ? "YOU" : "MAYNARD AI") +
+    "\n" +
+    item.content
+  ).join("\n\n-------------------------\n\n");
 
-input.addEventListener(
-  "paste",
-  event => {
+  const blob = new Blob(
+    [output],
+    { type: "text/plain;charset=utf-8" }
+  );
 
-    const files = Array.from(
-      event.clipboardData.files
-    ).filter(file => file.type.startsWith("image/"));
+  const url = URL.createObjectURL(blob);
 
+  const link = document.createElement("a");
 
-    if (files.length) {
+  link.href = url;
 
-      event.preventDefault();
+  link.download = "Maynard-AI-conversation.txt";
 
-      addFiles(files);
+  link.click();
 
-    }
+  URL.revokeObjectURL(url);
+};
 
+/* =========================================
+   MOBILE MENU
+========================================= */
+
+$("menuBtn").onclick = () => {
+  $("sidebar").classList.toggle("open");
+};
+
+/* =========================================
+   VOICE OUTPUT TOGGLE
+========================================= */
+
+$("voiceToggle").onclick = () => {
+  voiceEnabled = !voiceEnabled;
+
+  $("voiceToggle").textContent =
+    voiceEnabled ? "🔊 Voice On" : "🔊 Voice";
+};
+
+/* =========================================
+   VOICE INPUT
+========================================= */
+
+$("micBtn").onclick = () => {
+  const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    alert("Voice input is not supported in this browser.");
+    return;
   }
-);
-
-
-/* ==========================================
-   IMAGE ATTACHMENT EVENTS
-========================================== */
-
-$("#attach").addEventListener(
-  "click",
-  () => $("#file").click()
-);
-
-
-$("#file").addEventListener(
-  "change",
-  event => {
-
-    addFiles(
-      Array.from(event.target.files)
-    );
-
-    event.target.value = "";
-
-  }
-);
-
-
-/* ==========================================
-   MENU EVENTS
-========================================== */
-
-$("#menu").addEventListener(
-  "click",
-  () => {
-
-    openDrawer(
-      !drawer.classList.contains("open")
-    );
-
-  }
-);
-
-
-scrim.addEventListener(
-  "click",
-  () => openDrawer(false)
-);
-
-
-document.addEventListener(
-  "keydown",
-  event => {
-
-    if (event.key === "Escape") {
-
-      openDrawer(false);
-
-    }
-
-  }
-);
-
-
-$("#newChat").addEventListener(
-  "click",
-  startNewChat
-);
-
-
-/* ==========================================
-   VOICE EVENTS
-========================================== */
-
-voiceBtn.addEventListener(
-  "click",
-  () => {
-
-    autoSpeak = !autoSpeak;
-
-    voiceBtn.setAttribute(
-      "aria-pressed",
-      String(autoSpeak)
-    );
-
-
-    if (
-      !autoSpeak &&
-      "speechSynthesis" in window
-    ) {
-
-      speechSynthesis.cancel();
-
-    }
-
-  }
-);
-
-
-/* ==========================================
-   SPEECH RECOGNITION
-========================================== */
-
-const SpeechRecognition =
-  window.SpeechRecognition ||
-  window.webkitSpeechRecognition;
-
-
-if (!SpeechRecognition) {
-
-  micBtn.disabled = true;
-
-  micBtn.title =
-    "Dictation is not supported in this browser.";
-
-} else {
 
   const recognition = new SpeechRecognition();
 
+  recognition.lang = "en-US";
   recognition.interimResults = false;
-
   recognition.continuous = false;
 
-
   recognition.onresult = event => {
-
-    const transcript =
+    messageInput.value +=
+      (messageInput.value ? " " : "") +
       event.results[0][0].transcript;
 
-
-    input.value +=
-      (input.value ? " " : "") +
-      transcript;
-
-
-    input.focus();
-
-    input.dispatchEvent(
-      new Event("input")
-    );
-
+    messageInput.focus();
   };
-
 
   recognition.onerror = () => {
-
-    flash("Voice recognition could not complete.");
-
+    alert("Voice input could not be completed.");
   };
 
+  recognition.start();
+};
 
-  recognition.onend = () => {
+/* =========================================
+   LOAD CHAT HISTORY
+========================================= */
 
-    micBtn.classList.remove("on");
+function loadHistory() {
+  try {
+    const saved = JSON.parse(
+      localStorage.getItem("maynard_history") || "[]"
+    );
 
-  };
-
-
-  micBtn.addEventListener(
-    "click",
-    () => {
-
-      if (micBtn.classList.contains("on")) {
-
-        recognition.stop();
-
-        return;
-
-      }
-
-
-      try {
-
-        micBtn.classList.add("on");
-
-        recognition.start();
-
-      } catch(error) {
-
-        micBtn.classList.remove("on");
-
-        flash("Voice recognition is unavailable.");
-
-      }
-
+    if (Array.isArray(saved)) {
+      conversation = saved.filter(item =>
+        item &&
+        ["user", "assistant"].includes(item.role) &&
+        typeof item.content === "string"
+      ).slice(-50);
     }
-  );
 
+  } catch {
+    conversation = [];
+  }
+
+  renderConversation();
 }
 
+/* =========================================
+   INITIALISE MAYNARD AI AND MATHJAX
+========================================= */
 
-/* ==========================================
-   INITIALIZE APPLICATION
-========================================== */
+window.addEventListener("load", async () => {
+  try {
+    if (window.MathJax?.startup?.promise) {
+      await MathJax.startup.promise;
 
-chat = newChat();
+      mathReady = true;
+    } else {
+      console.warn(
+        "MathJax did not load. Check your internet connection."
+      );
+    }
 
-renderChat();
+  } catch (error) {
+    console.warn(
+      "MathJax could not start:",
+      error
+    );
+  }
 
-})();
+  loadHistory();
+
+  document.querySelectorAll(".bubble").forEach(element => {
+    renderMath(element);
+  });
+});
 </script>
 
 </body>
