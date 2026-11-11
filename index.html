@@ -1,0 +1,485 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#101827">
+<title>Maynard AI</title>
+
+<style>
+:root {
+  --bg:#101827;
+  --panel:#172235;
+  --panel2:#202e43;
+  --text:#f4f7fb;
+  --muted:#a8b4c6;
+  --accent:#7c6cff;
+  --border:#304057;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  height:100dvh;
+  display:flex;
+  flex-direction:column;
+}
+header{
+  height:65px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 16px;
+  border-bottom:1px solid var(--border);
+  background:var(--panel);
+}
+.brand{font-size:20px;font-weight:bold}
+.brand span{color:var(--accent)}
+.actions{display:flex;gap:8px}
+button,select{font:inherit}
+.icon-btn{
+  background:var(--panel2);
+  color:var(--text);
+  border:1px solid var(--border);
+  padding:9px 12px;
+  border-radius:10px;
+}
+main{
+  flex:1;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+  max-width:900px;
+  width:100%;
+  margin:auto;
+}
+.toolbar{
+  display:flex;
+  gap:8px;
+  padding:12px;
+  overflow-x:auto;
+}
+.toolbar select{
+  background:var(--panel);
+  color:var(--text);
+  border:1px solid var(--border);
+  padding:10px;
+  border-radius:10px;
+  min-width:180px;
+}
+#chat{
+  flex:1;
+  overflow-y:auto;
+  padding:16px;
+}
+.welcome{
+  text-align:center;
+  margin:55px auto;
+  max-width:500px;
+}
+.welcome h1{font-size:30px}
+.welcome p{color:var(--muted);line-height:1.6}
+.message{
+  max-width:88%;
+  padding:13px 15px;
+  border-radius:16px;
+  margin:12px 0;
+  line-height:1.6;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+}
+.user{
+  background:#493f9e;
+  margin-left:auto;
+}
+.bot{
+  background:var(--panel);
+  border:1px solid var(--border);
+  margin-right:auto;
+}
+.message-actions{
+  display:flex;
+  gap:8px;
+  margin-top:8px;
+}
+.message-actions button{
+  font-size:12px;
+  padding:6px 9px;
+  border-radius:8px;
+  border:1px solid var(--border);
+  color:var(--muted);
+  background:var(--panel2);
+}
+.composer{
+  padding:12px;
+  border-top:1px solid var(--border);
+  background:var(--panel);
+}
+.attachments{
+  display:flex;
+  gap:7px;
+  flex-wrap:wrap;
+  margin-bottom:8px;
+}
+.file-chip{
+  background:var(--panel2);
+  padding:7px 9px;
+  border-radius:8px;
+  font-size:12px;
+}
+.input-area{
+  display:flex;
+  gap:8px;
+  align-items:flex-end;
+}
+textarea{
+  flex:1;
+  min-height:48px;
+  max-height:150px;
+  resize:none;
+  padding:14px;
+  border-radius:13px;
+  border:1px solid var(--border);
+  background:var(--bg);
+  color:var(--text);
+  outline:none;
+  font:inherit;
+}
+.send{
+  background:var(--accent);
+  color:white;
+  border:0;
+  border-radius:12px;
+  padding:14px 17px;
+  font-weight:bold;
+}
+.tools{
+  display:flex;
+  gap:8px;
+  margin-top:9px;
+  flex-wrap:wrap;
+}
+.tools button{
+  background:var(--panel2);
+  border:1px solid var(--border);
+  color:var(--text);
+  padding:8px 11px;
+  border-radius:9px;
+}
+.status{
+  font-size:12px;
+  color:var(--muted);
+  padding:7px 2px 0;
+}
+#fileInput{display:none}
+body.light{
+  --bg:#f4f6fb;
+  --panel:#ffffff;
+  --panel2:#edf0f7;
+  --text:#172033;
+  --muted:#647087;
+  --border:#dce2ed;
+}
+@media(max-width:500px){
+  .welcome{margin:35px 15px}
+  .message{max-width:94%}
+  header{padding:0 11px}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="brand">Maynard <span>AI</span></div>
+  <div class="actions">
+    <button class="icon-btn" id="themeBtn">☀️</button>
+    <button class="icon-btn" id="newBtn">＋ New</button>
+  </div>
+</header>
+
+<main>
+
+  <div class="toolbar">
+    <select id="mode">
+      <option>General Assistant</option>
+      <option>Education</option>
+      <option>Writing</option>
+      <option>Coding</option>
+      <option>Business</option>
+      <option>Research</option>
+    </select>
+  </div>
+
+  <section id="chat">
+    <div class="welcome" id="welcome">
+      <h1>Welcome to Maynard AI</h1>
+      <p>Your multipurpose AI assistant. Ask questions, learn, write, research, code and explore new ideas.</p>
+    </div>
+  </section>
+
+  <section class="composer">
+
+    <div class="attachments" id="attachments"></div>
+
+    <div class="input-area">
+      <textarea id="message" placeholder="Message Maynard AI..."></textarea>
+      <button class="send" id="sendBtn">Send</button>
+    </div>
+
+    <div class="tools">
+      <button id="attachBtn">＋ Attach file</button>
+      <button id="voiceBtn">🎙 Voice</button>
+      <button id="clearBtn">Clear chat</button>
+    </div>
+
+    <input type="file" id="fileInput" multiple
+      accept="image/*,.pdf,.txt,.md,.csv,.tsv,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.rtf">
+
+    <div class="status" id="status">Ready to help you.</div>
+
+  </section>
+
+</main>
+
+<script>
+const chat = document.getElementById("chat");
+const messageInput = document.getElementById("message");
+const sendBtn = document.getElementById("sendBtn");
+const fileInput = document.getElementById("fileInput");
+const attachments = document.getElementById("attachments");
+const statusText = document.getElementById("status");
+const modeSelect = document.getElementById("mode");
+
+let files = [];
+let sessionId = crypto.randomUUID
+  ? crypto.randomUUID()
+  : String(Date.now());
+
+function addMessage(text, type) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "message " + type;
+
+  const content = document.createElement("div");
+  content.textContent = text;
+  wrapper.appendChild(content);
+
+  if (type === "bot") {
+    const actions = document.createElement("div");
+    actions.className = "message-actions";
+
+    const copy = document.createElement("button");
+    copy.textContent = "Copy";
+    copy.onclick = async () => {
+      await navigator.clipboard.writeText(text);
+      copy.textContent = "Copied";
+    };
+
+    actions.appendChild(copy);
+    wrapper.appendChild(actions);
+  }
+
+  chat.appendChild(wrapper);
+  chat.scrollTop = chat.scrollHeight;
+  return wrapper;
+}
+
+function showFiles() {
+  attachments.innerHTML = "";
+
+  files.forEach((item, index) => {
+    const chip = document.createElement("div");
+    chip.className = "file-chip";
+    chip.textContent = item.name + " ";
+
+    const remove = document.createElement("button");
+    remove.textContent = "×";
+    remove.style.border = "0";
+    remove.style.background = "transparent";
+    remove.style.color = "inherit";
+    remove.onclick = () => {
+      files.splice(index, 1);
+      showFiles();
+    };
+
+    chip.appendChild(remove);
+    attachments.appendChild(chip);
+  });
+}
+
+fileInput.addEventListener("change", () => {
+  for (const file of fileInput.files) {
+    if (files.length >= 5) {
+      alert("Maximum 5 attachments allowed.");
+      break;
+    }
+
+    if (file.size === 0) {
+      alert("This file is empty.");
+      continue;
+    }
+
+    if (file.size > 4 * 1024 * 1024) {
+      alert("Each file must be no larger than 4 MB.");
+      continue;
+    }
+
+    const total = files.reduce(
+      (sum, item) => sum + item.size, 0
+    );
+
+    if (total + file.size > 4 * 1024 * 1024) {
+      alert("Total attachments must not exceed 4 MB.");
+      break;
+    }
+
+    files.push(file);
+  }
+
+  fileInput.value = "";
+  showFiles();
+});
+
+document.getElementById("attachBtn").onclick = () => {
+  fileInput.click();
+};
+
+async function sendMessage() {
+  const message = messageInput.value.trim();
+
+  if (!message && files.length === 0) {
+    alert("Enter a message or attach a file.");
+    return;
+  }
+
+  addMessage(
+    message || "Please analyze my attachment.",
+    "user"
+  );
+
+  messageInput.value = "";
+  document.getElementById("welcome")?.remove();
+
+  const loading = addMessage("Maynard AI is thinking...", "bot");
+
+  sendBtn.disabled = true;
+  statusText.textContent = "Connecting to Maynard AI...";
+
+  try {
+    const form = new FormData();
+
+    form.append("message", message);
+    form.append("mode", modeSelect.value);
+    form.append("sessionId", sessionId);
+
+    files.forEach(file => {
+      form.append("files", file);
+    });
+
+    files = [];
+    showFiles();
+
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      body: form
+    });
+
+    const result = await response.json();
+
+    loading.remove();
+
+    if (!response.ok) {
+      throw new Error(
+        result.error || "The AI server returned an error."
+      );
+    }
+
+    const reply = result.reply || result.message;
+
+    if (!reply) {
+      throw new Error("The AI returned an empty response.");
+    }
+
+    addMessage(reply, "bot");
+    statusText.textContent = "Ready to help you.";
+
+  } catch (error) {
+    loading.remove();
+
+    addMessage(
+      "Maynard AI could not complete your request.\n\n" +
+      error.message,
+      "bot"
+    );
+
+    statusText.textContent = "Connection error.";
+  } finally {
+    sendBtn.disabled = false;
+    messageInput.focus();
+  }
+}
+
+sendBtn.onclick = sendMessage;
+
+messageInput.addEventListener("keydown", event => {
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
+    sendMessage();
+  }
+});
+
+document.getElementById("newBtn").onclick = () => {
+  chat.innerHTML = `
+    <div class="welcome" id="welcome">
+      <h1>Welcome to Maynard AI</h1>
+      <p>Your multipurpose AI assistant. What would you like to do?</p>
+    </div>
+  `;
+
+  files = [];
+  showFiles();
+  sessionId = crypto.randomUUID
+    ? crypto.randomUUID()
+    : String(Date.now());
+};
+
+document.getElementById("clearBtn").onclick = () => {
+  chat.innerHTML = "";
+};
+
+document.getElementById("themeBtn").onclick = () => {
+  document.body.classList.toggle("light");
+};
+
+document.getElementById("voiceBtn").onclick = () => {
+  const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    alert("Voice input is not supported in this browser. Try Chrome.");
+    return;
+  }
+
+  const recognition = new SpeechRecognition();
+  recognition.lang = "en-US";
+  recognition.interimResults = false;
+
+  recognition.onresult = event => {
+    messageInput.value +=
+      event.results[0][0].transcript;
+  };
+
+  recognition.onerror = () => {
+    statusText.textContent = "Voice input was not completed.";
+  };
+
+  recognition.start();
+};
+</script>
+
+</body>
+</html>
