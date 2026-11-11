@@ -385,7 +385,8 @@
   }
 
   async function streamReply(messages, onText, signal) {
-    const system = assistant.system + " Today is " + new Date().toDateString() + ".";
+    const system = assistant.system +
+  " Write all math in plain text with Unicode symbols (× ÷ √ ² ³ ½ π ≤ ≥ ≠) and put each step on its own line. Never use LaTeX, backslash commands or dollar signs. Today is " + new Date().toDateString() + ".";
 
     // No personal key set: use the site's own backend (api/chat.mjs), which holds the key.
     const res = !settings.key
