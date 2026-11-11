@@ -15,16 +15,35 @@ const MAX_TEXT_FILE_LENGTH = 20000;
 const requests = new Map();
 
 const MODES = {
-  general: "You are Maynard AI, a helpful multipurpose assistant. Give accurate, clear and useful answers.",
-  education: "You are Maynard AI Education. Explain subjects step by step and help learners understand.",
-  writing: "You are Maynard AI Writing. Produce original, polished writing in the requested style.",
-  coding: "You are Maynard AI Coding. Write accurate code, explain it and help debug errors.",
-  research: "You are Maynard AI Research. Distinguish facts from uncertainty. Never invent sources or pretend to browse the internet.",
-  business: "You are Maynard AI Business. Help with responsible business planning, organization and ideas.",
-  creative: "You are Maynard AI Creative. Help with original stories, design concepts and creative projects.",
-  translator: "You are Maynard AI Translator. Translate accurately and preserve meaning, tone and context.",
-  summarizer: "You are Maynard AI Summarizer. Produce clear summaries while preserving important information.",
-  assistant: "You are Maynard AI Personal Assistant. Help organize tasks, plans, ideas and schedules."
+  general:
+    "You are Maynard AI, a helpful multipurpose assistant. Give accurate, clear and useful answers.",
+
+  education:
+    "You are Maynard AI Education. Explain subjects step by step and help learners understand.",
+
+  writing:
+    "You are Maynard AI Writing. Produce original, polished writing in the requested style.",
+
+  coding:
+    "You are Maynard AI Coding. Write accurate code, explain it and help debug errors.",
+
+  research:
+    "You are Maynard AI Research. Distinguish facts from uncertainty. Never invent sources or pretend to browse the internet.",
+
+  business:
+    "You are Maynard AI Business. Help with responsible business planning, organization and ideas.",
+
+  creative:
+    "You are Maynard AI Creative. Help with original stories, design concepts and creative projects.",
+
+  translator:
+    "You are Maynard AI Translator. Translate accurately and preserve meaning, tone and context.",
+
+  summarizer:
+    "You are Maynard AI Summarizer. Produce clear summaries while preserving important information.",
+
+  assistant:
+    "You are Maynard AI Personal Assistant. Help organize tasks, plans, ideas and schedules."
 };
 
 function send(res, status, data) {
@@ -33,6 +52,7 @@ function send(res, status, data) {
 
 function rateLimit(req) {
   const forwarded = req.headers["x-forwarded-for"];
+
   const ip = typeof forwarded === "string"
     ? forwarded.split(",")[0].trim()
     : "unknown";
@@ -44,13 +64,18 @@ function rateLimit(req) {
     if (previous.count >= 15) return false;
     previous.count++;
   } else {
-    requests.set(ip, { start: now, count: 1 });
+    requests.set(ip, {
+      start: now,
+      count: 1
+    });
   }
 
   // Keep the map from growing indefinitely.
   if (requests.size > 500) {
     for (const [key, value] of requests) {
-      if (now - value.start > 120000) requests.delete(key);
+      if (now - value.start > 120000) {
+        requests.delete(key);
+      }
     }
   }
 
@@ -58,7 +83,9 @@ function rateLimit(req) {
 }
 
 function validImage(file) {
-  if (!file || typeof file.data !== "string") return false;
+  if (!file || typeof file.data !== "string") {
+    return false;
+  }
 
   const allowed = [
     "image/jpeg",
@@ -66,7 +93,9 @@ function validImage(file) {
     "image/webp"
   ];
 
-  if (!allowed.includes(file.type)) return false;
+  if (!allowed.includes(file.type)) {
+    return false;
+  }
 
   const prefix = `data:${file.type};base64,`;
 
@@ -77,6 +106,7 @@ function validImage(file) {
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
+
     return send(res, 405, {
       error: "Only POST requests are supported."
     });
@@ -99,9 +129,10 @@ export default async function handler(req, res) {
   try {
     const body = req.body || {};
 
-    const message = typeof body.message === "string"
-      ? body.message.trim()
-      : "";
+    const message =
+      typeof body.message === "string"
+        ? body.message.trim()
+        : "";
 
     const mode = MODES[body.mode]
       ? body.mode
@@ -138,10 +169,14 @@ export default async function handler(req, res) {
     }
 
     for (const file of attachments) {
-      if (!file || typeof file !== "object") continue;
+      if (!file || typeof file !== "object") {
+        continue;
+      }
 
       if (file.kind === "image") {
-        if (!validImage(file)) continue;
+        if (!validImage(file)) {
+          continue;
+        }
 
         userContent.push({
           type: "image_url",
@@ -185,16 +220,38 @@ export default async function handler(req, res) {
         content: item.content.slice(0, 6000)
       }));
 
+    const systemInstructions = [
+      MODES[mode],
+
+      "Your name is Maynard AI.",
+
+      "Your AI requests are processed through the Groq API.",
+
+      "Your text model is openai/gpt-oss-20b when the default model is used.",
+
+      "Never claim to be powered by OpenAI GPT-4 or another provider unless that is actually configured.",
+
+      "If asked who powers you, explain that this application sends AI requests through Groq.",
+
+      "The model name does not change the API provider.",
+
+      "Be helpful, respectful, honest and clear.",
+
+      "Do not invent facts, sources or capabilities.",
+
+      "Do not pretend to browse the internet or access external services when those features are not connected.",
+
+      "If you cannot perform an action, explain the limitation."
+    ].join("\n");
+
     const messages = [
       {
         role: "system",
-        content:
-          MODES[mode] +
-          "\nYour name is Maynard AI. Be helpful, respectful, " +
-          "honest and clear. Do not invent facts, sources or capabilities. " +
-          "If you cannot perform an action, explain the limitation."
+        content: systemInstructions
       },
+
       ...safeHistory,
+
       {
         role: "user",
         content: hasImage
@@ -214,10 +271,12 @@ export default async function handler(req, res) {
       "https://api.groq.com/openai/v1/chat/completions",
       {
         method: "POST",
+
         headers: {
           "Authorization": `Bearer ${apiKey}`,
           "Content-Type": "application/json"
         },
+
         body: JSON.stringify({
           model: selectedModel,
           messages,
@@ -242,7 +301,10 @@ export default async function handler(req, res) {
     const reply =
       result?.choices?.[0]?.message?.content;
 
-    if (typeof reply !== "string" || !reply.trim()) {
+    if (
+      typeof reply !== "string" ||
+      !reply.trim()
+    ) {
       return send(res, 502, {
         error: "The AI returned an empty response."
       });
