@@ -1,11 +1,12 @@
-
 import { createHash, randomUUID } from "node:crypto";
 
-// MAYNARD AI — Vercel + Groq + Upstash Redis
+// MAYNARD AI — Vercel + Groq + Upstash Redis + Stability AI
 
 export const config = { maxDuration: 60 };
 
 const API_URL = "https://api.groq.com/openai/v1/chat/completions";
+const STABILITY_IMAGE_URL =
+  "https://api.stability.ai/v2beta/stable-image/generate/core";
 
 const TEXT_MODEL =
   process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
@@ -16,8 +17,22 @@ const VISION_MODEL =
 const MAX_TOKENS = 3072;
 const MAX_MESSAGES = 60;
 const DAILY_IMAGE_LIMIT = 15;
+const DAILY_GENERATION_LIMIT = 3;
 const IMAGES_PER_BATCH = 3;
 const HISTORY_MESSAGES = 8;
+const MAX_GENERATION_PROMPT = 2000;
+
+const ALLOWED_ASPECT_RATIOS = new Set([
+  "1:1",
+  "16:9",
+  "21:9",
+  "2:3",
+  "3:2",
+  "4:5",
+  "5:4",
+  "9:16",
+  "9:21"
+]);
 
 // ==========================================
 // MAYNARD AI — ANSWER QUALITY INSTRUCTIONS
@@ -156,7 +171,6 @@ function getCookie(req, name) {
 
   for (const cookie of cookies) {
     const index = cookie.indexOf("=");
-
     if (index < 0) continue;
 
     const key = cookie.slice(0, index).trim();
@@ -197,7 +211,7 @@ function getVisitorId(req, res) {
 }
 
 // ==========================================
-// GHANA DATE AND IMAGE USAGE
+// GHANA DATE AND USAGE LIMITS
 // ==========================================
 
 function getGhanaDate() {
@@ -230,24 +244,19 @@ function secondsUntilMidnightGhana() {
 }
 
 // ==========================================
-// UPSTASH REDIS IMAGE LIMIT
+// UPSTASH REDIS USAGE RESERVATION
 // ==========================================
 
-async function reserveImages(visitorId, amount) {
+async function reserveUsage(visitorId, amount, category, maximum) {
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
 
   if (!url || !token) {
-    throw new Error(
-      "Image usage tracking is not configured."
-    );
+    throw new Error("Usage tracking is not configured.");
   }
 
   const date = getGhanaDate();
-
-  const key =
-    `maynard:images:${visitorId}:${date}`;
-
+  const key = `maynard:${category}:${visitorId}:${date}`;
   const ttl = secondsUntilMidnightGhana();
 
   const script = `
@@ -260,61 +269,245 @@ async function reserveImages(visitorId, amount) {
     end
 
     local updated = redis.call("INCRBY", KEYS[1], requested)
-
-    redis.call(
-      "EXPIRE",
-      KEYS[1],
-      tonumber(ARGV[3])
-    )
+    redis.call("EXPIRE", KEYS[1], tonumber(ARGV[3]))
 
     return {1, updated}
   `;
 
   const response = await fetch(url, {
     method: "POST",
-
     headers: {
       Authorization: "Bearer " + token,
       "Content-Type": "application/json"
     },
-
     body: JSON.stringify([
       "EVAL",
       script,
       "1",
       key,
       String(amount),
-      String(DAILY_IMAGE_LIMIT),
+      String(maximum),
       String(ttl)
     ])
   });
 
   if (!response.ok) {
-    throw new Error(
-      "Could not contact usage database."
-    );
+    throw new Error("Could not contact usage database.");
   }
 
   const data = await response.json();
 
   if (data.error) {
-    throw new Error(
-      "Usage database error."
-    );
+    throw new Error("Usage database error.");
   }
 
   const result = data.result;
 
   if (!Array.isArray(result)) {
-    throw new Error(
-      "Invalid usage database response."
-    );
+    throw new Error("Invalid usage database response.");
   }
 
   return {
     allowed: Number(result[0]) === 1,
     used: Number(result[1])
   };
+}
+
+async function reserveImages(visitorId, amount) {
+  return reserveUsage(
+    visitorId,
+    amount,
+    "images",
+    DAILY_IMAGE_LIMIT
+  );
+}
+
+async function reserveGenerations(visitorId) {
+  return reserveUsage(
+    visitorId,
+    1,
+    "generations",
+    DAILY_GENERATION_LIMIT
+  );
+}
+
+// ==========================================
+// STABILITY AI IMAGE GENERATION
+// ==========================================
+
+async function generateStabilityImage(prompt, aspectRatio) {
+  const apiKey = process.env.STABILITY_API_KEY;
+
+  if (!apiKey) {
+    const error = new Error(
+      "Image generation is not configured. Add STABILITY_API_KEY to your Vercel environment variables."
+    );
+    error.status = 500;
+    throw error;
+  }
+
+  const form = new FormData();
+
+  form.append("prompt", prompt);
+  form.append("aspect_ratio", aspectRatio);
+  form.append("output_format", "png");
+
+  const response = await fetch(STABILITY_IMAGE_URL, {
+    method: "POST",
+    headers: {
+      Authorization: "Bearer " + apiKey,
+      Accept: "image/*"
+    },
+    body: form
+  });
+
+  if (!response.ok) {
+    const responseText = await response.text();
+    let providerMessage = "";
+
+    try {
+      const parsed = JSON.parse(responseText);
+      providerMessage =
+        parsed.message ||
+        parsed.error?.message ||
+        parsed.name ||
+        "";
+    } catch {
+      providerMessage = responseText.slice(0, 500);
+    }
+
+    const error = new Error(
+      providerMessage ||
+      "Stability AI could not generate the image."
+    );
+
+    error.status = response.status;
+    throw error;
+  }
+
+  const mimeType =
+    response.headers.get("content-type") || "image/png";
+
+  if (!mimeType.startsWith("image/")) {
+    const error = new Error(
+      "Stability AI returned an unexpected response."
+    );
+    error.status = 502;
+    throw error;
+  }
+
+  const buffer = Buffer.from(
+    await response.arrayBuffer()
+  );
+
+  if (!buffer.length) {
+    const error = new Error(
+      "Stability AI returned an empty image."
+    );
+    error.status = 502;
+    throw error;
+  }
+
+  return {
+    imageData:
+      `data:${mimeType};base64,${buffer.toString("base64")}`,
+    mimeType
+  };
+}
+
+async function handleImageGeneration(req, res) {
+  const prompt =
+    typeof req.body?.prompt === "string"
+      ? req.body.prompt.trim()
+      : "";
+
+  const aspectRatio =
+    typeof req.body?.aspect_ratio === "string"
+      ? req.body.aspect_ratio
+      : "1:1";
+
+  if (prompt.length < 3) {
+    return fail(
+      res,
+      400,
+      "Please enter a longer image description."
+    );
+  }
+
+  if (prompt.length > MAX_GENERATION_PROMPT) {
+    return fail(
+      res,
+      400,
+      `Your image description must be ${MAX_GENERATION_PROMPT} characters or fewer.`
+    );
+  }
+
+  if (!ALLOWED_ASPECT_RATIOS.has(aspectRatio)) {
+    return fail(
+      res,
+      400,
+      "That image aspect ratio is not supported."
+    );
+  }
+
+  let visitorId;
+
+  try {
+    visitorId = getVisitorId(req, res);
+
+    const usage = await reserveGenerations(visitorId);
+
+    if (!usage.allowed) {
+      return fail(
+        res,
+        429,
+        "You have reached your daily image-generation limit of 3 images. Your allowance resets at midnight Ghana time."
+      );
+    }
+  } catch (error) {
+    console.error("Image generation usage error:", error);
+
+    return fail(
+      res,
+      503,
+      "Image generation usage tracking is temporarily unavailable. Please try again later."
+    );
+  }
+
+  try {
+    const result = await generateStabilityImage(
+      prompt,
+      aspectRatio
+    );
+
+    return res.status(200).json(result);
+
+  } catch (error) {
+    console.error("Stability AI error:", error);
+
+    const status = Number(error.status) || 502;
+
+    let message = error.message ||
+      "Image generation failed. Please try again.";
+
+    if (status === 401) {
+      message = "Stability AI rejected the API key. Check STABILITY_API_KEY in Vercel.";
+    } else if (status === 402) {
+      message = "Your Stability AI account does not have enough credits to generate this image.";
+    } else if (status === 403) {
+      message = "Stability AI could not process this prompt. Try changing the description.";
+    } else if (status === 429) {
+      message = "Stability AI is receiving too many requests. Please wait and try again.";
+    } else if (status >= 500) {
+      message = "Stability AI is temporarily unavailable. Please try again later.";
+    }
+
+    return fail(
+      res,
+      status >= 400 && status <= 599 ? status : 502,
+      message
+    );
+  }
 }
 
 // ==========================================
@@ -324,10 +517,7 @@ async function reserveImages(visitorId, amount) {
 function extractImageBlocks(messages) {
   const latestUser = [...messages]
     .reverse()
-    .find(
-      message =>
-        message && message.role === "user"
-    );
+    .find(message => message && message.role === "user");
 
   if (
     !latestUser ||
@@ -345,10 +535,7 @@ function extractImageBlocks(messages) {
   for (const block of latestUser.content) {
     if (!block) continue;
 
-    if (
-      block.type === "text" &&
-      block.text
-    ) {
+    if (block.type === "text" && block.text) {
       text.push(String(block.text));
     }
 
@@ -386,15 +573,11 @@ function makeTextHistory(
 ) {
   const output = [];
 
-  // Combine frontend instructions with Maynard's rules.
   const systemInstructions = [
     MAYNARD_RESPONSE_RULES
   ];
 
-  if (
-    typeof system === "string" &&
-    system.trim()
-  ) {
+  if (typeof system === "string" && system.trim()) {
     systemInstructions.push(
       "ADDITIONAL APP INSTRUCTIONS:\n" +
       system.slice(0, 4000)
@@ -406,11 +589,8 @@ function makeTextHistory(
     content: systemInstructions.join("\n\n")
   });
 
-  let history = messages.slice(
-    -HISTORY_MESSAGES
-  );
+  let history = messages.slice(-HISTORY_MESSAGES);
 
-  // Avoid duplicating the latest image question.
   if (excludeLatestUser) {
     let lastUserIndex = -1;
 
@@ -442,14 +622,8 @@ function makeTextHistory(
       content = message.content;
     } else if (Array.isArray(message.content)) {
       content = message.content
-        .filter(
-          block =>
-            block &&
-            block.type === "text"
-        )
-        .map(
-          block => String(block.text || "")
-        )
+        .filter(block => block && block.type === "text")
+        .map(block => String(block.text || ""))
         .join("\n");
     }
 
@@ -468,21 +642,14 @@ function makeTextHistory(
 // GROQ API REQUEST
 // ==========================================
 
-async function groqRequest(
-  apiKey,
-  body,
-  signal
-) {
+async function groqRequest(apiKey, body, signal) {
   const response = await fetch(API_URL, {
     method: "POST",
-
     signal,
-
     headers: {
       "Content-Type": "application/json",
       Authorization: "Bearer " + apiKey
     },
-
     body: JSON.stringify(body)
   });
 
@@ -499,9 +666,7 @@ async function groqRequest(
 
     try {
       const parsed = JSON.parse(errorText);
-
-      providerMessage =
-        parsed.error?.message || "";
+      providerMessage = parsed.error?.message || "";
     } catch {
       providerMessage = "";
     }
@@ -532,7 +697,6 @@ async function analyzeImageBatch(
 ) {
   const imageParts = images.map(image => ({
     type: "image_url",
-
     image_url: {
       url:
         "data:" +
@@ -547,14 +711,11 @@ async function analyzeImageBatch(
 
   const messages = [
     ...history,
-
     {
       role: "user",
-
       content: [
         {
           type: "text",
-
           text:
             prompt +
             "\n\nThis is image batch " +
@@ -566,7 +727,6 @@ async function analyzeImageBatch(
             "Do not invent details. " +
             "If something is unclear, say so."
         },
-
         ...imageParts
       ]
     }
@@ -574,14 +734,12 @@ async function analyzeImageBatch(
 
   const response = await groqRequest(
     apiKey,
-
     {
       model: VISION_MODEL,
       max_tokens: 1500,
       stream: false,
       messages
     },
-
     signal
   );
 
@@ -611,14 +769,12 @@ async function streamFinalAnswer(
 ) {
   const upstream = await groqRequest(
     apiKey,
-
     {
       model: TEXT_MODEL,
       max_tokens: MAX_TOKENS,
       stream: true,
       messages
     },
-
     signal
   );
 
@@ -635,10 +791,7 @@ async function streamFinalAnswer(
   });
 
   const send = object => {
-    if (
-      !res.writableEnded &&
-      !res.destroyed
-    ) {
+    if (!res.writableEnded && !res.destroyed) {
       res.write(
         "data: " +
         JSON.stringify(object) +
@@ -675,7 +828,6 @@ async function streamFinalAnswer(
     if (event.error) {
       send({
         type: "error",
-
         error: {
           message:
             event.error.message ||
@@ -689,13 +841,9 @@ async function streamFinalAnswer(
     const content =
       event.choices?.[0]?.delta?.content;
 
-    if (
-      typeof content === "string" &&
-      content.length > 0
-    ) {
+    if (typeof content === "string" && content.length > 0) {
       send({
         type: "content_block_delta",
-
         delta: {
           type: "text_delta",
           text: content
@@ -714,18 +862,13 @@ async function streamFinalAnswer(
         break;
       }
 
-      buffer += decoder.decode(
-        chunk,
-        { stream: true }
-      );
+      buffer += decoder.decode(chunk, { stream: true });
 
       const lines = buffer.split("\n");
-
       buffer = lines.pop() || "";
 
       for (const line of lines) {
         processLine(line);
-
         if (finished) break;
       }
     }
@@ -740,7 +883,6 @@ async function streamFinalAnswer(
     if (!signal.aborted && !res.destroyed) {
       send({
         type: "error",
-
         error: {
           message:
             "The response was interrupted. Please try again."
@@ -749,10 +891,7 @@ async function streamFinalAnswer(
     }
   }
 
-  if (
-    !res.writableEnded &&
-    !res.destroyed
-  ) {
+  if (!res.writableEnded && !res.destroyed) {
     res.end();
   }
 }
@@ -762,19 +901,21 @@ async function streamFinalAnswer(
 // ==========================================
 
 export default async function handler(req, res) {
-  // METHOD VALIDATION
-
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
-
-    return fail(
-      res,
-      405,
-      "Use POST."
-    );
+    return fail(res, 405, "Use POST.");
   }
 
-  // API KEY VALIDATION
+  const body = req.body || {};
+
+  // IMAGE GENERATION REQUESTS ARE HANDLED SEPARATELY.
+  // They do not require a Groq API key.
+
+  if (body.action === "generate_image") {
+    return handleImageGeneration(req, res);
+  }
+
+  // GROQ API KEY VALIDATION
 
   const apiKey = process.env.GROQ_API_KEY;
 
@@ -788,7 +929,7 @@ export default async function handler(req, res) {
 
   // REQUEST VALIDATION
 
-  const { messages, system } = req.body || {};
+  const { messages, system } = body;
 
   if (
     !Array.isArray(messages) ||
@@ -806,10 +947,8 @@ export default async function handler(req, res) {
 
   // IMAGE EXTRACTION
 
-  const {
-    images,
-    question
-  } = extractImageBlocks(messages);
+  const { images, question } =
+    extractImageBlocks(messages);
 
   if (images.length > DAILY_IMAGE_LIMIT) {
     return fail(
@@ -829,26 +968,13 @@ export default async function handler(req, res) {
     }
   });
 
-  // ========================================
   // NORMAL TEXT REQUEST
-  // ========================================
 
   if (images.length === 0) {
-    const history = makeTextHistory(
-      messages,
-      system
-    );
+    const history = makeTextHistory(messages, system);
 
-    if (
-      !history.some(
-        message => message.role === "user"
-      )
-    ) {
-      return fail(
-        res,
-        400,
-        "No usable message content."
-      );
+    if (!history.some(message => message.role === "user")) {
+      return fail(res, 400, "No usable message content.");
     }
 
     try {
@@ -861,25 +987,15 @@ export default async function handler(req, res) {
 
     } catch (error) {
       if (!res.headersSent) {
-        return fail(
-          res,
-          502,
-          error.message
-        );
+        return fail(res, 502, error.message);
       }
 
-      if (
-        !res.writableEnded &&
-        !res.destroyed
-      ) {
+      if (!res.writableEnded && !res.destroyed) {
         res.write(
           "data: " +
           JSON.stringify({
             type: "error",
-
-            error: {
-              message: error.message
-            }
+            error: { message: error.message }
           }) +
           "\n\n"
         );
@@ -891,17 +1007,12 @@ export default async function handler(req, res) {
     return;
   }
 
-  // ========================================
-  // RESERVE DAILY IMAGE ALLOWANCE
-  // ========================================
+  // RESERVE DAILY IMAGE ANALYSIS ALLOWANCE
 
   let usage;
 
   try {
-    const visitorId = getVisitorId(
-      req,
-      res
-    );
+    const visitorId = getVisitorId(req, res);
 
     usage = await reserveImages(
       visitorId,
@@ -924,9 +1035,7 @@ export default async function handler(req, res) {
     );
   }
 
-  // ========================================
   // PROCESS IMAGE REQUEST
-  // ========================================
 
   try {
     const history = makeTextHistory(
@@ -934,8 +1043,6 @@ export default async function handler(req, res) {
       system,
       true
     );
-
-    // Divide images into groups of three.
 
     const batches = [];
 
@@ -945,25 +1052,14 @@ export default async function handler(req, res) {
       i += IMAGES_PER_BATCH
     ) {
       batches.push(
-        images.slice(
-          i,
-          i + IMAGES_PER_BATCH
-        )
+        images.slice(i, i + IMAGES_PER_BATCH)
       );
     }
 
     const findings = [];
 
-    // Analyze every image batch.
-
-    for (
-      let i = 0;
-      i < batches.length;
-      i++
-    ) {
-      if (controller.signal.aborted) {
-        return;
-      }
+    for (let i = 0; i < batches.length; i++) {
+      if (controller.signal.aborted) return;
 
       const result = await analyzeImageBatch(
         apiKey,
@@ -983,40 +1079,26 @@ export default async function handler(req, res) {
       );
     }
 
-    if (controller.signal.aborted) {
-      return;
-    }
-
-    // Prepare the final answer using all findings.
+    if (controller.signal.aborted) return;
 
     const finalMessages = [
       ...history,
-
       {
         role: "user",
-
         content:
           "I uploaded " +
           images.length +
           " images.\n\n" +
-
           "Here are the analysis results from all image batches:\n\n" +
-
           findings.join("\n\n") +
-
           "\n\nAnswer my original request using these findings. " +
-
           "Combine information from all images. " +
           "Avoid repeating yourself. " +
           "Do not invent details that were not visible. " +
           "If an image is unclear, explain that limitation. " +
           "Give a complete and understandable answer.\n\n" +
-
           "My original request: " +
-          (
-            question ||
-            "Explain what these images show."
-          )
+          (question || "Explain what these images show.")
       }
     ];
 
@@ -1028,9 +1110,7 @@ export default async function handler(req, res) {
     );
 
   } catch (error) {
-    if (controller.signal.aborted) {
-      return;
-    }
+    if (controller.signal.aborted) return;
 
     if (!res.headersSent) {
       return fail(
@@ -1040,15 +1120,11 @@ export default async function handler(req, res) {
       );
     }
 
-    if (
-      !res.writableEnded &&
-      !res.destroyed
-    ) {
+    if (!res.writableEnded && !res.destroyed) {
       res.write(
         "data: " +
         JSON.stringify({
           type: "error",
-
           error: {
             message:
               error.message ||
