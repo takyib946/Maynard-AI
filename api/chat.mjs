@@ -809,9 +809,26 @@ function makeTextHistory(
 ) {
   const output = [];
 
-  const systemInstructions = [
-    MAYNARD_RESPONSE_RULES
-  ];
+  
+const systemInstructions = [
+  MAYNARD_RESPONSE_RULES,
+
+  `
+  RESPONSE FORMATTING RULES:
+
+  - Always explain using clear, numbered steps.
+  - Use Step 1, Step 2, Step 3 for tutorials.
+  - Never use tables in responses.
+  - Never use Markdown tables or HTML tables.
+  - Explain mathematics line by line.
+  - Show every calculation clearly.
+  - Use bullet points for lists.
+  - Present comparisons in separate sections instead of tables.
+  - Keep explanations clear and beginner-friendly.
+  - Follow these rules unless the user explicitly requests a table.
+  `
+];
+
 
   if (typeof system === "string" && system.trim()) {
     systemInstructions.push(
