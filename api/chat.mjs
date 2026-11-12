@@ -2,13 +2,12 @@
 import { createHash, randomUUID } from "node:crypto";
 
 // MAYNARD AI — Vercel + Groq + Upstash Redis
-// + Stability AI + API-Football
+// + Gemini Image Generation + API-Football
 
 export const config = { maxDuration: 60 };
 
 const API_URL = "https://api.groq.com/openai/v1/chat/completions";
-const STABILITY_IMAGE_URL =
-  "https://api.stability.ai/v2beta/stable-image/generate/core";
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1/models";
 const FOOTBALL_API_URL = "https://v3.football.api-sports.io";
 
 const TEXT_MODEL =
@@ -16,6 +15,9 @@ const TEXT_MODEL =
 
 const VISION_MODEL =
   process.env.GROQ_VISION_MODEL || "qwen/qwen3.8-27b";
+
+const GEMINI_IMAGE_MODEL =
+  process.env.GEMINI_IMAGE_MODEL || "gemini-3.1-flash-lite-image";
 
 const MAX_TOKENS = 3072;
 const MAX_MESSAGES = 60;
@@ -444,24 +446,37 @@ async function reserveGenerations(visitorId) {
 }
 
 // ==========================================
-// IMAGE GENERATION
+// GEMINI IMAGE GENERATION
 // ==========================================
 
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function generateStabilityImage(prompt, aspectRatio) {
-  const apiKey = process.env.STABILITY_API_KEY;
+function getGeminiAspectRatio(aspectRatio) {
+  // Gemini 3.1 Flash Lite Image does not list 9:21.
+  // Map the existing frontend option to a supported ratio.
+  if (aspectRatio === "9:21") {
+    return "2:3";
+  }
+
+  return aspectRatio;
+}
+
+async function generateGeminiImage(prompt, aspectRatio) {
+  const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
     const error = new Error(
-      "Image generation is not configured. Add STABILITY_API_KEY to Vercel."
+      "Image generation is not configured. Add GEMINI_API_KEY to Vercel."
     );
 
     error.status = 500;
     throw error;
   }
+
+  const endpoint =
+    `${GEMINI_API_URL}/${GEMINI_IMAGE_MODEL}:generateContent`;
 
   for (
     let attempt = 0;
@@ -476,20 +491,34 @@ async function generateStabilityImage(prompt, aspectRatio) {
     );
 
     try {
-      const form = new FormData();
-
-      form.append("prompt", prompt);
-      form.append("aspect_ratio", aspectRatio);
-      form.append("output_format", "png");
-
-      const response = await fetch(STABILITY_IMAGE_URL, {
+      const response = await fetch(endpoint, {
         method: "POST",
         signal: controller.signal,
         headers: {
-          Authorization: "Bearer " + apiKey,
-          Accept: "image/*"
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey
         },
-        body: form
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [
+                {
+                  text: prompt
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            responseModalities: ["IMAGE"],
+            responseFormat: {
+              image: {
+                aspectRatio: getGeminiAspectRatio(aspectRatio),
+                imageSize: "1K"
+              }
+            }
+          }
+        })
       });
 
       if (!response.ok) {
@@ -501,24 +530,24 @@ async function generateStabilityImage(prompt, aspectRatio) {
           const parsed = JSON.parse(responseText);
 
           providerMessage =
-            parsed.message ||
             parsed.error?.message ||
-            parsed.name ||
+            parsed.message ||
             "";
         } catch {
-          providerMessage = responseText.slice(0, 300);
+          providerMessage = "";
         }
 
         const error = new Error(
           providerMessage ||
-          "Stability AI could not generate the image."
+          "Gemini could not generate the image."
         );
 
         error.status = response.status;
 
         if (
           (response.status === 429 ||
-           response.status === 503) &&
+           response.status === 503 ||
+           response.status === 500) &&
           attempt < IMAGE_MAX_RETRIES
         ) {
           const retryAfter = Number(
@@ -537,34 +566,60 @@ async function generateStabilityImage(prompt, aspectRatio) {
         throw error;
       }
 
+      const data = await response.json();
+
+      const candidates = data.candidates || [];
+
+      let imagePart = null;
+
+      for (const candidate of candidates) {
+        const parts = candidate.content?.parts || [];
+
+        imagePart = parts.find(part =>
+          part.inlineData?.data &&
+          part.inlineData?.mimeType?.startsWith("image/")
+        );
+
+        if (imagePart) break;
+      }
+
+      if (!imagePart) {
+        const blockReason =
+          data.promptFeedback?.blockReason ||
+          candidates[0]?.finishReason ||
+          "";
+
+        const error = new Error(
+          blockReason
+            ? `Gemini could not generate this image. Reason: ${blockReason}. Try changing your description.`
+            : "Gemini did not return an image. Please try another description."
+        );
+
+        error.status = 422;
+        throw error;
+      }
+
       const mimeType =
-        response.headers.get("content-type") || "image/png";
+        imagePart.inlineData.mimeType || "image/png";
 
-      if (!mimeType.startsWith("image/")) {
+      const imageBase64 = imagePart.inlineData.data;
+
+      if (
+        !/^image\/(png|jpeg|webp)$/i.test(mimeType) ||
+        typeof imageBase64 !== "string" ||
+        imageBase64.length === 0
+      ) {
         const error = new Error(
-          "Stability AI returned an unexpected response."
+          "Gemini returned an unsupported or empty image."
         );
 
         error.status = 502;
         throw error;
       }
 
-      const buffer = Buffer.from(
-        await response.arrayBuffer()
-      );
-
-      if (!buffer.length) {
-        const error = new Error(
-          "Stability AI returned an empty image."
-        );
-
-        error.status = 502;
-        throw error;
-      }
-
+      // Keep the same response format expected by index.html.
       return {
-        imageData:
-          `data:${mimeType};base64,${buffer.toString("base64")}`,
+        imageData: `data:${mimeType};base64,${imageBase64}`,
         mimeType
       };
 
@@ -585,7 +640,7 @@ async function generateStabilityImage(prompt, aspectRatio) {
     }
   }
 
-  throw new Error("Image generation could not be completed.");
+  throw new Error("Gemini image generation could not be completed.");
 }
 
 // ==========================================
@@ -648,7 +703,7 @@ async function handleImageGeneration(req, res) {
 
     generationReserved = true;
 
-    const result = await generateStabilityImage(
+    const result = await generateGeminiImage(
       prompt,
       aspectRatio
     );
@@ -656,7 +711,7 @@ async function handleImageGeneration(req, res) {
     return res.status(200).json(result);
 
   } catch (error) {
-    console.error("Image generation error:", error);
+    console.error("Gemini image generation error:", error);
 
     if (generationReserved && visitorId) {
       await refundGeneration(visitorId);
@@ -666,16 +721,20 @@ async function handleImageGeneration(req, res) {
 
     let message = "Image generation failed. Please try again.";
 
-    if (status === 401) {
-      message = "Stability AI rejected your API key. Check STABILITY_API_KEY in Vercel.";
+    if (status === 400) {
+      message = "Gemini rejected the image request. Check your prompt and try again.";
+    } else if (status === 401 || status === 403) {
+      message = "Gemini rejected the API key or the project does not have permission. Check GEMINI_API_KEY and your Google AI Studio project.";
     } else if (status === 402) {
-      message = "Your Stability AI account needs more credits.";
-    } else if (status === 403) {
-      message = "Stability AI refused this request. Check your account permissions and prompt.";
+      message = "Your Gemini API project may need billing enabled.";
+    } else if (status === 404) {
+      message = "The configured Gemini image model was not found. Check GEMINI_IMAGE_MODEL.";
+    } else if (status === 422) {
+      message = error.message;
     } else if (status === 429) {
-      message = "Stability AI is temporarily rate-limiting image generation. Please wait.";
+      message = "Gemini is rate-limiting image generation or your API quota has been reached. Please wait and try again.";
     } else if (status === 503) {
-      message = "Stability AI is temporarily unavailable.";
+      message = "Gemini image generation is temporarily unavailable.";
     } else if (status === 504) {
       message = "Image generation timed out. Please try again.";
     }
