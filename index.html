@@ -251,6 +251,57 @@ button{cursor:pointer}
 .tool{border:0;background:transparent;color:#aeb9d8;font-size:11px;padding:4px}
 .tool:hover{color:white}
 
+/* FULL SCREEN IMAGE VIEWER */
+.image-viewer{
+  position:fixed;
+  inset:0;
+  z-index:9999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(0,0,0,.96);
+  padding:65px 15px 75px;
+  overflow:auto;
+  touch-action:pan-x pan-y;
+}
+.image-viewer.hidden{
+  display:none!important;
+}
+.image-viewer img{
+  display:block;
+  max-width:100%;
+  max-height:100%;
+  width:auto;
+  height:auto;
+  object-fit:contain;
+  transform:scale(1);
+  transform-origin:center;
+  transition:transform .2s ease;
+}
+.image-viewer-close,
+.image-viewer-zoom{
+  position:fixed;
+  z-index:10000;
+  border:1px solid #ffffff35;
+  background:#222b45;
+  color:white;
+  border-radius:50%;
+  width:44px;
+  height:44px;
+  font-size:25px;
+  display:grid;
+  place-items:center;
+}
+.image-viewer-close{
+  top:15px;
+  right:15px;
+}
+.image-viewer-zoom{
+  bottom:20px;
+}
+#zoomOutImage{right:75px}
+#zoomInImage{right:20px}
+
 /* TYPING */
 .typing{display:flex;gap:5px;padding:6px}
 .typing i{width:6px;height:6px;border-radius:50%;background:#aaa2ff;animation:bounce .8s infinite alternate}
@@ -427,6 +478,17 @@ button{cursor:pointer}
 </main>
 </div>
 
+<!-- FULL SCREEN IMAGE VIEWER -->
+<div id="imageViewer" class="image-viewer hidden">
+  <button id="closeImageViewer" class="image-viewer-close"
+          aria-label="Close image">×</button>
+  <button id="zoomOutImage" class="image-viewer-zoom"
+          aria-label="Zoom out">−</button>
+  <button id="zoomInImage" class="image-viewer-zoom"
+          aria-label="Zoom in">+</button>
+  <img id="fullScreenImage" alt="Uploaded picture">
+</div>
+
 <script>
 "use strict";
 
@@ -462,6 +524,58 @@ let busy = false;
 let voiceEnabled = false;
 let mathReady = false;
 let mathQueue = Promise.resolve();
+
+/* FULL SCREEN IMAGE VIEWER */
+
+let imageZoom = 1;
+
+function openImageViewer(src) {
+  if (!src) return;
+
+  const viewer = $("imageViewer");
+  const fullImage = $("fullScreenImage");
+
+  imageZoom = 1;
+  fullImage.src = src;
+  fullImage.style.transform = "scale(1)";
+
+  viewer.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+}
+
+function closeImageViewer() {
+  $("imageViewer").classList.add("hidden");
+  $("fullScreenImage").src = "";
+
+  document.body.style.overflow = "";
+  imageZoom = 1;
+}
+
+$("closeImageViewer").onclick = closeImageViewer;
+
+$("imageViewer").onclick = event => {
+  if (event.target === $("imageViewer")) {
+    closeImageViewer();
+  }
+};
+
+$("zoomInImage").onclick = () => {
+  imageZoom = Math.min(imageZoom + 0.25,3);
+  $("fullScreenImage").style.transform =
+    `scale(${imageZoom})`;
+};
+
+$("zoomOutImage").onclick = () => {
+  imageZoom = Math.max(imageZoom - 0.25,0.5);
+  $("fullScreenImage").style.transform =
+    `scale(${imageZoom})`;
+};
+
+document.addEventListener("keydown",event => {
+  if (event.key === "Escape") {
+    closeImageViewer();
+  }
+});
 
 /* INDEXEDDB IMAGE STORAGE */
 
@@ -975,9 +1089,13 @@ function addMessage(role,content,options = {}) {
         });
       }
 
+      /* OPEN IMAGE INSIDE MAYNARD AI */
       image.onclick = () => {
-        if (image.src) window.open(image.src,"_blank","noopener");
+        if (image.src) {
+          openImageViewer(image.src);
+        }
       };
+
       image.style.cursor = "zoom-in";
     });
 
