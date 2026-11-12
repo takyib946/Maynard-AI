@@ -7,10 +7,8 @@ import { createHash, randomUUID } from "node:crypto";
 export const config = { maxDuration: 60 };
 
 const API_URL = "https://api.groq.com/openai/v1/chat/completions";
-
 const STABILITY_IMAGE_URL =
   "https://api.stability.ai/v2beta/stable-image/generate/core";
-
 const FOOTBALL_API_URL = "https://v3.football.api-sports.io";
 
 const TEXT_MODEL =
@@ -28,27 +26,18 @@ const HISTORY_MESSAGES = 8;
 const MAX_GENERATION_PROMPT = 2000;
 const MAX_FOOTBALL_RESULTS = 150;
 
-// IMAGE GENERATION PROTECTION
-
-const IMAGE_REQUEST_TIMEOUT = 20000;
+const IMAGE_REQUEST_TIMEOUT = 40000;
 const IMAGE_RETRY_DELAY = 1500;
 const IMAGE_MAX_RETRIES = 1;
 const IMAGE_LOCK_SECONDS = 60;
 
 const ALLOWED_ASPECT_RATIOS = new Set([
-  "1:1",
-  "16:9",
-  "21:9",
-  "2:3",
-  "3:2",
-  "4:5",
-  "5:4",
-  "9:16",
-  "9:21"
+  "1:1", "16:9", "21:9", "2:3", "3:2",
+  "4:5", "5:4", "9:16", "9:21"
 ]);
 
 // ==========================================
-// MAYNARD AI — ANSWER QUALITY INSTRUCTIONS
+// MAYNARD AI RESPONSE RULES
 // ==========================================
 
 const MAYNARD_RESPONSE_RULES = `
@@ -60,117 +49,104 @@ Prioritize correctness over speed and unnecessary detail.
 
 1. ACCURACY AND RELIABILITY
 
-- Carefully understand the user's question before answering.
-- Answer the actual question instead of changing its meaning.
-- Do not invent facts, statistics, quotations, sources or references.
+- Understand the user's question before answering.
+- Answer the actual question.
+- Never invent facts, statistics, quotations or sources.
 - Do not present guesses as confirmed facts.
-- If information is uncertain, explain the uncertainty.
-- If a question is ambiguous, ask for clarification when necessary.
-- Check calculations and logical conclusions before responding.
-- Correct mistakes when they are identified.
-- Never pretend to have performed an action or checked information that you have not checked.
-- Do not claim that information is current if you cannot verify that it is current.
+- Explain uncertainty when information is incomplete.
+- Check calculations and logical conclusions.
+- Correct mistakes when identified.
+- Never pretend to have checked information or performed an action you have not performed.
+- Do not claim information is current if it has not been verified.
 
 2. ANSWER FORMATTING
 
 - Use clear, natural paragraphs.
-- Use headings when they improve organization.
+- Use headings when helpful.
 - Use numbered steps for procedures and multi-step explanations.
-- Use bullet points when listing related information.
-- Do not automatically turn every answer into a table.
+- Use bullet points for lists.
 - Avoid unnecessary tables.
-- Use a table only when it genuinely makes information easier to compare or understand, or when requested.
-- Keep answers focused on the user's question.
-- Avoid repeating the same information.
-- Explain technical terms in understandable language when appropriate.
+- Do not use tables unless the user explicitly requests one.
+- Keep answers focused on the question.
+- Avoid unnecessary repetition.
+- Explain technical terms in understandable language.
 
-3. MATHEMATICS AND SYMBOLIC MATHEMATICS
+3. MATHEMATICS
 
-- Support arithmetic, algebra, geometry, trigonometry, calculus, statistics and other mathematical subjects.
+- Support arithmetic, algebra, geometry, trigonometry, calculus and statistics.
 - Use accurate mathematical notation.
 - Use LaTeX for mathematical expressions.
 - Use \\( ... \\) for inline mathematics.
 - Use \\[ ... \\] for displayed mathematics.
-- Format fractions, roots, powers, subscripts and superscripts correctly.
 - Show important calculations step by step.
-- Explain why each important mathematical operation is performed.
+- Explain why important operations are performed.
 - Check arithmetic and algebraic results.
-- Verify answers by substitution or another suitable method when possible.
+- Verify answers by substitution when possible.
 - Clearly identify the final answer.
 - Never put an entire mathematical solution inside a table.
-- Do not use mathematical notation unnecessarily in ordinary sentences.
-- If a problem cannot be solved because information is missing, identify what is missing.
 
 4. SCIENCE AND TECHNICAL SUBJECTS
 
 - Explain scientific concepts accurately.
 - Use correct terminology and units.
-- Distinguish established scientific facts from theories, estimates and hypotheses.
-- Show formulas and calculations where appropriate.
-- Explain the meaning of symbols used in formulas.
-- Do not invent experimental results or scientific evidence.
+- Distinguish facts from estimates and hypotheses.
+- Explain formulas and their symbols.
+- Never invent experimental results or evidence.
 
-5. EDUCATIONAL QUESTIONS
+5. EDUCATION
 
-- Give answers that directly address the question.
+- Answer each part of a question.
 - Explain difficult concepts in simple language.
-- Answer each part of a multi-part question separately.
-- Show relevant working for calculations.
-- Use examples when they genuinely help understanding.
+- Show working for calculations.
+- Use examples when useful.
 - Respect requested answer lengths and formats.
-- Do not leave out important parts of the question.
-- Do not add unrelated information just to make an answer longer.
+- Avoid unrelated information.
 
 6. WRITING AND LANGUAGE
 
 - Use correct spelling, grammar and punctuation.
 - Write naturally and clearly.
-- Preserve the intended meaning when rewriting text.
+- Preserve meaning when rewriting.
 - Follow the requested language and tone.
-- Do not change names, figures or important details without a reason.
+- Do not change important names or figures without a reason.
 
 7. IMAGE UNDERSTANDING
 
-- Carefully examine all available uploaded images.
+- Examine available uploaded images carefully.
 - Read visible text accurately.
-- Answer the actual question associated with the image.
 - Do not invent details that cannot be seen.
-- If text is unclear or unreadable, say so.
-- If multiple images are supplied, consider information from all of them.
-- Explain relevant differences between images when necessary.
+- Explain when something is unclear.
+- Consider all supplied images.
 
 8. GENERAL KNOWLEDGE
 
 - Separate facts from opinions.
-- Do not make up historical dates, names or events.
 - Avoid unsupported claims.
-- When a question concerns changing information, explain when your knowledge may be outdated.
+- Explain when information may be outdated.
 - Give useful context without overwhelming the user.
 
 9. CONVERSATION
 
-- Remember relevant information from the conversation provided to you.
-- Use previous messages when they help answer the current question.
-- Do not ask the user to repeat information already available.
-- Do not repeat the entire conversation in every answer.
-- If the user corrects a misunderstanding, follow the correction.
+- Use relevant previous messages.
+- Do not ask users to repeat information already available.
+- Follow user corrections.
+- Do not claim to have permanent memory unless that feature is actually available.
 
-10. FINAL ANSWER QUALITY
+10. FINAL QUALITY CHECK
 
-Before responding, check:
+Before answering, check:
 - Did I answer the actual question?
-- Is the answer logically consistent?
+- Is the answer accurate and understandable?
 - Are calculations correct?
-- Is the explanation understandable?
 - Did I avoid unnecessary tables?
-- Did I clearly identify uncertainty?
-- Did I include all important parts?
+- Did I explain uncertainty?
+- Did I cover all important parts?
 
 Give the best accurate answer you can.
 `;
 
 // ==========================================
-// BASIC RESPONSE HELPERS
+// BASIC HELPERS
 // ==========================================
 
 function fail(res, status, message) {
@@ -245,9 +221,7 @@ function getGhanaDate() {
 }
 
 function getGhanaDateOffset(days = 0) {
-  const currentDate = getGhanaDate();
-
-  const [year, month, day] = currentDate
+  const [year, month, day] = getGhanaDate()
     .split("-")
     .map(Number);
 
@@ -261,7 +235,6 @@ function getGhanaDateOffset(days = 0) {
 }
 
 function secondsUntilMidnightGhana() {
-  const now = new Date();
   const date = getGhanaDate();
 
   const nextMidnight = new Date(
@@ -275,13 +248,13 @@ function secondsUntilMidnightGhana() {
   return Math.max(
     60,
     Math.ceil(
-      (nextMidnight.getTime() - now.getTime()) / 1000
+      (nextMidnight.getTime() - Date.now()) / 1000
     )
   );
 }
 
 // ==========================================
-// UPSTASH REDIS HELPERS
+// REDIS
 // ==========================================
 
 async function redisCommand(command) {
@@ -331,9 +304,7 @@ async function acquireImageLock(visitorId) {
     String(IMAGE_LOCK_SECONDS)
   ]);
 
-  return result === "OK"
-    ? { key, token }
-    : null;
+  return result === "OK" ? { key, token } : null;
 }
 
 async function releaseImageLock(lock) {
@@ -358,7 +329,7 @@ async function releaseImageLock(lock) {
 }
 
 // ==========================================
-// RESTORE FAILED GENERATION ALLOWANCE
+// REFUND FAILED GENERATION
 // ==========================================
 
 async function refundGeneration(visitorId) {
@@ -381,12 +352,12 @@ async function refundGeneration(visitorId) {
       key
     ]);
   } catch (error) {
-    console.error("Generation allowance refund error:", error);
+    console.error("Generation refund error:", error);
   }
 }
 
 // ==========================================
-// UPSTASH REDIS USAGE RESERVATION
+// USAGE RESERVATION
 // ==========================================
 
 async function reserveUsage(visitorId, amount, category, maximum) {
@@ -397,8 +368,9 @@ async function reserveUsage(visitorId, amount, category, maximum) {
     throw new Error("Usage tracking is not configured.");
   }
 
-  const date = getGhanaDate();
-  const key = `maynard:${category}:${visitorId}:${date}`;
+  const key =
+    `maynard:${category}:${visitorId}:${getGhanaDate()}`;
+
   const ttl = secondsUntilMidnightGhana();
 
   const script = `
@@ -443,15 +415,13 @@ async function reserveUsage(visitorId, amount, category, maximum) {
     throw new Error("Usage database error.");
   }
 
-  const result = data.result;
-
-  if (!Array.isArray(result)) {
+  if (!Array.isArray(data.result)) {
     throw new Error("Invalid usage database response.");
   }
 
   return {
-    allowed: Number(result[0]) === 1,
-    used: Number(result[1])
+    allowed: Number(data.result[0]) === 1,
+    used: Number(data.result[1])
   };
 }
 
@@ -474,23 +444,19 @@ async function reserveGenerations(visitorId) {
 }
 
 // ==========================================
-// IMAGE GENERATION WAIT HELPER
+// IMAGE GENERATION
 // ==========================================
 
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// ==========================================
-// STABILITY AI IMAGE GENERATION
-// ==========================================
-
 async function generateStabilityImage(prompt, aspectRatio) {
   const apiKey = process.env.STABILITY_API_KEY;
 
   if (!apiKey) {
     const error = new Error(
-      "Image generation is not configured. Add STABILITY_API_KEY to your Vercel environment variables."
+      "Image generation is not configured. Add STABILITY_API_KEY to Vercel."
     );
 
     error.status = 500;
@@ -560,8 +526,7 @@ async function generateStabilityImage(prompt, aspectRatio) {
           );
 
           const delay =
-            Number.isFinite(retryAfter) &&
-            retryAfter > 0
+            Number.isFinite(retryAfter) && retryAfter > 0
               ? Math.min(retryAfter * 1000, 5000)
               : IMAGE_RETRY_DELAY;
 
@@ -606,7 +571,7 @@ async function generateStabilityImage(prompt, aspectRatio) {
     } catch (error) {
       if (controller.signal.aborted) {
         const timeoutError = new Error(
-          "Image generation took too long. Please try again later."
+          "Image generation took too long. Please try again."
         );
 
         timeoutError.status = 504;
@@ -624,7 +589,7 @@ async function generateStabilityImage(prompt, aspectRatio) {
 }
 
 // ==========================================
-// IMAGE GENERATION REQUEST HANDLER
+// IMAGE GENERATION HANDLER
 // ==========================================
 
 async function handleImageGeneration(req, res) {
@@ -639,11 +604,7 @@ async function handleImageGeneration(req, res) {
       : "1:1";
 
   if (prompt.length < 3) {
-    return fail(
-      res,
-      400,
-      "Please enter a longer image description."
-    );
+    return fail(res, 400, "Please enter a longer image description.");
   }
 
   if (prompt.length > MAX_GENERATION_PROMPT) {
@@ -655,11 +616,7 @@ async function handleImageGeneration(req, res) {
   }
 
   if (!ALLOWED_ASPECT_RATIOS.has(aspectRatio)) {
-    return fail(
-      res,
-      400,
-      "That image aspect ratio is not supported."
-    );
+    return fail(res, 400, "That image aspect ratio is not supported.");
   }
 
   let visitorId;
@@ -675,7 +632,7 @@ async function handleImageGeneration(req, res) {
       return fail(
         res,
         429,
-        "An image is already being generated. Please wait for it to finish before requesting another."
+        "An image is already being generated. Please wait for it to finish."
       );
     }
 
@@ -707,32 +664,20 @@ async function handleImageGeneration(req, res) {
 
     const status = Number(error.status) || 502;
 
-    let message =
-      "Image generation failed. Please try again.";
+    let message = "Image generation failed. Please try again.";
 
     if (status === 401) {
-      message =
-        "Stability AI rejected your API key. Check STABILITY_API_KEY in Vercel.";
-
+      message = "Stability AI rejected your API key. Check STABILITY_API_KEY in Vercel.";
     } else if (status === 402) {
-      message =
-        "Your Stability AI account needs more credits to generate this flyer.";
-
+      message = "Your Stability AI account needs more credits.";
     } else if (status === 403) {
-      message =
-        "Stability AI refused this request. Check your account permissions and prompt.";
-
+      message = "Stability AI refused this request. Check your account permissions and prompt.";
     } else if (status === 429) {
-      message =
-        "Stability AI is temporarily rate-limiting image generation. Wait a little before trying again.";
-
+      message = "Stability AI is temporarily rate-limiting image generation. Please wait.";
     } else if (status === 503) {
-      message =
-        "Stability AI is temporarily unavailable. Please try again later.";
-
+      message = "Stability AI is temporarily unavailable.";
     } else if (status === 504) {
-      message =
-        "Image generation timed out. Please try again later.";
+      message = "Image generation timed out. Please try again.";
     }
 
     return fail(
@@ -755,14 +700,8 @@ function extractImageBlocks(messages) {
     .reverse()
     .find(message => message && message.role === "user");
 
-  if (
-    !latestUser ||
-    !Array.isArray(latestUser.content)
-  ) {
-    return {
-      images: [],
-      question: ""
-    };
+  if (!latestUser || !Array.isArray(latestUser.content)) {
+    return { images: [], question: "" };
   }
 
   const images = [];
@@ -802,33 +741,23 @@ function extractImageBlocks(messages) {
 // CONVERSATION HISTORY
 // ==========================================
 
-function makeTextHistory(
-  messages,
-  system,
-  excludeLatestUser = false
-) {
+function makeTextHistory(messages, system, excludeLatestUser = false) {
   const output = [];
 
-  
-const systemInstructions = [
-  MAYNARD_RESPONSE_RULES,
+  const systemInstructions = [
+    MAYNARD_RESPONSE_RULES,
+    `
+    RESPONSE FORMATTING RULES:
 
-  `
-  RESPONSE FORMATTING RULES:
-
-  - Always explain using clear, numbered steps.
-  - Use Step 1, Step 2, Step 3 for tutorials.
-  - Never use tables in responses.
-  - Never use Markdown tables or HTML tables.
-  - Explain mathematics line by line.
-  - Show every calculation clearly.
-  - Use bullet points for lists.
-  - Present comparisons in separate sections instead of tables.
-  - Keep explanations clear and beginner-friendly.
-  - Follow these rules unless the user explicitly requests a table.
-  `
-];
-
+    - Use clear, numbered steps for tutorials.
+    - Use Step 1, Step 2, Step 3 when explaining procedures.
+    - Do not use tables unless the user explicitly requests one.
+    - Explain mathematics line by line.
+    - Show calculations clearly.
+    - Use bullet points for lists.
+    - Keep explanations beginner-friendly.
+    `
+  ];
 
   if (typeof system === "string" && system.trim()) {
     systemInstructions.push(
@@ -892,7 +821,7 @@ const systemInstructions = [
 }
 
 // ==========================================
-// WORLDWIDE LIVE FOOTBALL INTEGRATION
+// FOOTBALL
 // ==========================================
 
 function getLatestUserText(messages) {
@@ -943,10 +872,7 @@ async function getFootballData(path, apiKey, signal) {
     );
   }
 
-  if (
-    data.errors &&
-    Object.keys(data.errors).length > 0
-  ) {
+  if (data.errors && Object.keys(data.errors).length > 0) {
     throw new Error(JSON.stringify(data.errors));
   }
 
@@ -974,8 +900,7 @@ function formatFootballMatch(match) {
       : goals.away;
 
   const elapsed =
-    status.elapsed !== null &&
-    status.elapsed !== undefined
+    status.elapsed !== null && status.elapsed !== undefined
       ? `${status.elapsed}'`
       : status.short || "Scheduled";
 
@@ -1030,25 +955,19 @@ Do not invent live scores or fixtures.
     let requestType;
 
     if (wantsTomorrow) {
-      const date = getGhanaDateOffset(1);
-
       endpoint =
-        `fixtures?date=${date}&timezone=Africa/Accra`;
+        `fixtures?date=${getGhanaDateOffset(1)}&timezone=Africa/Accra`;
 
       requestType = "Tomorrow's fixtures";
 
     } else if (wantsToday) {
-      const date = getGhanaDateOffset(0);
-
       endpoint =
-        `fixtures?date=${date}&timezone=Africa/Accra`;
+        `fixtures?date=${getGhanaDateOffset(0)}&timezone=Africa/Accra`;
 
       requestType = "Today's fixtures";
 
     } else {
-      endpoint =
-        "fixtures?live=all&timezone=Africa/Accra";
-
+      endpoint = "fixtures?live=all&timezone=Africa/Accra";
       requestType = "Worldwide live matches";
     }
 
@@ -1066,7 +985,7 @@ Do not invent live scores or fixtures.
       return `
 FOOTBALL DATA RESULTS:
 
-The football data provider returned no matches for:
+The football provider returned no matches for:
 ${requestType}.
 
 Explain that no matching results were returned.
@@ -1084,43 +1003,35 @@ Do not invent matches, teams, scores or kickoff times.
         `${index + 1}. ${formatFootballMatch(match)}`
     );
 
-    const wasLimited =
-      matches.length > displayedMatches.length;
-
     return `
 VERIFIED FOOTBALL DATA FROM API-FOOTBALL
 
 Request type: ${requestType}
-
-Date and timezone: Africa/Accra (Ghana)
-
-Number of matches returned by provider: ${matches.length}
-
-Number of matches included below: ${displayedMatches.length}
+Timezone: Africa/Accra (Ghana)
+Matches returned: ${matches.length}
+Matches included: ${displayedMatches.length}
 
 MATCH RESULTS:
 
 ${formattedMatches.join("\n")}
 
-IMPORTANT INSTRUCTIONS:
+IMPORTANT:
 
 - Use these results as the source of truth.
 - Show team names, scores, competition and match status.
-- For live matches, show elapsed minutes when available.
-- For scheduled matches, show kickoff time in Ghana local time.
+- Show elapsed minutes for live matches when available.
+- Show Ghana kickoff times for scheduled matches.
 - Do not invent missing scores, matches or times.
-- Do not claim the provider returned every match in the world.
+- Do not claim that the provider returned every match in the world.
 - ${
-      wasLimited
-        ? "The supplied list is limited to the first " + MAX_FOOTBALL_RESULTS + " results. Tell the user that more results were returned than displayed."
-        : "The supplied list contains all results returned by this API request."
+      matches.length > displayedMatches.length
+        ? "More results were returned than displayed."
+        : "All results returned by this request are included."
     }
-- Clearly distinguish live matches from scheduled matches.
+- Distinguish live matches from scheduled matches.
 `;
   } catch (error) {
-    if (signal?.aborted) {
-      throw error;
-    }
+    if (signal?.aborted) throw error;
 
     console.error("API-Football error:", error);
 
@@ -1128,15 +1039,14 @@ IMPORTANT INSTRUCTIONS:
 FOOTBALL DATA UNAVAILABLE
 
 The football data provider could not return reliable data.
-
-Explain that live football information is temporarily unavailable.
+Explain that football information is temporarily unavailable.
 Do not guess or invent scores, fixtures or match times.
 `;
   }
 }
 
 // ==========================================
-// GROQ API REQUEST
+// GROQ API
 // ==========================================
 
 async function groqRequest(apiKey, body, signal) {
@@ -1155,7 +1065,7 @@ async function groqRequest(apiKey, body, signal) {
 
     if (response.status === 429) {
       throw new Error(
-        "The AI service is busy or its usage limit has been reached. Please wait a little and try again."
+        "The AI service is busy or its usage limit has been reached. Please wait and try again."
       );
     }
 
@@ -1169,9 +1079,7 @@ async function groqRequest(apiKey, body, signal) {
     }
 
     throw new Error(
-      "AI service error (" +
-      response.status +
-      "): " +
+      `AI service error (${response.status}): ` +
       (providerMessage || "The AI request could not be completed.")
     );
   }
@@ -1242,8 +1150,7 @@ async function analyzeImageBatch(
 
   const data = await response.json();
 
-  const result =
-    data.choices?.[0]?.message?.content;
+  const result = data.choices?.[0]?.message?.content;
 
   if (!result) {
     throw new Error(
@@ -1276,9 +1183,7 @@ async function streamFinalAnswer(
   );
 
   if (!upstream.body) {
-    throw new Error(
-      "The AI service returned an empty response."
-    );
+    throw new Error("The AI service returned an empty response.");
   }
 
   res.writeHead(200, {
@@ -1289,11 +1194,7 @@ async function streamFinalAnswer(
 
   const send = object => {
     if (!res.writableEnded && !res.destroyed) {
-      res.write(
-        "data: " +
-        JSON.stringify(object) +
-        "\n\n"
-      );
+      res.write("data: " + JSON.stringify(object) + "\n\n");
     }
   };
 
@@ -1405,22 +1306,18 @@ export default async function handler(req, res) {
 
   const body = req.body || {};
 
-  // IMAGE GENERATION REQUESTS
+  // IMAGE GENERATION
 
   if (body.action === "generate_image") {
     return handleImageGeneration(req, res);
   }
 
-  // GROQ API KEY VALIDATION
+  // API KEY
 
   const apiKey = process.env.GROQ_API_KEY;
 
   if (!apiKey) {
-    return fail(
-      res,
-      500,
-      "The server is missing GROQ_API_KEY."
-    );
+    return fail(res, 500, "The server is missing GROQ_API_KEY.");
   }
 
   // REQUEST VALIDATION
@@ -1435,10 +1332,32 @@ export default async function handler(req, res) {
     return fail(
       res,
       400,
-      "Send a non-empty messages array with a maximum of " +
-      MAX_MESSAGES +
-      " messages."
+      `Send a non-empty messages array with a maximum of ${MAX_MESSAGES} messages.`
     );
+  }
+
+  for (const message of messages) {
+    if (
+      !message ||
+      !["user", "assistant"].includes(message.role) ||
+      !(
+        typeof message.content === "string" ||
+        Array.isArray(message.content)
+      )
+    ) {
+      return fail(
+        res,
+        400,
+        "One or more conversation messages are invalid."
+      );
+    }
+  }
+
+  if (
+    system !== undefined &&
+    typeof system !== "string"
+  ) {
+    return fail(res, 400, "Invalid app instructions.");
   }
 
   // IMAGE EXTRACTION
@@ -1454,7 +1373,7 @@ export default async function handler(req, res) {
     );
   }
 
-  // REQUEST CANCELLATION
+  // CANCELLATION
 
   const controller = new AbortController();
 
@@ -1464,14 +1383,13 @@ export default async function handler(req, res) {
     }
   });
 
-  // NORMAL TEXT REQUEST + FOOTBALL DATA
+  // NORMAL TEXT REQUEST
 
   if (images.length === 0) {
     let extraInstructions =
       typeof system === "string" ? system : "";
 
-    const latestQuestion =
-      getLatestUserText(messages);
+    const latestQuestion = getLatestUserText(messages);
 
     if (isFootballQuestion(latestQuestion)) {
       try {
@@ -1540,7 +1458,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  // RESERVE DAILY IMAGE ANALYSIS ALLOWANCE
+  // RESERVE IMAGE ANALYSIS ALLOWANCE
 
   let usage;
 
@@ -1552,7 +1470,9 @@ export default async function handler(req, res) {
       images.length
     );
 
-  } catch {
+  } catch (error) {
+    console.error("Image usage reservation error:", error);
+
     return fail(
       res,
       503,
@@ -1568,7 +1488,7 @@ export default async function handler(req, res) {
     );
   }
 
-  // PROCESS IMAGE REQUEST
+  // PROCESS IMAGES
 
   try {
     const history = makeTextHistory(
@@ -1644,6 +1564,8 @@ export default async function handler(req, res) {
 
   } catch (error) {
     if (controller.signal.aborted) return;
+
+    console.error("Image processing error:", error);
 
     if (!res.headersSent) {
       return fail(
