@@ -260,12 +260,10 @@ button{cursor:pointer}
   backdrop-filter:blur(10px);z-index:4;
 }
 .composer{
-  width:min(1100px,100%);
-  margin:auto;
+  width:min(1100px,100%);margin:auto;
   border:1px solid #9d9aff55;
   background:rgba(20,28,52,.96);
-  border-radius:19px;
-  padding:13px;
+  border-radius:19px;padding:13px;
   box-shadow:0 12px 45px #0006,0 0 25px #7564ff16;
 }
 
@@ -291,7 +289,7 @@ button{cursor:pointer}
 .attachment-remove:hover{background:#a52c45;color:white}
 .attachment-document{padding:14px 8px;font-size:11px;color:#d4dcf7;overflow-wrap:anywhere;min-height:65px}
 
-/* IMAGE GENERATION CONTROLS */
+/* IMAGE GENERATION */
 .image-gen-controls{
   display:flex;align-items:center;gap:9px;flex-wrap:wrap;
   padding:5px 3px 10px;color:var(--muted);font-size:11px;
@@ -308,53 +306,23 @@ button{cursor:pointer}
 .image-gen-btn:disabled{opacity:.5;cursor:not-allowed}
 .image-gen-status{font-size:11px;color:var(--muted)}
 
-/* FULL-WIDTH MESSAGE INPUT */
-.compose-row{
-  display:flex;
-  flex-direction:column;
-  align-items:stretch;
-  gap:10px;
-  width:100%;
-}
+/* INPUT */
+.compose-row{display:flex;flex-direction:column;align-items:stretch;gap:10px;width:100%}
 .compose-row textarea{
-  display:block;
-  width:100%;
-  min-width:0;
-  min-height:72px;
-  max-height:200px;
-  resize:none;
-  background:rgba(255,255,255,.025);
-  border:1px solid var(--line);
-  border-radius:12px;
-  outline:none;
-  color:white;
-  padding:14px;
-  font-size:15px;
-  line-height:1.6;
-  overflow-y:auto;
+  display:block;width:100%;min-width:0;min-height:72px;max-height:200px;
+  resize:none;background:rgba(255,255,255,.025);
+  border:1px solid var(--line);border-radius:12px;
+  outline:none;color:white;padding:14px;font-size:15px;
+  line-height:1.6;overflow-y:auto;
 }
-.compose-row textarea:focus{
-  border-color:#8b7cff99;
-  box-shadow:0 0 0 2px #8b7cff18;
-}
+.compose-row textarea:focus{border-color:#8b7cff99;box-shadow:0 0 0 2px #8b7cff18}
 .compose-row textarea::placeholder{color:#8793b2}
-
-/* BUTTONS UNDER THE TEXTAREA */
-.compose-actions{
-  display:flex;
-  align-items:center;
-  gap:9px;
-  width:100%;
-  flex-wrap:wrap;
-}
+.compose-actions{display:flex;align-items:center;gap:9px;width:100%;flex-wrap:wrap}
 .compose-actions .actionbtn{flex-shrink:0}
+.compose-actions .sendbtn{margin-left:auto;flex-shrink:0}
 .actionbtn{
   min-width:38px;height:38px;border-radius:11px;
   border:1px solid var(--line);background:#ffffff0b;color:#e9edff;padding:0 10px;
-}
-.compose-actions .sendbtn{
-  margin-left:auto;
-  flex-shrink:0;
 }
 .sendbtn{
   background:linear-gradient(135deg,#8b7cff,#397cce);border:0;
@@ -375,11 +343,7 @@ button{cursor:pointer}
   .chat{padding:18px 12px 245px}
   .bubble{padding:12px}
   .message-body{max-width:88%}
-  .composer-wrap{
-    left:0;
-    right:0;
-    padding:10px;
-  }
+  .composer-wrap{left:0;right:0;padding:10px}
   .suggestions{grid-template-columns:1fr}
   .bubble mjx-container[display="true"]{padding:10px 5px;margin:12px 0!important}
   .bubble mjx-math{font-size:1em}
@@ -388,11 +352,7 @@ button{cursor:pointer}
   .attachments{grid-template-columns:repeat(auto-fill,minmax(85px,1fr));max-height:180px}
   .attachment-thumb{height:75px}
   .compose-row{gap:9px}
-  .compose-row textarea{
-    width:100%;
-    min-height:72px;
-    font-size:15px;
-  }
+  .compose-row textarea{width:100%;min-height:72px;font-size:15px}
   .compose-actions{gap:7px}
   .image-gen-btn{padding:0 7px}
 }
@@ -485,25 +445,13 @@ button{cursor:pointer}
       </div>
 
       <div class="compose-row">
-        <textarea
-          id="messageInput"
-          rows="2"
-          placeholder="Write your prompt..."
-          aria-label="Write your message"
-        ></textarea>
+        <textarea id="messageInput" rows="2" placeholder="Write your prompt..." aria-label="Write your message"></textarea>
 
         <div class="compose-actions">
           <button class="actionbtn" id="attachBtn" title="Choose images">🖼</button>
           <button class="actionbtn" id="docBtn" title="Attach document">📄</button>
           <button class="actionbtn" id="micBtn" title="Voice input">🎙</button>
-
-          <button
-            class="actionbtn image-gen-btn"
-            id="imageGenBtn"
-            type="button"
-            title="Generate an image"
-          >🎨 Create</button>
-
+          <button class="actionbtn image-gen-btn" id="imageGenBtn" type="button" title="Generate an image">🎨 Create</button>
           <button class="sendbtn" id="sendBtn">Send ➤</button>
 
           <input type="file" id="imageInput" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden>
@@ -539,6 +487,8 @@ const imageGenStatus = $("imageGenStatus");
 
 const MAX_IMAGES_PER_MESSAGE = 15;
 const MAX_DOCUMENTS_PER_MESSAGE = 5;
+const MAX_FILE_SIZE = 12 * 1024 * 1024;
+const MAX_DOCUMENT_CHARS = 20000;
 
 const modeNames = {
   general:"General Assistant",
@@ -563,7 +513,7 @@ let voiceEnabled = false;
 let mathReady = false;
 let mathQueue = Promise.resolve();
 
-/* FULL SCREEN IMAGE VIEWER */
+/* IMAGE VIEWER */
 
 let imageZoom = 1;
 
@@ -680,7 +630,7 @@ function createImageId() {
   return "image_" + Date.now() + "_" + Math.random().toString(36).slice(2,10);
 }
 
-/* ASSISTANT MODES AND FORMATTING */
+/* ASSISTANT MODES */
 
 const formattingRules = `
 IMPORTANT RESPONSE FORMATTING RULES:
@@ -711,6 +661,7 @@ function getModeInstructions(mode) {
     translator:"You are a professional translator. Translate accurately while preserving the original meaning and tone.",
     summarizer:"You are a summarisation assistant. Identify the main points and present them clearly without unnecessary repetition."
   };
+
   return (instructions[mode] || instructions.general) + "\n\n" + formattingRules;
 }
 
@@ -776,7 +727,11 @@ function createChatId() {
 function getChatTitle(messages) {
   const first = messages.find(item => item.role === "user");
   if (!first) return "New conversation";
-  return first.content.length > 38 ? first.content.slice(0,38) + "..." : first.content;
+
+  const titleText = first.displayContent || first.content || "";
+  return titleText.length > 38
+    ? titleText.slice(0,38) + "..."
+    : titleText;
 }
 
 function saveHistory() {
@@ -792,6 +747,7 @@ function saveHistory() {
           updatedAt:Date.now(),
           messages:[]
         };
+
         currentChatId = existing.id;
         savedChats.unshift(existing);
       }
@@ -799,6 +755,7 @@ function saveHistory() {
       existing.messages = conversation.map(item => ({
         role:item.role,
         content:item.content,
+        displayContent:item.displayContent || item.content,
         images:(item.images || []).map(image => ({
           id:image.id,
           name:image.name
@@ -813,6 +770,7 @@ function saveHistory() {
 
     localStorage.setItem("maynard_chats",JSON.stringify(savedChats));
     renderHistoryList();
+
   } catch(error) {
     console.warn("Could not save conversation:",error);
     alert("Chat history could not be saved. Your browser storage may be full.");
@@ -831,6 +789,7 @@ function renderHistoryList() {
   savedChats.forEach(item => {
     const row = document.createElement("div");
     row.className = "history-item";
+
     if (item.id === currentChatId) row.classList.add("active");
 
     const open = document.createElement("button");
@@ -863,9 +822,11 @@ function openSavedChat(id) {
   if (!selected) return;
 
   currentChatId = selected.id;
+
   conversation = selected.messages.map(item => ({
     role:item.role,
     content:item.content,
+    displayContent:item.displayContent || item.content,
     images:Array.isArray(item.images) ? item.images : []
   }));
 
@@ -884,8 +845,10 @@ function openSavedChat(id) {
 function renameSavedChat(id) {
   const selected = savedChats.find(item => item.id === id);
   if (!selected) return;
+
   const newName = prompt("Enter a new conversation name:",selected.title);
   if (!newName || !newName.trim()) return;
+
   selected.title = newName.trim().slice(0,80);
   localStorage.setItem("maynard_chats",JSON.stringify(savedChats));
   renderHistoryList();
@@ -894,6 +857,7 @@ function renameSavedChat(id) {
 async function deleteSavedChat(id) {
   const selected = savedChats.find(item => item.id === id);
   if (!selected) return;
+
   if (!confirm("Delete this conversation and its saved pictures?")) return;
 
   await deleteImagesForMessages(selected.messages);
@@ -910,7 +874,7 @@ async function deleteSavedChat(id) {
   renderHistoryList();
 }
 
-/* SAFE MARKDOWN AND MATHEMATICS */
+/* MARKDOWN AND MATHEMATICS */
 
 function escapeHTML(value) {
   return String(value).replace(/[&<>"']/g,c => ({
@@ -925,6 +889,7 @@ function removeBoxedLatex(source) {
   while (true) {
     const start = text.indexOf("\\boxed",searchFrom);
     if (start === -1) break;
+
     const open = text.indexOf("{",start + 6);
     if (open === -1) break;
 
@@ -952,6 +917,7 @@ function removeBoxedLatex(source) {
 
 function normalizeMathSource(source) {
   let text = removeBoxedLatex(source);
+
   const environments = [
     "aligned","alignedat","gathered","cases","array","matrix",
     "pmatrix","bmatrix","Bmatrix","vmatrix","Vmatrix",
@@ -965,6 +931,7 @@ function normalizeMathSource(source) {
     const pattern = new RegExp(
       "\\\\begin\\{(" + names + ")\\}[\\s\\S]*?\\\\end\\{\\1\\}","g"
     );
+
     text = text.replace(pattern,match => "\\[\n" + match + "\n\\]");
   }
 
@@ -996,6 +963,7 @@ function protectMath(source) {
 function restoreMathTokens(root,saved) {
   const walker = document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
   const nodes = [];
+
   while (walker.nextNode()) nodes.push(walker.currentNode);
 
   for (const node of nodes) {
@@ -1004,6 +972,7 @@ function restoreMathTokens(root,saved) {
 
     saved.forEach((math,index) => {
       const token = `MATHPROTECTEDTOKEN${index}END`;
+
       if (value.includes(token)) {
         value = value.split(token).join(math);
         changed = true;
@@ -1028,6 +997,7 @@ function formatMarkdown(source) {
   const container = document.createElement("div");
   container.innerHTML = html;
   restoreMathTokens(container,protectedContent.saved);
+
   return container.innerHTML;
 }
 
@@ -1044,7 +1014,7 @@ function renderMath(element) {
   });
 }
 
-/* ADD MESSAGE AND RESTORE SAVED IMAGES */
+/* DISPLAY MESSAGES AND SAVED IMAGES */
 
 function addMessage(role,content,options = {}) {
   const row = document.createElement("div");
@@ -1092,6 +1062,7 @@ function addMessage(role,content,options = {}) {
         image.src = file.data;
         download.href = file.data;
         download.hidden = false;
+
       } else if (file.id) {
         image.classList.add("image-loading");
 
@@ -1115,6 +1086,7 @@ function addMessage(role,content,options = {}) {
       image.onclick = () => {
         if (image.src) openImageViewer(image.src);
       };
+
       image.style.cursor = "zoom-in";
     });
 
@@ -1141,23 +1113,31 @@ function addMessage(role,content,options = {}) {
 
   row.append(avatar,body);
   chat.appendChild(row);
+
   renderMath(bubble);
+
   $("welcome").classList.add("hidden");
   window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"});
+
   return row;
 }
 
-/* RENDER SAVED CONVERSATION */
-
 function renderConversation() {
   chat.innerHTML = "";
+
   if (!conversation.length) {
     $("welcome").classList.remove("hidden");
     return;
   }
+
   $("welcome").classList.add("hidden");
+
   conversation.forEach(item => {
-    addMessage(item.role,item.content,{images:item.images || []});
+    addMessage(
+      item.role,
+      item.displayContent || item.content,
+      {images:item.images || []}
+    );
   });
 }
 
@@ -1180,6 +1160,7 @@ function speakText(value) {
   }
 
   speechSynthesis.cancel();
+
   const clean = String(value)
     .replace(/```[\s\S]*?```/g," code omitted ")
     .replace(/\\\[([\s\S]*?)\\\]|\\\(([\s\S]*?)\\\)|\$\$([\s\S]*?)\$\$|\$([^$]+)\$/g," mathematical expression ")
@@ -1213,6 +1194,7 @@ function showTyping() {
   body.appendChild(bubble);
   row.append(avatar,body);
   chat.appendChild(row);
+
   window.scrollTo(0,document.body.scrollHeight);
 }
 
@@ -1225,20 +1207,27 @@ function removeTyping() {
 function resizeImage(file) {
   return new Promise((resolve,reject) => {
     const reader = new FileReader();
-    reader.onerror = reject;
+    reader.onerror = () => reject(new Error("Could not read the picture."));
 
     reader.onload = () => {
       const img = new Image();
-      img.onerror = reject;
+      img.onerror = () => reject(new Error("This picture could not be opened."));
 
       img.onload = () => {
         const max = 1280;
         const scale = Math.min(1,max / Math.max(img.width,img.height));
+
         const canvas = document.createElement("canvas");
         canvas.width = Math.round(img.width * scale);
         canvas.height = Math.round(img.height * scale);
 
         const context = canvas.getContext("2d");
+
+        if (!context) {
+          reject(new Error("Image processing is unavailable."));
+          return;
+        }
+
         context.drawImage(img,0,0,canvas.width,canvas.height);
         resolve(canvas.toDataURL("image/jpeg",.75));
       };
@@ -1250,7 +1239,7 @@ function resizeImage(file) {
   });
 }
 
-/* ATTACHMENT PREVIEW SYSTEM */
+/* ATTACHMENTS */
 
 function updateAttachmentList() {
   attachmentList.innerHTML = "";
@@ -1271,6 +1260,7 @@ function updateAttachmentList() {
       name.className = "attachment-name";
       name.textContent = file.name;
       item.appendChild(name);
+
     } else {
       const documentPreview = document.createElement("div");
       documentPreview.className = "attachment-document";
@@ -1284,6 +1274,7 @@ function updateAttachmentList() {
     remove.textContent = "×";
     remove.title = "Remove attachment";
     remove.setAttribute("aria-label","Remove " + file.name);
+
     remove.onclick = () => {
       attachments.splice(index,1);
       updateAttachmentList();
@@ -1311,31 +1302,39 @@ async function processAttachments(files,imageOnly) {
 
     if (isImage) {
       const imageCount = attachments.filter(item => item.type.startsWith("image/")).length;
+
       if (imageCount >= MAX_IMAGES_PER_MESSAGE) {
         alert("You can attach up to 15 pictures in one message.");
         break;
       }
+
     } else {
       const documentCount = attachments.filter(item => !item.type.startsWith("image/")).length;
+
       if (documentCount >= MAX_DOCUMENTS_PER_MESSAGE) {
         alert("You can attach up to five documents.");
         break;
       }
     }
 
-    if (file.size > 12 * 1024 * 1024) {
+    if (file.size > MAX_FILE_SIZE) {
       alert("Each file must be smaller than 12 MB.");
       continue;
     }
 
     try {
-      const data = isImage ? await resizeImage(file) : (await file.text()).slice(0,20000);
+      const data = isImage
+        ? await resizeImage(file)
+        : (await file.text()).slice(0,MAX_DOCUMENT_CHARS);
+
       attachments.push({
         name:file.name,
         type:isImage ? "image/jpeg" : "text/plain",
         data
       });
+
       updateAttachmentList();
+
     } catch(error) {
       console.error(error);
       alert("Could not read " + file.name);
@@ -1361,12 +1360,13 @@ function isMathQuestion(message) {
     || /[a-z]\s*[\^²³]\s*\d*/i.test(message);
 }
 
-/* STREAMING */
+/* STREAMING RESPONSE */
 
 function readStreamEvent(data,state) {
   if (!data || data === "[DONE]") return;
 
   let event;
+
   try {
     event = JSON.parse(data);
   } catch {
@@ -1389,14 +1389,16 @@ function readStreamEvent(data,state) {
   state.reply += text;
   removeTyping();
 
-  if (!state.row) state.row = addMessage("assistant","");
+  if (!state.row) {
+    state.row = addMessage("assistant","");
+  }
 
   const bubble = state.row.querySelector(".bubble");
   bubble.innerHTML = formatMarkdown(state.reply);
   window.scrollTo(0,document.body.scrollHeight);
 }
 
-/* STABILITY AI IMAGE GENERATION */
+/* IMAGE GENERATION */
 
 async function generateImage() {
   if (busy || imageGenBusy) return;
@@ -1424,6 +1426,19 @@ async function generateImage() {
     "assistant",
     "Creating your image with Stability AI. Please wait..."
   );
+
+  // Save the user's image prompt as part of the conversation.
+  conversation.push({
+    role:"user",
+    content:prompt,
+    displayContent:prompt,
+    images:[]
+  });
+
+  addMessage("user",prompt);
+  messageInput.value = "";
+  messageInput.style.height = "72px";
+  saveHistory();
 
   try {
     const response = await fetch("/api/chat",{
@@ -1483,11 +1498,11 @@ async function generateImage() {
     loadingRow.remove();
 
     const imageInfo = {id:imageId,name:imageName};
-    const description = "Generated image for: " + prompt;
 
     conversation.push({
       role:"assistant",
-      content:description,
+      content:"Your image has been generated successfully.",
+      displayContent:"Your image has been generated successfully.",
       images:[imageInfo]
     });
 
@@ -1504,11 +1519,19 @@ async function generateImage() {
     console.error("Stability AI generation error:",error);
     loadingRow.remove();
 
-    addMessage(
-      "assistant",
+    const errorMessage =
       "**Image generation failed.**\n\n" +
-      (error?.message || "An unexpected error occurred.")
-    );
+      (error?.message || "An unexpected error occurred.");
+
+    conversation.push({
+      role:"assistant",
+      content:errorMessage,
+      displayContent:errorMessage,
+      images:[]
+    });
+
+    addMessage("assistant",errorMessage);
+    saveHistory();
 
     imageGenStatus.textContent = "Generation failed.";
 
@@ -1528,6 +1551,7 @@ async function sendMessage() {
   if (busy || imageGenBusy) return;
 
   const message = messageInput.value.trim();
+
   if (!message && !attachments.length) return;
 
   const currentAttachments = attachments.slice();
@@ -1553,6 +1577,7 @@ async function sendMessage() {
 
       messageImages.push({id:imageId,name:file.name});
     }
+
   } catch(error) {
     console.error("Image storage error:",error);
     alert("Maynard AI could not save the picture in your browser. Please try again.");
@@ -1561,9 +1586,22 @@ async function sendMessage() {
     return;
   }
 
+  // Keep document contents in the conversation history.
+  const textAttachments = currentAttachments.filter(
+    file => !file.type.startsWith("image/")
+  );
+
+  let savedUserContent = displayText;
+
+  for (const file of textAttachments) {
+    savedUserContent +=
+      "\n\nAttached document: " + file.name + "\n" + file.data;
+  }
+
   conversation.push({
     role:"user",
-    content:displayText,
+    content:savedUserContent,
+    displayContent:displayText,
     images:messageImages
   });
 
@@ -1583,16 +1621,13 @@ async function sendMessage() {
   const state = {reply:"",error:"",row:null};
 
   try {
+    // Previous conversation now includes saved document contents.
     const history = conversation.slice(-13,-1).map(item => ({
       role:item.role,
       content:item.content
     }));
 
-    let apiMessage = message;
-
-    const textAttachments = currentAttachments.filter(
-      file => !file.type.startsWith("image/")
-    );
+    let apiMessage = message || "Please examine my attachment.";
 
     for (const file of textAttachments) {
       apiMessage += "\n\nAttached file: " + file.name + "\n" + file.data;
@@ -1600,7 +1635,9 @@ async function sendMessage() {
 
     const content = [];
 
-    if (apiMessage) content.push({type:"text",text:apiMessage});
+    if (apiMessage) {
+      content.push({type:"text",text:apiMessage});
+    }
 
     for (const file of currentAttachments) {
       if (!file.type.startsWith("image/")) continue;
@@ -1634,7 +1671,10 @@ async function sendMessage() {
     const response = await fetch("/api/chat",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({messages,system:systemPrompt})
+      body:JSON.stringify({
+        messages,
+        system:systemPrompt
+      })
     });
 
     if (!response.ok) {
@@ -1643,11 +1683,13 @@ async function sendMessage() {
 
       try {
         const errorData = JSON.parse(errorText);
+
         errorMessage =
           errorData?.error?.message ||
           errorData?.message ||
           errorData?.error ||
           errorText;
+
       } catch {}
 
       if (typeof errorMessage !== "string") {
@@ -1697,7 +1739,10 @@ async function sendMessage() {
 
     removeTyping();
 
-    if (state.error) throw new Error(state.error);
+    if (state.error) {
+      throw new Error(state.error);
+    }
+
     if (!state.reply.trim()) {
       throw new Error("The AI service returned an empty response. Please try again.");
     }
@@ -1707,6 +1752,7 @@ async function sendMessage() {
     conversation.push({
       role:"assistant",
       content:cleanReply,
+      displayContent:cleanReply,
       images:[]
     });
 
@@ -1719,17 +1765,29 @@ async function sendMessage() {
     }
 
     saveHistory();
-    if (voiceEnabled) speakText(cleanReply);
+
+    if (voiceEnabled) {
+      speakText(cleanReply);
+    }
 
   } catch(error) {
     removeTyping();
     console.error("Maynard AI request error:",error);
 
-    addMessage(
-      "assistant",
+    const errorMessage =
       "I couldn't complete that request.\n\n**Error:** " +
-      (error?.message || "An unexpected error occurred.")
-    );
+      (error?.message || "An unexpected error occurred.");
+
+    conversation.push({
+      role:"assistant",
+      content:errorMessage,
+      displayContent:errorMessage,
+      images:[]
+    });
+
+    addMessage("assistant",errorMessage);
+    saveHistory();
+
   } finally {
     busy = false;
     sendBtn.disabled = false;
@@ -1777,6 +1835,7 @@ $("modes").addEventListener("click",event => {
 $("welcome").addEventListener("click",event => {
   const button = event.target.closest(".suggestion");
   if (!button) return;
+
   messageInput.value = button.dataset.prompt;
   sendMessage();
 });
@@ -1808,8 +1867,11 @@ $("newChat").onclick = () => {
 /* CLEAR CURRENT CONVERSATION */
 
 $("clearBtn").onclick = async () => {
-  if (busy || imageGenBusy ||
-      !confirm("Clear this conversation and its saved pictures?")) return;
+  if (
+    busy ||
+    imageGenBusy ||
+    !confirm("Clear this conversation and its saved pictures?")
+  ) return;
 
   await deleteImagesForMessages(conversation);
 
@@ -1837,7 +1899,7 @@ $("exportBtn").onclick = () => {
 
   const output = conversation.map(item =>
     (item.role === "user" ? "YOU" : "MAYNARD AI") +
-    "\n" + item.content +
+    "\n" + (item.displayContent || item.content) +
     (item.images?.length
       ? "\nPictures: " + item.images.map(image => image.name).join(", ")
       : "")
@@ -1853,7 +1915,8 @@ $("exportBtn").onclick = () => {
   document.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(url);
+
+  setTimeout(() => URL.revokeObjectURL(url),1000);
 };
 
 /* MOBILE MENU */
@@ -1866,7 +1929,10 @@ $("menuBtn").onclick = () => {
 
 $("voiceToggle").onclick = () => {
   voiceEnabled = !voiceEnabled;
-  $("voiceToggle").textContent = voiceEnabled ? "🔊 Voice On" : "🔊 Voice";
+
+  $("voiceToggle").textContent = voiceEnabled
+    ? "🔊 Voice On"
+    : "🔊 Voice";
 
   if (!voiceEnabled && "speechSynthesis" in window) {
     speechSynthesis.cancel();
@@ -1893,8 +1959,8 @@ $("micBtn").onclick = () => {
     messageInput.value +=
       (messageInput.value ? " " : "") +
       event.results[0][0].transcript;
-    messageInput.focus();
 
+    messageInput.focus();
     messageInput.dispatchEvent(new Event("input"));
   };
 
@@ -1909,7 +1975,9 @@ $("micBtn").onclick = () => {
 
 function loadHistory() {
   try {
-    const saved = JSON.parse(localStorage.getItem("maynard_chats") || "null");
+    const saved = JSON.parse(
+      localStorage.getItem("maynard_chats") || "null"
+    );
 
     if (Array.isArray(saved)) {
       savedChats = saved.filter(item =>
@@ -1925,13 +1993,22 @@ function loadHistory() {
         ).map(message => ({
           role:message.role,
           content:message.content,
+          displayContent:
+            typeof message.displayContent === "string"
+              ? message.displayContent
+              : message.content,
           images:Array.isArray(message.images)
-            ? message.images.filter(image => image && typeof image.id === "string")
+            ? message.images.filter(image =>
+                image && typeof image.id === "string"
+              )
             : []
         }))
       }));
+
     } else {
-      const old = JSON.parse(localStorage.getItem("maynard_history") || "[]");
+      const old = JSON.parse(
+        localStorage.getItem("maynard_history") || "[]"
+      );
 
       if (Array.isArray(old) && old.length) {
         const validOld = old.filter(item =>
@@ -1949,16 +2026,22 @@ function loadHistory() {
             messages:validOld.map(item => ({
               role:item.role,
               content:item.content,
+              displayContent:item.content,
               images:[]
             }))
           }];
 
-          localStorage.setItem("maynard_chats",JSON.stringify(savedChats));
+          localStorage.setItem(
+            "maynard_chats",
+            JSON.stringify(savedChats)
+          );
         }
       }
     }
 
-    savedChats.sort((a,b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    savedChats.sort(
+      (a,b) => (b.updatedAt || 0) - (a.updatedAt || 0)
+    );
 
     if (savedChats.length) {
       openSavedChat(savedChats[0].id);
@@ -1972,9 +2055,11 @@ function loadHistory() {
 
   } catch(error) {
     console.warn("Could not load chat history:",error);
+
     savedChats = [];
     conversation = [];
     currentChatId = createChatId();
+
     renderConversation();
     renderHistoryList();
   }
