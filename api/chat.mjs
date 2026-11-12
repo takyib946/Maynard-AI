@@ -1,7 +1,7 @@
 
 import { createHash, randomUUID } from "node:crypto";
 
-// Maynard AI — Vercel + Groq + Upstash Redis
+// MAYNARD AI — Vercel + Groq + Upstash Redis
 
 export const config = { maxDuration: 60 };
 
@@ -13,11 +13,137 @@ const TEXT_MODEL =
 const VISION_MODEL =
   process.env.GROQ_VISION_MODEL || "qwen/qwen3.8-27b";
 
-const MAX_TOKENS = 2048;
+const MAX_TOKENS = 3072;
 const MAX_MESSAGES = 60;
 const DAILY_IMAGE_LIMIT = 15;
 const IMAGES_PER_BATCH = 3;
 const HISTORY_MESSAGES = 8;
+
+// ==========================================
+// MAYNARD AI — ANSWER QUALITY INSTRUCTIONS
+// ==========================================
+
+const MAYNARD_RESPONSE_RULES = `
+You are Maynard AI, an intelligent, helpful and accurate AI assistant.
+
+YOUR MAIN GOAL:
+Give users accurate, useful, understandable and complete answers.
+Prioritize correctness over speed and unnecessary detail.
+
+1. ACCURACY AND RELIABILITY
+
+- Carefully understand the user's question before answering.
+- Answer the actual question instead of changing its meaning.
+- Do not invent facts, statistics, quotations, sources or references.
+- Do not present guesses as confirmed facts.
+- If information is uncertain, explain the uncertainty.
+- If a question is ambiguous, ask for clarification when necessary.
+- Check calculations and logical conclusions before responding.
+- Correct mistakes when they are identified.
+- Never pretend to have performed an action or checked information that you have not checked.
+- Do not claim that information is current if you cannot verify that it is current.
+
+2. ANSWER FORMATTING
+
+- Use clear, natural paragraphs.
+- Use headings when they improve organization.
+- Use numbered steps for procedures and multi-step explanations.
+- Use bullet points when listing related information.
+- Do not automatically turn every answer into a table.
+- Avoid unnecessary tables.
+- Use a table only when it genuinely makes information easier to compare or understand, or when requested.
+- Keep answers focused on the user's question.
+- Avoid repeating the same information.
+- Explain technical terms in understandable language when appropriate.
+
+3. MATHEMATICS AND SYMBOLIC MATHEMATICS
+
+- Support arithmetic, algebra, geometry, trigonometry, calculus, statistics and other mathematical subjects.
+- Use accurate mathematical notation.
+- Use LaTeX for mathematical expressions.
+- Use \\( ... \\) for inline mathematics.
+- Use \\[ ... \\] for displayed mathematics.
+- Format fractions, roots, powers, subscripts and superscripts correctly.
+- Show important calculations step by step.
+- Explain why each important mathematical operation is performed.
+- Check arithmetic and algebraic results.
+- Verify answers by substitution or another suitable method when possible.
+- Clearly identify the final answer.
+- Never put an entire mathematical solution inside a table.
+- Do not use mathematical notation unnecessarily in ordinary sentences.
+- If a problem cannot be solved because information is missing, identify what is missing.
+
+4. SCIENCE AND TECHNICAL SUBJECTS
+
+- Explain scientific concepts accurately.
+- Use correct terminology and units.
+- Distinguish established scientific facts from theories, estimates and hypotheses.
+- Show formulas and calculations where appropriate.
+- Explain the meaning of symbols used in formulas.
+- Do not invent experimental results or scientific evidence.
+
+5. EDUCATIONAL QUESTIONS
+
+- Give answers that directly address the question.
+- Explain difficult concepts in simple language.
+- Answer each part of a multi-part question separately.
+- Show relevant working for calculations.
+- Use examples when they genuinely help understanding.
+- Respect requested answer lengths and formats.
+- Do not leave out important parts of the question.
+- Do not add unrelated information just to make an answer longer.
+
+6. WRITING AND LANGUAGE
+
+- Use correct spelling, grammar and punctuation.
+- Write naturally and clearly.
+- Preserve the intended meaning when rewriting text.
+- Follow the requested language and tone.
+- Do not change names, figures or important details without a reason.
+
+7. IMAGE UNDERSTANDING
+
+- Carefully examine all available uploaded images.
+- Read visible text accurately.
+- Answer the actual question associated with the image.
+- Do not invent details that cannot be seen.
+- If text is unclear or unreadable, say so.
+- If multiple images are supplied, consider information from all of them.
+- Explain relevant differences between images when necessary.
+
+8. GENERAL KNOWLEDGE
+
+- Separate facts from opinions.
+- Do not make up historical dates, names or events.
+- Avoid unsupported claims.
+- When a question concerns changing information, explain when your knowledge may be outdated.
+- Give useful context without overwhelming the user.
+
+9. CONVERSATION
+
+- Remember relevant information from the conversation provided to you.
+- Use previous messages when they help answer the current question.
+- Do not ask the user to repeat information already available.
+- Do not repeat the entire conversation in every answer.
+- If the user corrects a misunderstanding, follow the correction.
+
+10. FINAL ANSWER QUALITY
+
+Before responding, check:
+- Did I answer the actual question?
+- Is the answer logically consistent?
+- Are calculations correct?
+- Is the explanation understandable?
+- Did I avoid unnecessary tables?
+- Did I clearly identify uncertainty?
+- Did I include all important parts?
+
+Give the best accurate answer you can.
+`;
+
+// ==========================================
+// BASIC RESPONSE HELPERS
+// ==========================================
 
 function fail(res, status, message) {
   return res.status(status).json({
@@ -30,16 +156,27 @@ function getCookie(req, name) {
 
   for (const cookie of cookies) {
     const index = cookie.indexOf("=");
+
     if (index < 0) continue;
 
     const key = cookie.slice(0, index).trim();
     const value = cookie.slice(index + 1).trim();
 
-    if (key === name) return decodeURIComponent(value);
+    if (key === name) {
+      try {
+        return decodeURIComponent(value);
+      } catch {
+        return null;
+      }
+    }
   }
 
   return null;
 }
+
+// ==========================================
+// VISITOR IDENTIFICATION
+// ==========================================
 
 function getVisitorId(req, res) {
   let id = getCookie(req, "maynard_visitor");
@@ -54,8 +191,14 @@ function getVisitorId(req, res) {
     );
   }
 
-  return createHash("sha256").update(id).digest("hex");
+  return createHash("sha256")
+    .update(id)
+    .digest("hex");
 }
+
+// ==========================================
+// GHANA DATE AND IMAGE USAGE
+// ==========================================
 
 function getGhanaDate() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -74,27 +217,39 @@ function secondsUntilMidnightGhana() {
     date + "T00:00:00.000Z"
   );
 
-  nextMidnight.setUTCDate(nextMidnight.getUTCDate() + 1);
+  nextMidnight.setUTCDate(
+    nextMidnight.getUTCDate() + 1
+  );
 
   return Math.max(
     60,
-    Math.ceil((nextMidnight.getTime() - now.getTime()) / 1000)
+    Math.ceil(
+      (nextMidnight.getTime() - now.getTime()) / 1000
+    )
   );
 }
+
+// ==========================================
+// UPSTASH REDIS IMAGE LIMIT
+// ==========================================
 
 async function reserveImages(visitorId, amount) {
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
 
   if (!url || !token) {
-    throw new Error("Image usage tracking is not configured.");
+    throw new Error(
+      "Image usage tracking is not configured."
+    );
   }
 
   const date = getGhanaDate();
-  const key = `maynard:images:${visitorId}:${date}`;
+
+  const key =
+    `maynard:images:${visitorId}:${date}`;
+
   const ttl = secondsUntilMidnightGhana();
 
-  // Atomic: either reserve all requested images or none.
   const script = `
     local current = tonumber(redis.call("GET", KEYS[1]) or "0")
     local requested = tonumber(ARGV[1])
@@ -105,17 +260,24 @@ async function reserveImages(visitorId, amount) {
     end
 
     local updated = redis.call("INCRBY", KEYS[1], requested)
-    redis.call("EXPIRE", KEYS[1], tonumber(ARGV[3]))
+
+    redis.call(
+      "EXPIRE",
+      KEYS[1],
+      tonumber(ARGV[3])
+    )
 
     return {1, updated}
   `;
 
   const response = await fetch(url, {
     method: "POST",
+
     headers: {
       Authorization: "Bearer " + token,
       "Content-Type": "application/json"
     },
+
     body: JSON.stringify([
       "EVAL",
       script,
@@ -128,19 +290,25 @@ async function reserveImages(visitorId, amount) {
   });
 
   if (!response.ok) {
-    throw new Error("Could not contact usage database.");
+    throw new Error(
+      "Could not contact usage database."
+    );
   }
 
   const data = await response.json();
 
   if (data.error) {
-    throw new Error("Usage database error.");
+    throw new Error(
+      "Usage database error."
+    );
   }
 
   const result = data.result;
 
   if (!Array.isArray(result)) {
-    throw new Error("Invalid usage database response.");
+    throw new Error(
+      "Invalid usage database response."
+    );
   }
 
   return {
@@ -149,13 +317,26 @@ async function reserveImages(visitorId, amount) {
   };
 }
 
+// ==========================================
+// IMAGE EXTRACTION
+// ==========================================
+
 function extractImageBlocks(messages) {
   const latestUser = [...messages]
     .reverse()
-    .find((message) => message && message.role === "user");
+    .find(
+      message =>
+        message && message.role === "user"
+    );
 
-  if (!latestUser || !Array.isArray(latestUser.content)) {
-    return { images: [], question: "" };
+  if (
+    !latestUser ||
+    !Array.isArray(latestUser.content)
+  ) {
+    return {
+      images: [],
+      question: ""
+    };
   }
 
   const images = [];
@@ -164,7 +345,10 @@ function extractImageBlocks(messages) {
   for (const block of latestUser.content) {
     if (!block) continue;
 
-    if (block.type === "text" && block.text) {
+    if (
+      block.type === "text" &&
+      block.text
+    ) {
       text.push(String(block.text));
     }
 
@@ -191,20 +375,64 @@ function extractImageBlocks(messages) {
   };
 }
 
-function makeTextHistory(messages, system) {
+// ==========================================
+// CONVERSATION HISTORY
+// ==========================================
+
+function makeTextHistory(
+  messages,
+  system,
+  excludeLatestUser = false
+) {
   const output = [];
 
-  if (typeof system === "string" && system) {
-    output.push({
-      role: "system",
-      content: system.slice(0, 4000)
-    });
+  // Combine frontend instructions with Maynard's rules.
+  const systemInstructions = [
+    MAYNARD_RESPONSE_RULES
+  ];
+
+  if (
+    typeof system === "string" &&
+    system.trim()
+  ) {
+    systemInstructions.push(
+      "ADDITIONAL APP INSTRUCTIONS:\n" +
+      system.slice(0, 4000)
+    );
   }
 
-  const history = messages.slice(-HISTORY_MESSAGES);
+  output.push({
+    role: "system",
+    content: systemInstructions.join("\n\n")
+  });
+
+  let history = messages.slice(
+    -HISTORY_MESSAGES
+  );
+
+  // Avoid duplicating the latest image question.
+  if (excludeLatestUser) {
+    let lastUserIndex = -1;
+
+    for (let i = history.length - 1; i >= 0; i--) {
+      if (history[i]?.role === "user") {
+        lastUserIndex = i;
+        break;
+      }
+    }
+
+    if (lastUserIndex >= 0) {
+      history = history.filter(
+        (_, index) => index !== lastUserIndex
+      );
+    }
+  }
 
   for (const message of history) {
-    if (!message || !["user", "assistant"].includes(message.role)) {
+    if (
+      !message ||
+      !["user", "assistant"].includes(message.role)
+    ) {
       continue;
     }
 
@@ -214,8 +442,14 @@ function makeTextHistory(messages, system) {
       content = message.content;
     } else if (Array.isArray(message.content)) {
       content = message.content
-        .filter((block) => block && block.type === "text")
-        .map((block) => String(block.text || ""))
+        .filter(
+          block =>
+            block &&
+            block.type === "text"
+        )
+        .map(
+          block => String(block.text || "")
+        )
         .join("\n");
     }
 
@@ -230,14 +464,25 @@ function makeTextHistory(messages, system) {
   return output;
 }
 
-async function groqRequest(apiKey, body, signal) {
+// ==========================================
+// GROQ API REQUEST
+// ==========================================
+
+async function groqRequest(
+  apiKey,
+  body,
+  signal
+) {
   const response = await fetch(API_URL, {
     method: "POST",
+
     signal,
+
     headers: {
       "Content-Type": "application/json",
       Authorization: "Bearer " + apiKey
     },
+
     body: JSON.stringify(body)
   });
 
@@ -250,14 +495,31 @@ async function groqRequest(apiKey, body, signal) {
       );
     }
 
+    let providerMessage = "";
+
+    try {
+      const parsed = JSON.parse(errorText);
+
+      providerMessage =
+        parsed.error?.message || "";
+    } catch {
+      providerMessage = "";
+    }
+
     throw new Error(
-      "AI service error (" + response.status + "): " +
-      errorText.slice(0, 500)
+      "AI service error (" +
+      response.status +
+      "): " +
+      (providerMessage || "The AI request could not be completed.")
     );
   }
 
   return response;
 }
+
+// ==========================================
+// IMAGE ANALYSIS
+// ==========================================
 
 async function analyzeImageBatch(
   apiKey,
@@ -268,8 +530,9 @@ async function analyzeImageBatch(
   totalBatches,
   signal
 ) {
-  const imageParts = images.map((image) => ({
+  const imageParts = images.map(image => ({
     type: "image_url",
+
     image_url: {
       url:
         "data:" +
@@ -284,20 +547,26 @@ async function analyzeImageBatch(
 
   const messages = [
     ...history,
+
     {
       role: "user",
+
       content: [
         {
           type: "text",
+
           text:
             prompt +
             "\n\nThis is image batch " +
             batchNumber +
             " of " +
             totalBatches +
-            ". Examine every image in this batch carefully. " +
-            "Describe useful details and do not invent information."
+            ". Examine every image carefully. " +
+            "Read visible text accurately. " +
+            "Do not invent details. " +
+            "If something is unclear, say so."
         },
+
         ...imageParts
       ]
     }
@@ -305,22 +574,34 @@ async function analyzeImageBatch(
 
   const response = await groqRequest(
     apiKey,
+
     {
       model: VISION_MODEL,
-      max_tokens: 1200,
+      max_tokens: 1500,
       stream: false,
       messages
     },
+
     signal
   );
 
   const data = await response.json();
 
-  return (
-    data.choices?.[0]?.message?.content ||
-    "No image analysis was returned for this batch."
-  );
+  const result =
+    data.choices?.[0]?.message?.content;
+
+  if (!result) {
+    throw new Error(
+      "The vision model did not return an image analysis."
+    );
+  }
+
+  return result;
 }
+
+// ==========================================
+// STREAMING FINAL ANSWER
+// ==========================================
 
 async function streamFinalAnswer(
   apiKey,
@@ -330,98 +611,182 @@ async function streamFinalAnswer(
 ) {
   const upstream = await groqRequest(
     apiKey,
+
     {
       model: TEXT_MODEL,
       max_tokens: MAX_TOKENS,
       stream: true,
       messages
     },
+
     signal
   );
 
+  if (!upstream.body) {
+    throw new Error(
+      "The AI service returned an empty response."
+    );
+  }
+
   res.writeHead(200, {
-    "Content-Type": "text/event-stream",
+    "Content-Type": "text/event-stream; charset=utf-8",
     "Cache-Control": "no-cache, no-transform",
     Connection: "keep-alive"
   });
 
-  const send = (object) => {
-    if (!res.writableEnded && !res.destroyed) {
-      res.write("data: " + JSON.stringify(object) + "\n\n");
+  const send = object => {
+    if (
+      !res.writableEnded &&
+      !res.destroyed
+    ) {
+      res.write(
+        "data: " +
+        JSON.stringify(object) +
+        "\n\n"
+      );
     }
   };
 
   const decoder = new TextDecoder();
+
   let buffer = "";
+  let finished = false;
+
+  function processLine(line) {
+    if (!line.startsWith("data:")) return;
+
+    const payload = line.slice(5).trim();
+
+    if (!payload) return;
+
+    if (payload === "[DONE]") {
+      finished = true;
+      return;
+    }
+
+    let event;
+
+    try {
+      event = JSON.parse(payload);
+    } catch {
+      return;
+    }
+
+    if (event.error) {
+      send({
+        type: "error",
+
+        error: {
+          message:
+            event.error.message ||
+            "The AI stream encountered an error."
+        }
+      });
+
+      return;
+    }
+
+    const content =
+      event.choices?.[0]?.delta?.content;
+
+    if (
+      typeof content === "string" &&
+      content.length > 0
+    ) {
+      send({
+        type: "content_block_delta",
+
+        delta: {
+          type: "text_delta",
+          text: content
+        }
+      });
+    }
+  }
 
   try {
     for await (const chunk of upstream.body) {
-      if (signal.aborted || res.destroyed) break;
+      if (
+        signal.aborted ||
+        res.destroyed ||
+        finished
+      ) {
+        break;
+      }
 
-      buffer += decoder.decode(chunk, { stream: true });
+      buffer += decoder.decode(
+        chunk,
+        { stream: true }
+      );
 
       const lines = buffer.split("\n");
+
       buffer = lines.pop() || "";
 
       for (const line of lines) {
-        if (!line.startsWith("data:")) continue;
+        processLine(line);
 
-        const payload = line.slice(5).trim();
-
-        if (!payload || payload === "[DONE]") continue;
-
-        let event;
-
-        try {
-          event = JSON.parse(payload);
-        } catch {
-          continue;
-        }
-
-        if (event.error) {
-          send({
-            type: "error",
-            error: {
-              message: event.error.message || "Stream error."
-            }
-          });
-          continue;
-        }
-
-        const content =
-          event.choices?.[0]?.delta?.content;
-
-        if (typeof content === "string" && content) {
-          send({
-            type: "content_block_delta",
-            delta: {
-              type: "text_delta",
-              text: content
-            }
-          });
-        }
+        if (finished) break;
       }
     }
-  } catch {
-    // The visitor may have closed the connection.
+
+    buffer += decoder.decode();
+
+    if (buffer.trim() && !finished) {
+      processLine(buffer);
+    }
+
+  } catch (error) {
+    if (!signal.aborted && !res.destroyed) {
+      send({
+        type: "error",
+
+        error: {
+          message:
+            "The response was interrupted. Please try again."
+        }
+      });
+    }
   }
 
-  if (!res.writableEnded && !res.destroyed) {
+  if (
+    !res.writableEnded &&
+    !res.destroyed
+  ) {
     res.end();
   }
 }
 
+// ==========================================
+// MAIN VERCEL HANDLER
+// ==========================================
+
 export default async function handler(req, res) {
+  // METHOD VALIDATION
+
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
-    return fail(res, 405, "Use POST.");
+
+    return fail(
+      res,
+      405,
+      "Use POST."
+    );
   }
+
+  // API KEY VALIDATION
 
   const apiKey = process.env.GROQ_API_KEY;
 
   if (!apiKey) {
-    return fail(res, 500, "The server is missing GROQ_API_KEY.");
+    return fail(
+      res,
+      500,
+      "The server is missing GROQ_API_KEY."
+    );
   }
+
+  // REQUEST VALIDATION
 
   const { messages, system } = req.body || {};
 
@@ -433,13 +798,18 @@ export default async function handler(req, res) {
     return fail(
       res,
       400,
-      "Send a non-empty messages array (maximum " +
+      "Send a non-empty messages array with a maximum of " +
       MAX_MESSAGES +
-      ")."
+      " messages."
     );
   }
 
-  const { images, question } = extractImageBlocks(messages);
+  // IMAGE EXTRACTION
+
+  const {
+    images,
+    question
+  } = extractImageBlocks(messages);
 
   if (images.length > DAILY_IMAGE_LIMIT) {
     return fail(
@@ -449,6 +819,8 @@ export default async function handler(req, res) {
     );
   }
 
+  // REQUEST CANCELLATION
+
   const controller = new AbortController();
 
   res.on("close", () => {
@@ -457,12 +829,26 @@ export default async function handler(req, res) {
     }
   });
 
-  // Requests without images use the normal text model.
-  if (images.length === 0) {
-    const history = makeTextHistory(messages, system);
+  // ========================================
+  // NORMAL TEXT REQUEST
+  // ========================================
 
-    if (!history.some((message) => message.role === "user")) {
-      return fail(res, 400, "No usable message content.");
+  if (images.length === 0) {
+    const history = makeTextHistory(
+      messages,
+      system
+    );
+
+    if (
+      !history.some(
+        message => message.role === "user"
+      )
+    ) {
+      return fail(
+        res,
+        400,
+        "No usable message content."
+      );
     }
 
     try {
@@ -472,20 +858,32 @@ export default async function handler(req, res) {
         res,
         controller.signal
       );
+
     } catch (error) {
       if (!res.headersSent) {
-        return fail(res, 502, error.message);
+        return fail(
+          res,
+          502,
+          error.message
+        );
       }
 
-      if (!res.writableEnded && !res.destroyed) {
+      if (
+        !res.writableEnded &&
+        !res.destroyed
+      ) {
         res.write(
           "data: " +
           JSON.stringify({
             type: "error",
-            error: { message: error.message }
+
+            error: {
+              message: error.message
+            }
           }) +
           "\n\n"
         );
+
         res.end();
       }
     }
@@ -493,13 +891,24 @@ export default async function handler(req, res) {
     return;
   }
 
-  // Reserve the daily allowance before processing images.
+  // ========================================
+  // RESERVE DAILY IMAGE ALLOWANCE
+  // ========================================
+
   let usage;
 
   try {
-    const visitorId = getVisitorId(req, res);
-    usage = await reserveImages(visitorId, images.length);
-  } catch (error) {
+    const visitorId = getVisitorId(
+      req,
+      res
+    );
+
+    usage = await reserveImages(
+      visitorId,
+      images.length
+    );
+
+  } catch {
     return fail(
       res,
       503,
@@ -515,8 +924,18 @@ export default async function handler(req, res) {
     );
   }
 
+  // ========================================
+  // PROCESS IMAGE REQUEST
+  // ========================================
+
   try {
-    const history = makeTextHistory(messages, system);
+    const history = makeTextHistory(
+      messages,
+      system,
+      true
+    );
+
+    // Divide images into groups of three.
 
     const batches = [];
 
@@ -526,15 +945,25 @@ export default async function handler(req, res) {
       i += IMAGES_PER_BATCH
     ) {
       batches.push(
-        images.slice(i, i + IMAGES_PER_BATCH)
+        images.slice(
+          i,
+          i + IMAGES_PER_BATCH
+        )
       );
     }
 
     const findings = [];
 
-    // Process the images in groups of three.
-    for (let i = 0; i < batches.length; i++) {
-      if (controller.signal.aborted) return;
+    // Analyze every image batch.
+
+    for (
+      let i = 0;
+      i < batches.length;
+      i++
+    ) {
+      if (controller.signal.aborted) {
+        return;
+      }
 
       const result = await analyzeImageBatch(
         apiKey,
@@ -554,22 +983,40 @@ export default async function handler(req, res) {
       );
     }
 
-    if (controller.signal.aborted) return;
+    if (controller.signal.aborted) {
+      return;
+    }
+
+    // Prepare the final answer using all findings.
 
     const finalMessages = [
       ...history,
+
       {
         role: "user",
+
         content:
           "I uploaded " +
           images.length +
-          " images. Here are the analysis results from all image batches:\n\n" +
+          " images.\n\n" +
+
+          "Here are the analysis results from all image batches:\n\n" +
+
           findings.join("\n\n") +
-          "\n\nNow answer my original request clearly. " +
-          "Combine the findings from all images, avoid repeating yourself, " +
-          "and explain any important differences between the images.\n\n" +
+
+          "\n\nAnswer my original request using these findings. " +
+
+          "Combine information from all images. " +
+          "Avoid repeating yourself. " +
+          "Do not invent details that were not visible. " +
+          "If an image is unclear, explain that limitation. " +
+          "Give a complete and understandable answer.\n\n" +
+
           "My original request: " +
-          (question || "Explain what these images show.")
+          (
+            question ||
+            "Explain what these images show."
+          )
       }
     ];
 
@@ -581,19 +1028,31 @@ export default async function handler(req, res) {
     );
 
   } catch (error) {
-    if (controller.signal.aborted) return;
-
-    if (!res.headersSent) {
-      return fail(res, 502, error.message);
+    if (controller.signal.aborted) {
+      return;
     }
 
-    if (!res.writableEnded && !res.destroyed) {
+    if (!res.headersSent) {
+      return fail(
+        res,
+        502,
+        error.message || "Image processing failed."
+      );
+    }
+
+    if (
+      !res.writableEnded &&
+      !res.destroyed
+    ) {
       res.write(
         "data: " +
         JSON.stringify({
           type: "error",
+
           error: {
-            message: error.message || "Image processing failed."
+            message:
+              error.message ||
+              "Image processing failed."
           }
         }) +
         "\n\n"
