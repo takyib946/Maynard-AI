@@ -163,9 +163,18 @@ button{cursor:pointer}
 .message.user .avatar{order:2;background:linear-gradient(135deg,#397cce,#7564e8)}
 .message-body{min-width:0;max-width:min(82%,720px)}
 .bubble{
-  padding:13px 16px;border:1px solid var(--line);border-radius:17px;
-  background:rgba(24,34,59,.96);line-height:1.72;font-size:14px;
-  overflow-wrap:anywhere;box-shadow:0 8px 25px #00000018;
+  padding:13px 16px;
+  border:1px solid var(--line);
+  border-radius:17px;
+  background:rgba(24,34,59,.96);
+  line-height:1.72;
+  font-size:14px;
+  min-width:0;
+  max-width:100%;
+  overflow-wrap:break-word;
+  word-break:normal;
+  hyphens:manual;
+  box-shadow:0 8px 25px #00000018;
 }
 .message.user .bubble{
   background:linear-gradient(135deg,#6658dc,#397fdb);
@@ -178,29 +187,54 @@ button{cursor:pointer}
 .bubble ul,.bubble ol{padding-left:23px}
 .bubble li{margin:5px 0}
 .bubble pre{
-  white-space:pre-wrap;overflow:auto;background:#080d1c;
-  padding:13px;border-radius:10px;border:1px solid var(--line);
+  white-space:pre-wrap;
+  overflow:auto;
+  overflow-wrap:anywhere;
+  background:#080d1c;
+  padding:13px;
+  border-radius:10px;
+  border:1px solid var(--line);
+  max-width:100%;
 }
-.bubble code{background:#ffffff12;padding:2px 5px;border-radius:5px}
+.bubble code{
+  background:#ffffff12;
+  padding:2px 5px;
+  border-radius:5px;
+  overflow-wrap:anywhere;
+}
 .bubble pre code{background:none;padding:0}
 .bubble blockquote{border-left:3px solid var(--accent);margin:10px 0;padding:5px 12px;color:#c6cce2}
-.bubble table{border-collapse:collapse;width:100%;display:block;overflow-x:auto;margin:12px 0}
+.bubble table{
+  border-collapse:collapse;
+  width:100%;
+  display:block;
+  overflow-x:auto;
+  margin:12px 0;
+  max-width:100%;
+}
 .bubble th,.bubble td{border:1px solid var(--line);padding:9px;text-align:left}
 .bubble th{background:#ffffff12}
 
 /* MATHEMATICS */
 .bubble mjx-container{
-  color:#f0efff!important;max-width:100%;overflow-x:auto;overflow-y:hidden;
+  color:#f0efff!important;
+  max-width:100%;
+  overflow-x:auto;
+  overflow-y:hidden;
 }
 .bubble mjx-container[display="true"]{
-  display:block;margin:17px 0!important;padding:15px 10px;
+  display:block;
+  margin:17px 0!important;
+  padding:15px 10px;
   background:linear-gradient(120deg,rgba(139,124,255,.09),rgba(53,214,207,.05));
-  border:1px solid rgba(160,180,255,.15);border-radius:13px;text-align:center;
+  border:1px solid rgba(160,180,255,.15);
+  border-radius:13px;
+  text-align:center;
 }
 .bubble mjx-math{font-size:1.04em}
 .message.user .bubble mjx-container{color:white!important}
 
-/* IMAGE GALLERY IN SENT MESSAGES */
+/* IMAGE GALLERY */
 .image-gallery{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(110px,1fr));
@@ -237,7 +271,7 @@ button{cursor:pointer}
   box-shadow:0 12px 45px #0006,0 0 25px #7564ff16;
 }
 
-/* IMAGE PREVIEW STRIP */
+/* ATTACHMENTS */
 .attachments{
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(100px,1fr));
@@ -268,7 +302,6 @@ button{cursor:pointer}
   padding:14px 8px;font-size:11px;color:#d4dcf7;
   overflow-wrap:anywhere;min-height:65px;
 }
-
 .compose-row{display:flex;align-items:flex-end;gap:8px}
 .compose-row textarea{
   flex:1;min-width:0;min-height:44px;max-height:150px;resize:none;
@@ -508,7 +541,25 @@ function createImageId() {
   return "image_" + Date.now() + "_" + Math.random().toString(36).slice(2,10);
 }
 
-/* ASSISTANT MODES */
+/* ASSISTANT MODES AND RESPONSE FORMATTING */
+
+const formattingRules = `
+IMPORTANT RESPONSE FORMATTING RULES:
+
+1. Write answers using normal paragraphs, headings and bullet points.
+2. For step-by-step explanations, use numbered steps.
+3. NEVER put an entire explanation or solution inside a table.
+4. NEVER use tables as the default response format.
+5. Use tables ONLY when comparing items or presenting structured data where a table genuinely improves readability.
+6. Keep each explanation directly under its relevant heading or numbered step.
+7. Do not split words unnecessarily.
+8. Use clear spacing between paragraphs and steps.
+9. For mathematics, show equations on separate lines using proper mathematical notation.
+10. Make answers readable on mobile phone screens.
+11. Prefer a clear explanation over unnecessary formatting.
+12. Do not place long paragraphs inside table cells.
+13. Do not create a table just to organise ordinary instructions.
+`;
 
 function getModeInstructions(mode) {
   const instructions = {
@@ -522,7 +573,9 @@ function getModeInstructions(mode) {
     translator:"You are a professional translator. Translate accurately while preserving the original meaning and tone.",
     summarizer:"You are a summarisation assistant. Identify the main points and present them clearly without unnecessary repetition."
   };
-  return instructions[mode] || instructions.general;
+
+  return (instructions[mode] || instructions.general) +
+    "\n\n" + formattingRules;
 }
 
 /* MATHEMATICS INSTRUCTIONS */
@@ -571,6 +624,11 @@ MATHEMATICAL FORMATTING RULES:
 11. Do not use programming-style slash notation for ordinary fractions.
 12. Keep explanations detailed and readable.
 13. Check calculations before presenting the final answer.
+14. NEVER present mathematical solutions inside tables.
+15. Use numbered steps with explanations underneath.
+16. Put calculations on separate lines.
+17. Keep long explanations in normal paragraphs.
+18. Use tables only when the user specifically requests one or when genuinely necessary.
 `;
 
 /* CHAT HISTORY */
