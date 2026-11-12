@@ -710,8 +710,54 @@ async function handleImageGeneration(req, res) {
 
     return res.status(200).json(result);
 
-  } catch (error) {
-    console.error("Gemini image generation error:", error);
+  
+} catch (error) {
+  console.error("Gemini image generation error:", {
+    status: error.status || 502,
+    message: error.message || "Unknown Gemini error"
+  });
+
+  if (generationReserved && visitorId) {
+    await refundGeneration(visitorId);
+  }
+
+  const status = Number(error.status) || 502;
+  const detail = String(
+    error.message || "Unknown provider error"
+  ).slice(0, 500);
+
+  let message;
+
+  if (status === 400) {
+    message = `Gemini rejected the request. Details: ${detail}`;
+  } else if (status === 401 || status === 403) {
+    message = `Gemini API key or permission error. Details: ${detail}`;
+  } else if (status === 402) {
+    message = `Gemini billing error. Details: ${detail}`;
+  } else if (status === 404) {
+    message = `Gemini model not found. Details: ${detail}`;
+  } else if (status === 422) {
+    message = detail;
+  } else if (status === 429) {
+    message = `Gemini quota or rate limit error. Details: ${detail}`;
+  } else if (status === 503) {
+    message = `Gemini service unavailable. Details: ${detail}`;
+  } else if (status === 504) {
+    message = detail;
+  } else {
+    message = `Image generation failed (${status}). Details: ${detail}`;
+  }
+
+  return fail(
+    res,
+    status >= 400 && status <= 599 ? status : 502,
+    message
+  );
+
+} finally {
+  await releaseImageLock(lock);
+}
+
 
     if (generationReserved && visitorId) {
       await refundGeneration(visitorId);
