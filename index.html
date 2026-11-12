@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#090d1b">
 <title>Maynard AI</title>
 
-<!-- MathJax configuration -->
+<!-- MathJax -->
 <script>
 window.MathJax = {
   tex: {
@@ -18,10 +18,7 @@ window.MathJax = {
     packages: {'[+]': ['ams']}
   },
   options: {
-    skipHtmlTags: [
-      'script', 'noscript', 'style',
-      'textarea', 'pre', 'code'
-    ]
+    skipHtmlTags: ['script','noscript','style','textarea','pre','code']
   },
   chtml: {
     scale: 1.05,
@@ -61,15 +58,15 @@ body {
   margin: 0;
   min-height: 100vh;
   color: var(--text);
-  font-family: Inter, system-ui, Arial, sans-serif;
+  font-family: Inter,system-ui,Arial,sans-serif;
   background:
-    radial-gradient(ellipse at 15% 15%, rgba(103,80,255,.22), transparent 38%),
-    radial-gradient(ellipse at 85% 80%, rgba(20,205,194,.13), transparent 36%),
+    radial-gradient(ellipse at 15% 15%,rgba(103,80,255,.22),transparent 38%),
+    radial-gradient(ellipse at 85% 80%,rgba(20,205,194,.13),transparent 36%),
     linear-gradient(135deg,#080c19,#10162b 55%,#090e1d);
   background-attachment: fixed;
 }
 
-button, input, textarea {
+button,input,textarea {
   font: inherit;
 }
 
@@ -88,7 +85,7 @@ button {
   width: 265px;
   flex-shrink: 0;
   padding: 20px 15px;
-  background: rgba(7,11,25,.86);
+  background: rgba(7,11,25,.92);
   border-right: 1px solid var(--line);
   backdrop-filter: blur(22px);
   display: flex;
@@ -104,7 +101,7 @@ button {
   padding: 8px 7px 17px;
 }
 
-.logo, .welcome-logo {
+.logo,.welcome-logo {
   display: grid;
   place-items: center;
   font-weight: 900;
@@ -130,7 +127,7 @@ button {
   margin-top: 3px;
 }
 
-.newchat, .mode, .sidebtn {
+.newchat,.mode,.sidebtn {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 13px;
@@ -167,9 +164,72 @@ button {
   padding: 10px 12px;
 }
 
-.mode:hover, .mode.active, .sidebtn:hover {
+.mode:hover,.mode.active,.sidebtn:hover {
   background: rgba(135,123,255,.16);
   border-color: #8b7cff55;
+  color: white;
+}
+
+/* CHAT HISTORY */
+
+.history-section {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: 36vh;
+}
+
+.history-list {
+  display: grid;
+  gap: 6px;
+  overflow-y: auto;
+  padding: 3px;
+}
+
+.history-empty {
+  color: var(--muted);
+  font-size: 12px;
+  padding: 8px;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 6px;
+  background: #ffffff08;
+}
+
+.history-item.active {
+  background: rgba(139,124,255,.17);
+  border-color: #8b7cff55;
+}
+
+.history-open {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: #dce3fa;
+  text-align: left;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 7px 4px;
+}
+
+.history-action {
+  border: 0;
+  background: transparent;
+  color: #aeb9d8;
+  padding: 5px;
+  font-size: 12px;
+}
+
+.history-action:hover {
   color: white;
 }
 
@@ -380,12 +440,12 @@ button {
   margin-bottom: 0;
 }
 
-.bubble h1, .bubble h2, .bubble h3 {
+.bubble h1,.bubble h2,.bubble h3 {
   line-height: 1.3;
   margin: 17px 0 8px;
 }
 
-.bubble ul, .bubble ol {
+.bubble ul,.bubble ol {
   padding-left: 23px;
 }
 
@@ -428,7 +488,7 @@ button {
   margin: 12px 0;
 }
 
-.bubble th, .bubble td {
+.bubble th,.bubble td {
   border: 1px solid var(--line);
   padding: 9px;
   text-align: left;
@@ -651,6 +711,7 @@ button {
     left: -280px;
     transition: left .25s;
     box-shadow: 10px 0 30px #0006;
+    overflow-y: auto;
   }
 
   .sidebar.open {
@@ -699,6 +760,10 @@ button {
     padding: 0 11px;
     font-size: 12px;
   }
+
+  .history-section {
+    max-height: 30vh;
+  }
 }
 </style>
 </head>
@@ -737,6 +802,14 @@ button {
       </div>
     </div>
 
+    <!-- CHAT HISTORY -->
+    <div class="history-section">
+      <div class="section">CHAT HISTORY</div>
+      <div id="historyList" class="history-list">
+        <p class="history-empty">No conversations yet.</p>
+      </div>
+    </div>
+
     <div class="sidebottom">
       <button class="sidebtn" id="exportBtn">
         ⬇ Export conversation
@@ -752,7 +825,6 @@ button {
   <main class="main">
 
     <header class="topbar">
-
       <div class="top-left">
         <button class="iconbtn menu-button" id="menuBtn" aria-label="Open menu">☰</button>
         <h2 id="modeTitle">General Assistant</h2>
@@ -761,7 +833,6 @@ button {
       <div class="top-actions">
         <button class="iconbtn" id="voiceToggle">🔊 Voice</button>
       </div>
-
     </header>
 
     <section class="chat" id="chat">
@@ -818,7 +889,11 @@ button {
 
         <div class="compose-row">
 
-          <button class="actionbtn" id="attachBtn" title="Attach file">📎</button>
+          <!-- IMAGE PICKER -->
+          <button class="actionbtn" id="attachBtn" title="Choose image">🖼</button>
+
+          <!-- DOCUMENT PICKER -->
+          <button class="actionbtn" id="docBtn" title="Attach document">📄</button>
 
           <button class="actionbtn" id="micBtn" title="Voice input">🎙</button>
 
@@ -828,8 +903,16 @@ button {
 
           <input
             type="file"
-            id="fileInput"
-            accept="image/jpeg,image/png,image/webp,.txt,.md,.csv,.tsv"
+            id="imageInput"
+            accept="image/*"
+            multiple
+            hidden
+          >
+
+          <input
+            type="file"
+            id="documentInput"
+            accept=".txt,.md,.csv,.tsv"
             multiple
             hidden
           >
@@ -858,8 +941,9 @@ const $ = id => document.getElementById(id);
 const chat = $("messages");
 const messageInput = $("messageInput");
 const sendBtn = $("sendBtn");
-const fileInput = $("fileInput");
 const attachmentList = $("attachmentList");
+const imageInput = $("imageInput");
+const documentInput = $("documentInput");
 
 const modeNames = {
   general: "General Assistant",
@@ -876,6 +960,9 @@ const modeNames = {
 let currentMode = "general";
 let conversation = [];
 let attachments = [];
+let savedChats = [];
+let currentChatId = null;
+
 let busy = false;
 let voiceEnabled = false;
 let mathReady = false;
@@ -967,26 +1054,196 @@ MATHEMATICAL FORMATTING RULES:
 9. NEVER use \\boxed{} or \\fbox{}.
 10. Do not put the final answer inside a box.
 11. Do not use programming-style slash notation for ordinary fractions.
-12. Keep explanations detailed, readable and suitable for students.
+12. Keep explanations detailed and readable.
 13. Check calculations before presenting the final answer.
 
-Do not use unnecessary explanations.
-Do not skip working.
+Do not skip important working.
 `;
 
 /* =========================================
-   SAVE CONVERSATION
+   CHAT HISTORY STORAGE
 ========================================= */
+
+function createChatId() {
+  return "chat_" + Date.now() + "_" +
+    Math.random().toString(36).slice(2, 8);
+}
+
+function getChatTitle(messages) {
+  const first = messages.find(item => item.role === "user");
+
+  if (!first) return "New conversation";
+
+  return first.content.length > 38
+    ? first.content.slice(0, 38) + "..."
+    : first.content;
+}
 
 function saveHistory() {
   try {
+    if (conversation.length) {
+      let existing = savedChats.find(
+        item => item.id === currentChatId
+      );
+
+      if (!existing) {
+        existing = {
+          id: currentChatId || createChatId(),
+          title: "",
+          mode: currentMode,
+          updatedAt: Date.now(),
+          messages: []
+        };
+
+        currentChatId = existing.id;
+        savedChats.unshift(existing);
+      }
+
+      existing.messages = conversation.slice();
+      existing.title = getChatTitle(conversation);
+      existing.mode = currentMode;
+      existing.updatedAt = Date.now();
+
+      savedChats.sort(
+        (a, b) => b.updatedAt - a.updatedAt
+      );
+    }
+
     localStorage.setItem(
-      "maynard_history",
-      JSON.stringify(conversation.slice(-50))
+      "maynard_chats",
+      JSON.stringify(savedChats)
     );
+
+    renderHistoryList();
+
   } catch (error) {
     console.warn("Could not save conversation:", error);
   }
+}
+
+function renderHistoryList() {
+  const list = $("historyList");
+
+  list.innerHTML = "";
+
+  if (!savedChats.length) {
+    list.innerHTML =
+      '<p class="history-empty">No conversations yet.</p>';
+    return;
+  }
+
+  savedChats.forEach(item => {
+    const row = document.createElement("div");
+    row.className = "history-item";
+
+    if (item.id === currentChatId) {
+      row.classList.add("active");
+    }
+
+    const open = document.createElement("button");
+    open.className = "history-open";
+    open.textContent = item.title || "New conversation";
+    open.title = item.title || "New conversation";
+
+    open.onclick = () => openSavedChat(item.id);
+
+    const rename = document.createElement("button");
+    rename.className = "history-action";
+    rename.textContent = "✏️";
+    rename.title = "Rename conversation";
+    rename.onclick = () => renameSavedChat(item.id);
+
+    const remove = document.createElement("button");
+    remove.className = "history-action";
+    remove.textContent = "🗑";
+    remove.title = "Delete conversation";
+    remove.onclick = () => deleteSavedChat(item.id);
+
+    row.append(open, rename, remove);
+    list.appendChild(row);
+  });
+}
+
+function openSavedChat(id) {
+  if (busy) return;
+
+  const selected = savedChats.find(
+    item => item.id === id
+  );
+
+  if (!selected) return;
+
+  currentChatId = selected.id;
+  conversation = selected.messages.slice();
+  currentMode = selected.mode || "general";
+
+  document.querySelectorAll(".mode").forEach(button => {
+    button.classList.toggle(
+      "active",
+      button.dataset.mode === currentMode
+    );
+  });
+
+  $("modeTitle").textContent =
+    modeNames[currentMode] || modeNames.general;
+
+  renderConversation();
+  renderHistoryList();
+
+  $("sidebar").classList.remove("open");
+}
+
+function renameSavedChat(id) {
+  const selected = savedChats.find(
+    item => item.id === id
+  );
+
+  if (!selected) return;
+
+  const newName = prompt(
+    "Enter a new conversation name:",
+    selected.title
+  );
+
+  if (!newName || !newName.trim()) return;
+
+  selected.title = newName.trim().slice(0, 80);
+
+  localStorage.setItem(
+    "maynard_chats",
+    JSON.stringify(savedChats)
+  );
+
+  renderHistoryList();
+}
+
+function deleteSavedChat(id) {
+  const selected = savedChats.find(
+    item => item.id === id
+  );
+
+  if (!selected) return;
+
+  if (!confirm("Delete this conversation?")) return;
+
+  savedChats = savedChats.filter(
+    item => item.id !== id
+  );
+
+  if (currentChatId === id) {
+    conversation = [];
+    currentChatId = createChatId();
+
+    chat.innerHTML = "";
+    $("welcome").classList.remove("hidden");
+  }
+
+  localStorage.setItem(
+    "maynard_chats",
+    JSON.stringify(savedChats)
+  );
+
+  renderHistoryList();
 }
 
 /* =========================================
@@ -1055,28 +1312,15 @@ function normalizeMathSource(source) {
   let text = removeBoxedLatex(source);
 
   const environments = [
-    "aligned",
-    "alignedat",
-    "gathered",
-    "cases",
-    "array",
-    "matrix",
-    "pmatrix",
-    "bmatrix",
-    "Bmatrix",
-    "vmatrix",
-    "Vmatrix",
-    "equation",
-    "equation*",
-    "align",
-    "align*",
-    "gather",
-    "gather*"
+    "aligned","alignedat","gathered","cases",
+    "array","matrix","pmatrix","bmatrix",
+    "Bmatrix","vmatrix","Vmatrix",
+    "equation","equation*","align","align*",
+    "gather","gather*"
   ];
 
   const hasMathDelimiters =
-    text.includes("\\[") ||
-    text.includes("$$");
+    text.includes("\\[") || text.includes("$$");
 
   if (!hasMathDelimiters) {
     const names = environments.join("|");
@@ -1102,7 +1346,6 @@ function normalizeMathSource(source) {
 
 function protectMath(source) {
   const saved = [];
-
   let text = normalizeMathSource(source);
 
   const patterns = [
@@ -1120,10 +1363,7 @@ function protectMath(source) {
     });
   }
 
-  return {
-    text,
-    saved
-  };
+  return { text, saved };
 }
 
 /* =========================================
@@ -1167,7 +1407,6 @@ function restoreMathTokens(root, saved) {
 
 function formatMarkdown(source) {
   const protectedContent = protectMath(source);
-
   let html;
 
   if (window.marked && window.DOMPurify) {
@@ -1213,9 +1452,7 @@ function renderMath(element) {
   mathQueue = mathQueue.then(async () => {
     try {
       MathJax.typesetClear([element]);
-
       await MathJax.typesetPromise([element]);
-
     } catch (error) {
       console.warn("Math rendering error:", error);
     }
@@ -1230,20 +1467,16 @@ function addMessage(role, content, options = {}) {
   const row = document.createElement("div");
 
   row.className =
-    "message " +
-    (role === "user" ? "user" : "assistant");
+    "message " + (role === "user" ? "user" : "assistant");
 
   const avatar = document.createElement("div");
-
   avatar.className = "avatar";
   avatar.textContent = role === "user" ? "You" : "M";
 
   const body = document.createElement("div");
-
   body.className = "message-body";
 
   const bubble = document.createElement("div");
-
   bubble.className = "bubble";
   bubble.innerHTML = formatMarkdown(content);
 
@@ -1263,35 +1496,33 @@ function addMessage(role, content, options = {}) {
 
   if (role === "assistant") {
     const tools = document.createElement("div");
-
     tools.className = "message-tools";
 
     const copy = document.createElement("button");
-
     copy.className = "tool";
     copy.textContent = "Copy";
     copy.onclick = () => copyText(content, copy);
 
     const speak = document.createElement("button");
-
     speak.className = "tool";
     speak.textContent = "Read aloud";
     speak.onclick = () => speakText(content);
 
     tools.append(copy, speak);
-
     body.appendChild(tools);
   }
 
   row.append(avatar, body);
-
   chat.appendChild(row);
 
   renderMath(bubble);
 
   $("welcome").classList.add("hidden");
 
-  chat.scrollTop = chat.scrollHeight;
+  window.scrollTo({
+    top: document.body.scrollHeight,
+    behavior: "smooth"
+  });
 
   return row;
 }
@@ -1392,10 +1623,9 @@ function showTyping() {
 
   body.appendChild(bubble);
   row.append(avatar, body);
-
   chat.appendChild(row);
 
-  chat.scrollTop = chat.scrollHeight;
+  window.scrollTo(0, document.body.scrollHeight);
 }
 
 function removeTyping() {
@@ -1461,21 +1691,15 @@ function updateAttachmentList() {
 
   attachments.forEach((file, index) => {
     const item = document.createElement("div");
-
     item.className = "attachment-item";
 
     const name = document.createElement("span");
     name.textContent = file.name;
 
     const remove = document.createElement("button");
-
     remove.type = "button";
     remove.textContent = "×";
-
-    remove.setAttribute(
-      "aria-label",
-      "Remove " + file.name
-    );
+    remove.setAttribute("aria-label", "Remove " + file.name);
 
     remove.onclick = () => {
       attachments.splice(index, 1);
@@ -1483,39 +1707,37 @@ function updateAttachmentList() {
     };
 
     item.append(name, remove);
-
     attachmentList.appendChild(item);
   });
 }
 
 /* =========================================
-   FILE ATTACHMENT
+   IMAGE AND DOCUMENT UPLOAD
 ========================================= */
 
 $("attachBtn").onclick = () => {
-  fileInput.click();
+  imageInput.click();
 };
 
-fileInput.onchange = async () => {
-  for (const file of Array.from(fileInput.files || [])) {
+$("docBtn").onclick = () => {
+  documentInput.click();
+};
+
+async function processAttachments(files, imageOnly) {
+  for (const file of Array.from(files || [])) {
 
     if (attachments.length >= 5) {
       alert("You can attach up to five files.");
       break;
     }
 
-    const isImage = [
-      "image/jpeg",
-      "image/png",
-      "image/webp"
-    ].includes(file.type);
+    const isImage = file.type.startsWith("image/");
+    const isDocument = /\.(txt|md|csv|tsv)$/i.test(file.name);
 
-    const isText = /\.(txt|md|csv|tsv)$/i.test(file.name);
+    if (imageOnly && !isImage) continue;
 
-    if (!isImage && !isText) {
-      alert(
-        "Supported files: JPG, PNG, WEBP, TXT, MD, CSV and TSV."
-      );
+    if (!imageOnly && !isDocument) {
+      alert("Please choose a TXT, MD, CSV or TSV file.");
       continue;
     }
 
@@ -1531,20 +1753,26 @@ fileInput.onchange = async () => {
 
       attachments.push({
         name: file.name,
-        type: isImage
-          ? "image/jpeg"
-          : (file.type || "text/plain"),
+        type: isImage ? "image/jpeg" : "text/plain",
         data
       });
 
-    } catch {
+    } catch (error) {
       alert("Could not read " + file.name);
     }
   }
 
   updateAttachmentList();
+}
 
-  fileInput.value = "";
+imageInput.onchange = async () => {
+  await processAttachments(imageInput.files, true);
+  imageInput.value = "";
+};
+
+documentInput.onchange = async () => {
+  await processAttachments(documentInput.files, false);
+  documentInput.value = "";
 };
 
 /* =========================================
@@ -1577,7 +1805,6 @@ function readStreamEvent(data, state) {
       event.error?.message ||
       event.message ||
       "An error occurred while generating your answer.";
-
     return;
   }
 
@@ -1600,9 +1827,7 @@ function readStreamEvent(data, state) {
 
   bubble.innerHTML = formatMarkdown(state.reply);
 
-  renderMath(bubble);
-
-  chat.scrollTop = chat.scrollHeight;
+  window.scrollTo(0, document.body.scrollHeight);
 }
 
 /* =========================================
@@ -1652,7 +1877,6 @@ async function sendMessage() {
   };
 
   try {
-    // Prepare previous conversation history.
     const history = conversation
       .slice(-13, -1)
       .map(item => ({
@@ -1660,7 +1884,6 @@ async function sendMessage() {
         content: item.content
       }));
 
-    // Add text attachments to the current message.
     let apiMessage = message;
 
     const textAttachments = currentAttachments.filter(
@@ -1673,15 +1896,6 @@ async function sendMessage() {
         "\n" + file.data;
     }
 
-    // Add mathematical instructions when needed.
-    if (
-      currentMode === "education" ||
-      isMathQuestion(message)
-    ) {
-      apiMessage += "\n\n" + mathInstructions;
-    }
-
-    // Prepare content in the backend's expected format.
     const content = [];
 
     if (apiMessage) {
@@ -1691,7 +1905,6 @@ async function sendMessage() {
       });
     }
 
-    // Convert images to base64 image blocks.
     for (const file of currentAttachments) {
       if (!file.type.startsWith("image/")) continue;
 
@@ -1711,7 +1924,6 @@ async function sendMessage() {
       });
     }
 
-    // This matches api/chat.mjs exactly.
     const messages = [
       ...history,
       {
@@ -1720,20 +1932,25 @@ async function sendMessage() {
       }
     ];
 
+    const systemPrompt =
+      getModeInstructions(currentMode) +
+      (
+        currentMode === "education" || isMathQuestion(message)
+          ? "\n\n" + mathInstructions
+          : ""
+      );
+
     const response = await fetch("/api/chat", {
       method: "POST",
-
       headers: {
         "Content-Type": "application/json"
       },
-
       body: JSON.stringify({
         messages,
-        system: getModeInstructions(currentMode)
+        system: systemPrompt
       })
     });
 
-    // Read server errors without showing [object Object].
     if (!response.ok) {
       const errorText = await response.text();
 
@@ -1747,10 +1964,7 @@ async function sendMessage() {
           errorData?.message ||
           errorData?.error ||
           errorText;
-
-      } catch {
-        // Keep the original server response.
-      }
+      } catch {}
 
       if (typeof errorMessage !== "string") {
         errorMessage = JSON.stringify(errorMessage);
@@ -1765,9 +1979,7 @@ async function sendMessage() {
       throw new Error("The server returned an empty response stream.");
     }
 
-    // Read the backend's Server-Sent Events stream.
     const reader = response.body.getReader();
-
     const decoder = new TextDecoder();
 
     let buffer = "";
@@ -1777,12 +1989,9 @@ async function sendMessage() {
 
       if (done) break;
 
-      buffer += decoder.decode(value, {
-        stream: true
-      });
+      buffer += decoder.decode(value, { stream: true });
 
       const events = buffer.split("\n\n");
-
       buffer = events.pop() || "";
 
       for (const eventBlock of events) {
@@ -1799,13 +2008,10 @@ async function sendMessage() {
       }
     }
 
-    // Flush the decoder and process any remaining event.
     buffer += decoder.decode();
 
     if (buffer.trim()) {
-      const lines = buffer.split("\n");
-
-      for (const line of lines) {
+      for (const line of buffer.split("\n")) {
         if (!line.startsWith("data:")) continue;
 
         readStreamEvent(
@@ -1829,21 +2035,18 @@ async function sendMessage() {
 
     const cleanReply = removeBoxedLatex(state.reply);
 
-    // Save the final assistant response.
     conversation.push({
       role: "assistant",
       content: cleanReply
     });
 
-    // Display the cleaned final response.
     if (state.row) {
       const bubble = state.row.querySelector(".bubble");
 
       bubble.innerHTML = formatMarkdown(cleanReply);
-
       renderMath(bubble);
     } else {
-      state.row = addMessage("assistant", cleanReply);
+      addMessage("assistant", cleanReply);
     }
 
     saveHistory();
@@ -1858,10 +2061,8 @@ async function sendMessage() {
     console.error("Maynard AI request error:", error);
 
     const errorMessage =
-      error?.message ||
-      "An unexpected error occurred.";
+      error?.message || "An unexpected error occurred.";
 
-    // Display the actual error message.
     addMessage(
       "assistant",
       "I couldn't complete that request.\n\n**Error:** " +
@@ -1870,9 +2071,7 @@ async function sendMessage() {
 
   } finally {
     busy = false;
-
     sendBtn.disabled = false;
-
     messageInput.focus();
   }
 }
@@ -1894,7 +2093,7 @@ messageInput.addEventListener("input", () => {
   messageInput.style.height = "44px";
 
   messageInput.style.height =
-    Math.min(messageInput.scrollHeight, 150) + "px";
+    Math.min(messageInput.scrollHeight,150) + "px";
 });
 
 /* =========================================
@@ -1914,6 +2113,9 @@ $("modes").addEventListener("click", event => {
 
   $("modeTitle").textContent = modeNames[currentMode];
 
+  // Save the current mode with this conversation.
+  saveHistory();
+
   $("sidebar").classList.remove("open");
 });
 
@@ -1927,7 +2129,6 @@ $("welcome").addEventListener("click", event => {
   if (!button) return;
 
   messageInput.value = button.dataset.prompt;
-
   sendMessage();
 });
 
@@ -1940,20 +2141,31 @@ $("newChat").onclick = () => {
 
   conversation = [];
   attachments = [];
+  currentChatId = createChatId();
+  currentMode = "general";
 
   updateAttachmentList();
 
-  saveHistory();
+  document.querySelectorAll(".mode").forEach(button => {
+    button.classList.toggle(
+      "active",
+      button.dataset.mode === "general"
+    );
+  });
+
+  $("modeTitle").textContent = "General Assistant";
 
   chat.innerHTML = "";
 
   $("welcome").classList.remove("hidden");
 
+  renderHistoryList();
+
   $("sidebar").classList.remove("open");
 };
 
 /* =========================================
-   CLEAR CONVERSATION
+   CLEAR CURRENT CONVERSATION
 ========================================= */
 
 $("clearBtn").onclick = () => {
@@ -1966,11 +2178,22 @@ $("clearBtn").onclick = () => {
 
   updateAttachmentList();
 
-  saveHistory();
+  savedChats = savedChats.filter(
+    item => item.id !== currentChatId
+  );
+
+  currentChatId = createChatId();
+
+  localStorage.setItem(
+    "maynard_chats",
+    JSON.stringify(savedChats)
+  );
 
   chat.innerHTML = "";
 
   $("welcome").classList.remove("hidden");
+
+  renderHistoryList();
 };
 
 /* =========================================
@@ -1985,8 +2208,7 @@ $("exportBtn").onclick = () => {
 
   const output = conversation.map(item =>
     (item.role === "user" ? "YOU" : "MAYNARD AI") +
-    "\n" +
-    item.content
+    "\n" + item.content
   ).join("\n\n-------------------------\n\n");
 
   const blob = new Blob(
@@ -1995,7 +2217,6 @@ $("exportBtn").onclick = () => {
   );
 
   const url = URL.createObjectURL(blob);
-
   const link = document.createElement("a");
 
   link.href = url;
@@ -2067,28 +2288,75 @@ $("micBtn").onclick = () => {
 };
 
 /* =========================================
-   LOAD CHAT HISTORY
+   LOAD CHAT HISTORY AND MIGRATE OLD DATA
 ========================================= */
 
 function loadHistory() {
   try {
     const saved = JSON.parse(
-      localStorage.getItem("maynard_history") || "[]"
+      localStorage.getItem("maynard_chats") || "null"
     );
 
     if (Array.isArray(saved)) {
-      conversation = saved.filter(item =>
+      savedChats = saved.filter(item =>
         item &&
-        ["user", "assistant"].includes(item.role) &&
-        typeof item.content === "string"
-      ).slice(-50);
+        typeof item.id === "string" &&
+        Array.isArray(item.messages)
+      );
+    } else {
+      // Migrate the previous single conversation.
+      const old = JSON.parse(
+        localStorage.getItem("maynard_history") || "[]"
+      );
+
+      if (Array.isArray(old) && old.length) {
+        const validOld = old.filter(item =>
+          item &&
+          ["user","assistant"].includes(item.role) &&
+          typeof item.content === "string"
+        );
+
+        if (validOld.length) {
+          savedChats = [{
+            id: createChatId(),
+            title: getChatTitle(validOld),
+            mode: "general",
+            updatedAt: Date.now(),
+            messages: validOld
+          }];
+
+          localStorage.setItem(
+            "maynard_chats",
+            JSON.stringify(savedChats)
+          );
+        }
+      }
     }
 
-  } catch {
-    conversation = [];
-  }
+    savedChats.sort(
+      (a,b) => (b.updatedAt || 0) - (a.updatedAt || 0)
+    );
 
-  renderConversation();
+    if (savedChats.length) {
+      openSavedChat(savedChats[0].id);
+    } else {
+      currentChatId = createChatId();
+      conversation = [];
+      renderConversation();
+    }
+
+    renderHistoryList();
+
+  } catch (error) {
+    console.warn("Could not load chat history:", error);
+
+    savedChats = [];
+    conversation = [];
+    currentChatId = createChatId();
+
+    renderConversation();
+    renderHistoryList();
+  }
 }
 
 /* =========================================
@@ -2099,19 +2367,14 @@ window.addEventListener("load", async () => {
   try {
     if (window.MathJax?.startup?.promise) {
       await MathJax.startup.promise;
-
       mathReady = true;
     } else {
       console.warn(
         "MathJax did not load. Check your internet connection."
       );
     }
-
   } catch (error) {
-    console.warn(
-      "MathJax could not start:",
-      error
-    );
+    console.warn("MathJax could not start:", error);
   }
 
   loadHistory();
