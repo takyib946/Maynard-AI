@@ -7,7 +7,6 @@
 <meta name="theme-color" content="#090d1b">
 <title>Maynard AI</title>
 
-<!-- MathJax -->
 <script>
 window.MathJax = {
   tex: {
@@ -130,7 +129,7 @@ button{cursor:pointer}
 .menu-button{display:none}
 
 /* CHAT */
-.chat{width:min(900px,100%);margin:0 auto;padding:28px 22px 170px;flex:1}
+.chat{width:min(900px,100%);margin:0 auto;padding:28px 22px 190px;flex:1}
 .welcome{text-align:center;padding:clamp(40px,10vh,105px) 12px 45px}
 .welcome-logo{
   width:68px;height:68px;border-radius:23px;margin:0 auto 20px;font-size:26px;
@@ -201,18 +200,17 @@ button{cursor:pointer}
 .bubble mjx-math{font-size:1.04em}
 .message.user .bubble mjx-container{color:white!important}
 
-/* PERSISTENT IMAGE DISPLAY */
+/* IMAGE GALLERY IN SENT MESSAGES */
 .image-gallery{
-  display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(110px,1fr));
   gap:9px;margin-top:12px;max-width:100%;
 }
-.image-gallery a{display:block;min-width:0}
 .uploaded-image{
-  display:block;width:100%;max-width:360px;max-height:300px;
-  object-fit:contain;border-radius:12px;border:1px solid #ffffff25;
-  background:#080d1c;
+  display:block;width:100%;height:150px;max-width:100%;
+  object-fit:cover;border-radius:12px;
+  border:1px solid #ffffff25;background:#080d1c;
 }
-.image-gallery .uploaded-image{max-width:100%;height:150px}
 .image-caption{font-size:11px;color:#cbd4ef;margin-top:4px;overflow-wrap:anywhere}
 .image-loading{color:var(--muted);font-size:12px;padding:8px}
 .message-tools{display:flex;gap:7px;margin-top:8px;opacity:.85}
@@ -224,8 +222,8 @@ button{cursor:pointer}
 .typing i{width:6px;height:6px;border-radius:50%;background:#aaa2ff;animation:bounce .8s infinite alternate}
 .typing i:nth-child(2){animation-delay:.15s}
 .typing i:nth-child(3){animation-delay:.3s}
-@keyframes bounce{to{transform:translateY(-5px);opacity:.4}}
 .hidden{display:none!important}
+@keyframes bounce{to{transform:translateY(-5px);opacity:.4}}
 
 /* COMPOSER */
 .composer-wrap{
@@ -238,12 +236,39 @@ button{cursor:pointer}
   background:rgba(20,28,52,.96);border-radius:19px;padding:11px 12px 9px;
   box-shadow:0 12px 45px #0006,0 0 25px #7564ff16;
 }
-.attachments{display:flex;gap:8px;flex-wrap:wrap;padding:2px 2px 8px}
-.attachment-item{
-  font-size:11px;color:#d4dcf7;background:#ffffff10;padding:7px 9px;
-  border-radius:8px;display:flex;gap:8px;align-items:center;
+
+/* IMAGE PREVIEW STRIP */
+.attachments{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(100px,1fr));
+  gap:10px;padding:4px 2px 10px;
+  max-height:220px;overflow-y:auto;
 }
-.attachment-item button{background:transparent;border:0;color:#ff9292;font-size:15px}
+.attachment-item{
+  position:relative;min-width:0;
+  display:flex;flex-direction:column;gap:4px;
+  background:#ffffff0b;border:1px solid var(--line);
+  border-radius:12px;overflow:hidden;
+}
+.attachment-thumb{
+  width:100%;height:88px;object-fit:cover;
+  display:block;background:#080d1c;
+}
+.attachment-name{
+  font-size:10px;color:#d4dcf7;padding:2px 7px 7px;
+  overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+}
+.attachment-remove{
+  position:absolute;top:5px;right:5px;width:25px;height:25px;
+  border:0;border-radius:50%;background:#171a2bdc;
+  color:#ffaaaa;font-size:17px;display:grid;place-items:center;
+}
+.attachment-remove:hover{background:#a52c45;color:white}
+.attachment-document{
+  padding:14px 8px;font-size:11px;color:#d4dcf7;
+  overflow-wrap:anywhere;min-height:65px;
+}
+
 .compose-row{display:flex;align-items:flex-end;gap:8px}
 .compose-row textarea{
   flex:1;min-width:0;min-height:44px;max-height:150px;resize:none;
@@ -271,7 +296,7 @@ button{cursor:pointer}
   .sidebar.open{left:0}
   .menu-button{display:inline-block}
   .topbar{padding:0 12px}
-  .chat{padding:18px 12px 160px}
+  .chat{padding:18px 12px 205px}
   .bubble{padding:12px}
   .message-body{max-width:88%}
   .composer-wrap{left:0;padding:10px}
@@ -280,6 +305,8 @@ button{cursor:pointer}
   .bubble mjx-math{font-size:1em}
   .sendbtn{padding:0 11px;font-size:12px}
   .history-section{max-height:30vh}
+  .attachments{grid-template-columns:repeat(auto-fill,minmax(85px,1fr));max-height:180px}
+  .attachment-thumb{height:75px}
 }
 </style>
 </head>
@@ -356,9 +383,9 @@ button{cursor:pointer}
         <button class="actionbtn" id="attachBtn" title="Choose images">🖼</button>
         <button class="actionbtn" id="docBtn" title="Attach document">📄</button>
         <button class="actionbtn" id="micBtn" title="Voice input">🎙</button>
-        <textarea id="messageInput" rows="1" placeholder="Message Maynard AI..."></textarea>
+        <textarea id="messageInput" rows="1" placeholder="Write your prompt about the pictures..."></textarea>
         <button class="sendbtn" id="sendBtn">Send ➤</button>
-        <input type="file" id="imageInput" accept="image/*" multiple hidden>
+        <input type="file" id="imageInput" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden>
         <input type="file" id="documentInput" accept=".txt,.md,.csv,.tsv" multiple hidden>
       </div>
     </div>
@@ -377,6 +404,9 @@ const sendBtn = $("sendBtn");
 const attachmentList = $("attachmentList");
 const imageInput = $("imageInput");
 const documentInput = $("documentInput");
+
+const MAX_IMAGES_PER_MESSAGE = 15;
+const MAX_DOCUMENTS_PER_MESSAGE = 5;
 
 const modeNames = {
   general:"General Assistant",
@@ -400,10 +430,7 @@ let voiceEnabled = false;
 let mathReady = false;
 let mathQueue = Promise.resolve();
 
-/* =========================================
-   INDEXEDDB IMAGE STORAGE
-   Images are stored separately from chat text.
-========================================= */
+/* INDEXEDDB IMAGE STORAGE */
 
 const IMAGE_DB_NAME = "MaynardAI_ImageDatabase";
 const IMAGE_STORE_NAME = "chatImages";
@@ -422,21 +449,15 @@ function openImageDatabase() {
 
     request.onupgradeneeded = () => {
       const db = request.result;
-
       if (!db.objectStoreNames.contains(IMAGE_STORE_NAME)) {
         db.createObjectStore(IMAGE_STORE_NAME,{keyPath:"id"});
       }
     };
 
     request.onsuccess = () => resolve(request.result);
-
     request.onerror = () => {
       imageDatabasePromise = null;
       reject(request.error);
-    };
-
-    request.onblocked = () => {
-      console.warn("Image database upgrade is blocked.");
     };
   });
 
@@ -449,11 +470,8 @@ async function saveChatImage(image) {
   return new Promise((resolve,reject) => {
     const transaction = db.transaction(IMAGE_STORE_NAME,"readwrite");
     transaction.objectStore(IMAGE_STORE_NAME).put(image);
-
-    transaction.oncomplete = () => resolve();
-
+    transaction.oncomplete = resolve;
     transaction.onerror = () => reject(transaction.error);
-    transaction.onabort = () => reject(transaction.error);
   });
 }
 
@@ -463,7 +481,6 @@ async function getChatImage(id) {
   return new Promise((resolve,reject) => {
     const transaction = db.transaction(IMAGE_STORE_NAME,"readonly");
     const request = transaction.objectStore(IMAGE_STORE_NAME).get(id);
-
     request.onsuccess = () => resolve(request.result || null);
     request.onerror = () => reject(request.error);
   });
@@ -475,7 +492,6 @@ async function deleteChatImage(id) {
   return new Promise((resolve,reject) => {
     const transaction = db.transaction(IMAGE_STORE_NAME,"readwrite");
     transaction.objectStore(IMAGE_STORE_NAME).delete(id);
-
     transaction.oncomplete = resolve;
     transaction.onerror = () => reject(transaction.error);
   });
@@ -485,18 +501,14 @@ async function deleteImagesForMessages(messages) {
   const ids = (messages || []).flatMap(message =>
     (message.images || []).map(image => image.id).filter(Boolean)
   );
-
   await Promise.allSettled(ids.map(deleteChatImage));
 }
 
 function createImageId() {
-  return "image_" + Date.now() + "_" +
-    Math.random().toString(36).slice(2,10);
+  return "image_" + Date.now() + "_" + Math.random().toString(36).slice(2,10);
 }
 
-/* =========================================
-   ASSISTANT MODES
-========================================= */
+/* ASSISTANT MODES */
 
 function getModeInstructions(mode) {
   const instructions = {
@@ -510,13 +522,10 @@ function getModeInstructions(mode) {
     translator:"You are a professional translator. Translate accurately while preserving the original meaning and tone.",
     summarizer:"You are a summarisation assistant. Identify the main points and present them clearly without unnecessary repetition."
   };
-
   return instructions[mode] || instructions.general;
 }
 
-/* =========================================
-   MATHEMATICS INSTRUCTIONS
-========================================= */
+/* MATHEMATICS INSTRUCTIONS */
 
 const mathInstructions = `
 IMPORTANT MATHEMATICS RESPONSE RULES:
@@ -562,23 +571,17 @@ MATHEMATICAL FORMATTING RULES:
 11. Do not use programming-style slash notation for ordinary fractions.
 12. Keep explanations detailed and readable.
 13. Check calculations before presenting the final answer.
-Do not skip important working.
 `;
 
-/* =========================================
-   CHAT HISTORY
-========================================= */
+/* CHAT HISTORY */
 
 function createChatId() {
-  return "chat_" + Date.now() + "_" +
-    Math.random().toString(36).slice(2,8);
+  return "chat_" + Date.now() + "_" + Math.random().toString(36).slice(2,8);
 }
 
 function getChatTitle(messages) {
   const first = messages.find(item => item.role === "user");
-
   if (!first) return "New conversation";
-
   return first.content.length > 38
     ? first.content.slice(0,38) + "..."
     : first.content;
@@ -597,7 +600,6 @@ function saveHistory() {
           updatedAt:Date.now(),
           messages:[]
         };
-
         currentChatId = existing.id;
         savedChats.unshift(existing);
       }
@@ -620,7 +622,6 @@ function saveHistory() {
 
     localStorage.setItem("maynard_chats",JSON.stringify(savedChats));
     renderHistoryList();
-
   } catch(error) {
     console.warn("Could not save conversation:",error);
     alert("Chat history could not be saved. Your browser storage may be full.");
@@ -639,7 +640,6 @@ function renderHistoryList() {
   savedChats.forEach(item => {
     const row = document.createElement("div");
     row.className = "history-item";
-
     if (item.id === currentChatId) row.classList.add("active");
 
     const open = document.createElement("button");
@@ -685,7 +685,6 @@ function openSavedChat(id) {
   });
 
   $("modeTitle").textContent = modeNames[currentMode] || modeNames.general;
-
   renderConversation();
   renderHistoryList();
   $("sidebar").classList.remove("open");
@@ -699,7 +698,6 @@ function renameSavedChat(id) {
   if (!newName || !newName.trim()) return;
 
   selected.title = newName.trim().slice(0,80);
-
   localStorage.setItem("maynard_chats",JSON.stringify(savedChats));
   renderHistoryList();
 }
@@ -711,7 +709,6 @@ async function deleteSavedChat(id) {
   if (!confirm("Delete this conversation and its saved pictures?")) return;
 
   await deleteImagesForMessages(selected.messages);
-
   savedChats = savedChats.filter(item => item.id !== id);
 
   if (currentChatId === id) {
@@ -725,9 +722,7 @@ async function deleteSavedChat(id) {
   renderHistoryList();
 }
 
-/* =========================================
-   SAFE MARKDOWN AND MATHEMATICS
-========================================= */
+/* SAFE MARKDOWN AND MATHEMATICS */
 
 function escapeHTML(value) {
   return String(value).replace(/[&<>"']/g,c => ({
@@ -770,7 +765,6 @@ function removeBoxedLatex(source) {
 
 function normalizeMathSource(source) {
   let text = removeBoxedLatex(source);
-
   const environments = [
     "aligned","alignedat","gathered","cases","array","matrix",
     "pmatrix","bmatrix","Bmatrix","vmatrix","Vmatrix",
@@ -784,7 +778,6 @@ function normalizeMathSource(source) {
     const pattern = new RegExp(
       "\\\\begin\\{(" + names + ")\\}[\\s\\S]*?\\\\end\\{\\1\\}","g"
     );
-
     text = text.replace(pattern,match => "\\[\n" + match + "\n\\]");
   }
 
@@ -825,7 +818,6 @@ function restoreMathTokens(root,saved) {
 
     saved.forEach((math,index) => {
       const token = `MATHPROTECTEDTOKEN${index}END`;
-
       if (value.includes(token)) {
         value = value.split(token).join(math);
         changed = true;
@@ -845,7 +837,6 @@ function formatMarkdown(source) {
       breaks:true,
       gfm:true
     });
-
     html = window.DOMPurify.sanitize(html);
   } else {
     html = escapeHTML(protectedContent.text).replace(/\n/g,"<br>");
@@ -853,9 +844,7 @@ function formatMarkdown(source) {
 
   const container = document.createElement("div");
   container.innerHTML = html;
-
   restoreMathTokens(container,protectedContent.saved);
-
   return container.innerHTML;
 }
 
@@ -872,9 +861,7 @@ function renderMath(element) {
   });
 }
 
-/* =========================================
-   ADD MESSAGE AND RESTORE SAVED IMAGES
-========================================= */
+/* ADD MESSAGE AND RESTORE SAVED IMAGES */
 
 function addMessage(role,content,options = {}) {
   const row = document.createElement("div");
@@ -890,7 +877,6 @@ function addMessage(role,content,options = {}) {
   const bubble = document.createElement("div");
   bubble.className = "bubble";
   bubble.innerHTML = formatMarkdown(content);
-
   body.appendChild(bubble);
 
   if (options.images && options.images.length) {
@@ -900,7 +886,6 @@ function addMessage(role,content,options = {}) {
     options.images.forEach(file => {
       const wrapper = document.createElement("div");
       const image = document.createElement("img");
-
       image.className = "uploaded-image";
       image.alt = file.name || "Uploaded image";
 
@@ -913,12 +898,9 @@ function addMessage(role,content,options = {}) {
 
       gallery.appendChild(wrapper);
 
-      // New upload: use its temporary data.
       if (file.data) {
         image.src = file.data;
-      }
-      // Old message: retrieve its picture from IndexedDB.
-      else if (file.id) {
+      } else if (file.id) {
         image.classList.add("image-loading");
 
         getChatImage(file.id).then(savedImage => {
@@ -935,11 +917,9 @@ function addMessage(role,content,options = {}) {
         });
       }
 
-      // Open the picture separately when tapped.
       image.onclick = () => {
         if (image.src) window.open(image.src,"_blank","noopener");
       };
-
       image.style.cursor = "zoom-in";
     });
 
@@ -966,21 +946,14 @@ function addMessage(role,content,options = {}) {
 
   row.append(avatar,body);
   chat.appendChild(row);
-
   renderMath(bubble);
+
   $("welcome").classList.add("hidden");
-
-  window.scrollTo({
-    top:document.body.scrollHeight,
-    behavior:"smooth"
-  });
-
+  window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"});
   return row;
 }
 
-/* =========================================
-   RENDER SAVED CONVERSATION
-========================================= */
+/* RENDER SAVED CONVERSATION */
 
 function renderConversation() {
   chat.innerHTML = "";
@@ -993,21 +966,16 @@ function renderConversation() {
   $("welcome").classList.add("hidden");
 
   conversation.forEach(item => {
-    addMessage(item.role,item.content,{
-      images:item.images || []
-    });
+    addMessage(item.role,item.content,{images:item.images || []});
   });
 }
 
-/* =========================================
-   COPY AND VOICE
-========================================= */
+/* COPY AND VOICE */
 
 async function copyText(value,button) {
   try {
     await navigator.clipboard.writeText(value);
     button.textContent = "Copied!";
-
     setTimeout(() => button.textContent = "Copy",1400);
   } catch {
     alert("Copy is not available in this browser.");
@@ -1031,13 +999,10 @@ function speakText(value) {
   const utterance = new SpeechSynthesisUtterance(clean);
   utterance.lang = "en-US";
   utterance.rate = 1;
-
   speechSynthesis.speak(utterance);
 }
 
-/* =========================================
-   TYPING INDICATOR
-========================================= */
+/* TYPING INDICATOR */
 
 function showTyping() {
   const row = document.createElement("div");
@@ -1058,7 +1023,6 @@ function showTyping() {
   body.appendChild(bubble);
   row.append(avatar,body);
   chat.appendChild(row);
-
   window.scrollTo(0,document.body.scrollHeight);
 }
 
@@ -1066,19 +1030,15 @@ function removeTyping() {
   $("typingIndicator")?.remove();
 }
 
-/* =========================================
-   IMAGE RESIZING
-========================================= */
+/* IMAGE RESIZING */
 
 function resizeImage(file) {
   return new Promise((resolve,reject) => {
     const reader = new FileReader();
-
     reader.onerror = reject;
 
     reader.onload = () => {
       const img = new Image();
-
       img.onerror = reject;
 
       img.onload = () => {
@@ -1102,9 +1062,7 @@ function resizeImage(file) {
   });
 }
 
-/* =========================================
-   ATTACHMENTS
-========================================= */
+/* ATTACHMENT PREVIEW SYSTEM */
 
 function updateAttachmentList() {
   attachmentList.innerHTML = "";
@@ -1113,12 +1071,30 @@ function updateAttachmentList() {
     const item = document.createElement("div");
     item.className = "attachment-item";
 
-    const name = document.createElement("span");
-    name.textContent = file.name;
+    if (file.type.startsWith("image/")) {
+      const preview = document.createElement("img");
+      preview.className = "attachment-thumb";
+      preview.src = file.data;
+      preview.alt = file.name;
+      preview.loading = "lazy";
+      item.appendChild(preview);
+
+      const name = document.createElement("div");
+      name.className = "attachment-name";
+      name.textContent = file.name;
+      item.appendChild(name);
+    } else {
+      const documentPreview = document.createElement("div");
+      documentPreview.className = "attachment-document";
+      documentPreview.textContent = "📄 " + file.name;
+      item.appendChild(documentPreview);
+    }
 
     const remove = document.createElement("button");
     remove.type = "button";
+    remove.className = "attachment-remove";
     remove.textContent = "×";
+    remove.title = "Remove attachment";
     remove.setAttribute("aria-label","Remove " + file.name);
 
     remove.onclick = () => {
@@ -1126,7 +1102,7 @@ function updateAttachmentList() {
       updateAttachmentList();
     };
 
-    item.append(name,remove);
+    item.appendChild(remove);
     attachmentList.appendChild(item);
   });
 }
@@ -1136,11 +1112,6 @@ $("docBtn").onclick = () => documentInput.click();
 
 async function processAttachments(files,imageOnly) {
   for (const file of Array.from(files || [])) {
-    if (attachments.length >= 5) {
-      alert("You can attach up to five files.");
-      break;
-    }
-
     const isImage = file.type.startsWith("image/");
     const isDocument = /\.(txt|md|csv|tsv)$/i.test(file.name);
 
@@ -1149,6 +1120,26 @@ async function processAttachments(files,imageOnly) {
     if (!imageOnly && !isDocument) {
       alert("Please choose a TXT, MD, CSV or TSV file.");
       continue;
+    }
+
+    if (isImage) {
+      const imageCount = attachments.filter(
+        item => item.type.startsWith("image/")
+      ).length;
+
+      if (imageCount >= MAX_IMAGES_PER_MESSAGE) {
+        alert("You can attach up to 15 pictures in one message.");
+        break;
+      }
+    } else {
+      const documentCount = attachments.filter(
+        item => !item.type.startsWith("image/")
+      ).length;
+
+      if (documentCount >= MAX_DOCUMENTS_PER_MESSAGE) {
+        alert("You can attach up to five documents.");
+        break;
+      }
     }
 
     if (file.size > 12 * 1024 * 1024) {
@@ -1166,12 +1157,13 @@ async function processAttachments(files,imageOnly) {
         type:isImage ? "image/jpeg" : "text/plain",
         data
       });
+
+      updateAttachmentList();
     } catch(error) {
+      console.error(error);
       alert("Could not read " + file.name);
     }
   }
-
-  updateAttachmentList();
 }
 
 imageInput.onchange = async () => {
@@ -1184,9 +1176,7 @@ documentInput.onchange = async () => {
   documentInput.value = "";
 };
 
-/* =========================================
-   MATHEMATICS DETECTION
-========================================= */
+/* MATHEMATICS DETECTION */
 
 function isMathQuestion(message) {
   return /solve|calculate|simplify|factoris|factoriz|quadratic|equation|simultaneous|differentiat|integrat|find the value|find x|evaluate|expand|algebra|geometry|trigonometry|probability|matrix|matrices|fraction|percentage|indices|logarithm|theorem/i.test(message)
@@ -1194,15 +1184,12 @@ function isMathQuestion(message) {
     || /[a-z]\s*[\^²³]\s*\d*/i.test(message);
 }
 
-/* =========================================
-   STREAMING
-========================================= */
+/* STREAMING */
 
 function readStreamEvent(data,state) {
   if (!data || data === "[DONE]") return;
 
   let event;
-
   try {
     event = JSON.parse(data);
   } catch {
@@ -1229,19 +1216,15 @@ function readStreamEvent(data,state) {
 
   const bubble = state.row.querySelector(".bubble");
   bubble.innerHTML = formatMarkdown(state.reply);
-
   window.scrollTo(0,document.body.scrollHeight);
 }
 
-/* =========================================
-   SEND MESSAGE
-========================================= */
+/* SEND MESSAGE */
 
 async function sendMessage() {
   if (busy) return;
 
   const message = messageInput.value.trim();
-
   if (!message && !attachments.length) return;
 
   const currentAttachments = attachments.slice();
@@ -1249,9 +1232,6 @@ async function sendMessage() {
   updateAttachmentList();
 
   const displayText = message || "Please examine my attachment.";
-
-  // Save each image separately in IndexedDB.
-  // The message stores only its image IDs and names.
   const messageImages = [];
 
   try {
@@ -1268,14 +1248,11 @@ async function sendMessage() {
         createdAt:Date.now()
       });
 
-      messageImages.push({
-        id:imageId,
-        name:file.name
-      });
+      messageImages.push({id:imageId,name:file.name});
     }
   } catch(error) {
     console.error("Image storage error:",error);
-    alert("Maynard AI could not save the picture in your browser. Please check your browser storage and try again.");
+    alert("Maynard AI could not save the picture in your browser. Please try again.");
     attachments = currentAttachments;
     updateAttachmentList();
     return;
@@ -1293,18 +1270,13 @@ async function sendMessage() {
 
   messageInput.value = "";
   messageInput.style.height = "44px";
-
   saveHistory();
 
   busy = true;
   sendBtn.disabled = true;
   showTyping();
 
-  const state = {
-    reply:"",
-    error:"",
-    row:null
-  };
+  const state = {reply:"",error:"",row:null};
 
   try {
     const history = conversation
@@ -1327,10 +1299,7 @@ async function sendMessage() {
     const content = [];
 
     if (apiMessage) {
-      content.push({
-        type:"text",
-        text:apiMessage
-      });
+      content.push({type:"text",text:apiMessage});
     }
 
     for (const file of currentAttachments) {
@@ -1407,8 +1376,6 @@ async function sendMessage() {
       if (done) break;
 
       buffer += decoder.decode(value,{stream:true});
-
-      // Handle both LF and CRLF server events.
       buffer = buffer.replace(/\r\n/g,"\n");
 
       const events = buffer.split("\n\n");
@@ -1416,8 +1383,9 @@ async function sendMessage() {
 
       for (const eventBlock of events) {
         for (const line of eventBlock.split("\n")) {
-          if (!line.startsWith("data:")) continue;
-          readStreamEvent(line.slice(5).trim(),state);
+          if (line.startsWith("data:")) {
+            readStreamEvent(line.slice(5).trim(),state);
+          }
         }
       }
     }
@@ -1427,15 +1395,15 @@ async function sendMessage() {
 
     if (buffer.trim()) {
       for (const line of buffer.split("\n")) {
-        if (!line.startsWith("data:")) continue;
-        readStreamEvent(line.slice(5).trim(),state);
+        if (line.startsWith("data:")) {
+          readStreamEvent(line.slice(5).trim(),state);
+        }
       }
     }
 
     removeTyping();
 
     if (state.error) throw new Error(state.error);
-
     if (!state.reply.trim()) {
       throw new Error("The AI service returned an empty response. Please try again.");
     }
@@ -1457,20 +1425,17 @@ async function sendMessage() {
     }
 
     saveHistory();
-
     if (voiceEnabled) speakText(cleanReply);
 
   } catch(error) {
     removeTyping();
     console.error("Maynard AI request error:",error);
 
-    const errorMessage = error?.message || "An unexpected error occurred.";
-
     addMessage(
       "assistant",
-      "I couldn't complete that request.\n\n**Error:** " + errorMessage
+      "I couldn't complete that request.\n\n**Error:** " +
+      (error?.message || "An unexpected error occurred.")
     );
-
   } finally {
     busy = false;
     sendBtn.disabled = false;
@@ -1478,9 +1443,7 @@ async function sendMessage() {
   }
 }
 
-/* =========================================
-   INPUT EVENTS
-========================================= */
+/* INPUT EVENTS */
 
 sendBtn.onclick = sendMessage;
 
@@ -1496,9 +1459,7 @@ messageInput.addEventListener("input",() => {
   messageInput.style.height = Math.min(messageInput.scrollHeight,150) + "px";
 });
 
-/* =========================================
-   MODE SELECTION
-========================================= */
+/* MODE SELECTION */
 
 $("modes").addEventListener("click",event => {
   const button = event.target.closest(".mode");
@@ -1515,9 +1476,7 @@ $("modes").addEventListener("click",event => {
   $("sidebar").classList.remove("open");
 });
 
-/* =========================================
-   WELCOME SUGGESTIONS
-========================================= */
+/* WELCOME SUGGESTIONS */
 
 $("welcome").addEventListener("click",event => {
   const button = event.target.closest(".suggestion");
@@ -1527,9 +1486,7 @@ $("welcome").addEventListener("click",event => {
   sendMessage();
 });
 
-/* =========================================
-   NEW CHAT
-========================================= */
+/* NEW CHAT */
 
 $("newChat").onclick = () => {
   if (busy) return;
@@ -1553,9 +1510,7 @@ $("newChat").onclick = () => {
   $("sidebar").classList.remove("open");
 };
 
-/* =========================================
-   CLEAR CURRENT CONVERSATION
-========================================= */
+/* CLEAR CURRENT CONVERSATION */
 
 $("clearBtn").onclick = async () => {
   if (busy || !confirm("Clear this conversation and its saved pictures?")) return;
@@ -1576,9 +1531,7 @@ $("clearBtn").onclick = async () => {
   renderHistoryList();
 };
 
-/* =========================================
-   EXPORT CONVERSATION
-========================================= */
+/* EXPORT CONVERSATION */
 
 $("exportBtn").onclick = () => {
   if (!conversation.length) {
@@ -1604,25 +1557,19 @@ $("exportBtn").onclick = () => {
   document.body.appendChild(link);
   link.click();
   link.remove();
-
   URL.revokeObjectURL(url);
 };
 
-/* =========================================
-   MOBILE MENU
-========================================= */
+/* MOBILE MENU */
 
 $("menuBtn").onclick = () => {
   $("sidebar").classList.toggle("open");
 };
 
-/* =========================================
-   VOICE OUTPUT
-========================================= */
+/* VOICE OUTPUT */
 
 $("voiceToggle").onclick = () => {
   voiceEnabled = !voiceEnabled;
-
   $("voiceToggle").textContent =
     voiceEnabled ? "🔊 Voice On" : "🔊 Voice";
 
@@ -1631,9 +1578,7 @@ $("voiceToggle").onclick = () => {
   }
 };
 
-/* =========================================
-   VOICE INPUT
-========================================= */
+/* VOICE INPUT */
 
 $("micBtn").onclick = () => {
   const SpeechRecognition =
@@ -1645,7 +1590,6 @@ $("micBtn").onclick = () => {
   }
 
   const recognition = new SpeechRecognition();
-
   recognition.lang = "en-US";
   recognition.interimResults = false;
   recognition.continuous = false;
@@ -1654,7 +1598,6 @@ $("micBtn").onclick = () => {
     messageInput.value +=
       (messageInput.value ? " " : "") +
       event.results[0][0].transcript;
-
     messageInput.focus();
   };
 
@@ -1665,9 +1608,7 @@ $("micBtn").onclick = () => {
   recognition.start();
 };
 
-/* =========================================
-   LOAD CHAT HISTORY
-========================================= */
+/* LOAD CHAT HISTORY */
 
 function loadHistory() {
   try {
@@ -1697,7 +1638,6 @@ function loadHistory() {
         }))
       }));
     } else {
-      // Migrate previous single-conversation history.
       const old = JSON.parse(
         localStorage.getItem("maynard_history") || "[]"
       );
@@ -1741,19 +1681,15 @@ function loadHistory() {
 
   } catch(error) {
     console.warn("Could not load chat history:",error);
-
     savedChats = [];
     conversation = [];
     currentChatId = createChatId();
-
     renderConversation();
     renderHistoryList();
   }
 }
 
-/* =========================================
-   INITIALISE MAYNARD AI
-========================================= */
+/* INITIALISE MAYNARD AI */
 
 window.addEventListener("load",async () => {
   try {
