@@ -1,12 +1,18 @@
+
 import { createHash, randomUUID } from "node:crypto";
 
-// MAYNARD AI — Vercel + Groq + Upstash Redis + Stability AI
+// MAYNARD AI — Vercel + Groq + Upstash Redis
+// + Stability AI + API-Football
 
 export const config = { maxDuration: 60 };
 
 const API_URL = "https://api.groq.com/openai/v1/chat/completions";
+
 const STABILITY_IMAGE_URL =
   "https://api.stability.ai/v2beta/stable-image/generate/core";
+
+const FOOTBALL_API_URL =
+  "https://v3.football.api-sports.io";
 
 const TEXT_MODEL =
   process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
@@ -21,6 +27,7 @@ const DAILY_GENERATION_LIMIT = 3;
 const IMAGES_PER_BATCH = 3;
 const HISTORY_MESSAGES = 8;
 const MAX_GENERATION_PROMPT = 2000;
+const MAX_FOOTBALL_RESULTS = 150;
 
 const ALLOWED_ASPECT_RATIOS = new Set([
   "1:1",
@@ -215,12 +222,36 @@ function getVisitorId(req, res) {
 // ==========================================
 
 function getGhanaDate() {
-  return new Intl.DateTimeFormat("en-CA", {
+  const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Africa/Accra",
     year: "numeric",
     month: "2-digit",
     day: "2-digit"
-  }).format(new Date());
+  }).formatToParts(new Date());
+
+  const values = {};
+
+  for (const part of parts) {
+    values[part.type] = part.value;
+  }
+
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function getGhanaDateOffset(days = 0) {
+  const currentDate = getGhanaDate();
+
+  const [year, month, day] = currentDate
+    .split("-")
+    .map(Number);
+
+  const date = new Date(Date.UTC(
+    year,
+    month - 1,
+    day + days
+  ));
+
+  return date.toISOString().slice(0, 10);
 }
 
 function secondsUntilMidnightGhana() {
@@ -639,6 +670,250 @@ function makeTextHistory(
 }
 
 // ==========================================
+// WORLDWIDE LIVE FOOTBALL INTEGRATION
+// ==========================================
+
+function getLatestUserText(messages) {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const message = messages[i];
+
+    if (!message || message.role !== "user") continue;
+
+    if (typeof message.content === "string") {
+      return message.content.trim();
+    }
+
+    if (Array.isArray(message.content)) {
+      return message.content
+        .filter(part => part?.type === "text")
+        .map(part => String(part.text || ""))
+        .join("\n")
+        .trim();
+    }
+  }
+
+  return "";
+}
+
+function isFootballQuestion(message) {
+  return /\b(football|soccer|live matches|live football|live scores?|football scores?|match scores?|fixtures?|kick.?off|premier league|champions league|la liga|serie a|bundesliga|ligue 1|afcon|black stars|ghana match|arsenal|real madrid|barcelona|manchester united|liverpool|chelsea|manchester city|inter miami|juventus|bayern|psg|football match|soccer match)\b/i.test(message);
+}
+
+async function getFootballData(path, apiKey, signal) {
+  const response = await fetch(
+    `${FOOTBALL_API_URL}/${path}`,
+    {
+      method: "GET",
+      signal,
+      headers: {
+        "x-apisports-key": apiKey
+      }
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data.errors
+        ? JSON.stringify(data.errors)
+        : `API-Football returned HTTP ${response.status}.`
+    );
+  }
+
+  if (
+    data.errors &&
+    Object.keys(data.errors).length > 0
+  ) {
+    throw new Error(JSON.stringify(data.errors));
+  }
+
+  return data;
+}
+
+function formatFootballMatch(match) {
+  const fixture = match.fixture || {};
+  const league = match.league || {};
+  const teams = match.teams || {};
+  const goals = match.goals || {};
+  const status = fixture.status || {};
+
+  const home = teams.home?.name || "Home team";
+  const away = teams.away?.name || "Away team";
+
+  const homeScore =
+    goals.home === null || goals.home === undefined
+      ? "-"
+      : goals.home;
+
+  const awayScore =
+    goals.away === null || goals.away === undefined
+      ? "-"
+      : goals.away;
+
+  const elapsed =
+    status.elapsed !== null &&
+    status.elapsed !== undefined
+      ? `${status.elapsed}'`
+      : status.short || "Scheduled";
+
+  let kickoff = "Time unavailable";
+
+  if (fixture.date) {
+    const parsedDate = new Date(fixture.date);
+
+    if (!Number.isNaN(parsedDate.getTime())) {
+      kickoff = new Intl.DateTimeFormat("en-GH", {
+        timeZone: "Africa/Accra",
+        dateStyle: "medium",
+        timeStyle: "short"
+      }).format(parsedDate);
+    }
+  }
+
+  return [
+    `${home} ${homeScore} - ${awayScore} ${away}`,
+    `Competition: ${league.name || "Unknown competition"}`,
+    `Country: ${league.country || "Unknown"}`,
+    `Status: ${status.long || status.short || "Unknown"}`,
+    `Match time: ${elapsed}`,
+    `Ghana kickoff time: ${kickoff}`,
+    `Venue: ${fixture.venue?.name || "Not provided"}`
+  ].join(" | ");
+}
+
+async function getFootballContext(question, signal) {
+  const apiKey = process.env.FOOTBALL_API_KEY;
+
+  if (!apiKey) {
+    return `
+FOOTBALL DATA NOTICE:
+
+The football feature is not configured.
+Tell the user to add FOOTBALL_API_KEY to Vercel Environment Variables.
+Do not invent live scores or fixtures.
+`;
+  }
+
+  try {
+    const text = question.toLowerCase();
+
+    const wantsTomorrow =
+      /\b(tomorrow|tomorrow's)\b/i.test(text);
+
+    const wantsToday =
+      /\b(today|today's|tonight)\b/i.test(text);
+
+    let endpoint;
+    let requestType;
+
+    if (wantsTomorrow) {
+      const date = getGhanaDateOffset(1);
+
+      endpoint =
+        `fixtures?date=${date}&timezone=Africa/Accra`;
+
+      requestType = "Tomorrow's fixtures";
+
+    } else if (wantsToday) {
+      const date = getGhanaDateOffset(0);
+
+      endpoint =
+        `fixtures?date=${date}&timezone=Africa/Accra`;
+
+      requestType = "Today's fixtures";
+
+    } else {
+      endpoint =
+        "fixtures?live=all&timezone=Africa/Accra";
+
+      requestType = "Worldwide live matches";
+    }
+
+    const data = await getFootballData(
+      endpoint,
+      apiKey,
+      signal
+    );
+
+    const matches = Array.isArray(data.response)
+      ? data.response
+      : [];
+
+    if (matches.length === 0) {
+      return `
+FOOTBALL DATA RESULTS:
+
+The football data provider returned no matches for:
+${requestType}.
+
+Explain that no matching results were returned.
+Do not invent matches, teams, scores or kickoff times.
+`;
+    }
+
+    const displayedMatches = matches.slice(
+      0,
+      MAX_FOOTBALL_RESULTS
+    );
+
+    const formattedMatches = displayedMatches.map(
+      (match, index) =>
+        `${index + 1}. ${formatFootballMatch(match)}`
+    );
+
+    const wasLimited =
+      matches.length > displayedMatches.length;
+
+    return `
+VERIFIED FOOTBALL DATA FROM API-FOOTBALL
+
+Request type: ${requestType}
+
+Date and timezone: Africa/Accra (Ghana)
+
+Number of matches returned by provider: ${matches.length}
+
+Number of matches included below: ${displayedMatches.length}
+
+MATCH RESULTS:
+
+${formattedMatches.join("\n")}
+
+IMPORTANT INSTRUCTIONS:
+
+- Use these results as the source of truth.
+- Show team names, scores, competition and match status.
+- For live matches, show elapsed minutes when available.
+- For scheduled matches, show kickoff time in Ghana local time.
+- Do not invent missing scores, matches or times.
+- Do not claim the provider returned every match in the world.
+- ${
+      wasLimited
+        ? "The supplied list is limited to the first " + MAX_FOOTBALL_RESULTS + " results. Tell the user that more results were returned than displayed."
+        : "The supplied list contains all results returned by this API request."
+    }
+- Clearly distinguish live matches from scheduled matches.
+`;
+  } catch (error) {
+    if (signal?.aborted) {
+      throw error;
+    }
+
+    console.error("API-Football error:", error);
+
+    return `
+FOOTBALL DATA UNAVAILABLE
+
+The football data provider could not return reliable data.
+
+Explain that live football information is temporarily unavailable.
+Do not guess or invent scores, fixtures or match times.
+`;
+  }
+}
+
+// ==========================================
 // GROQ API REQUEST
 // ==========================================
 
@@ -909,7 +1184,6 @@ export default async function handler(req, res) {
   const body = req.body || {};
 
   // IMAGE GENERATION REQUESTS ARE HANDLED SEPARATELY.
-  // They do not require a Groq API key.
 
   if (body.action === "generate_image") {
     return handleImageGeneration(req, res);
@@ -968,10 +1242,45 @@ export default async function handler(req, res) {
     }
   });
 
-  // NORMAL TEXT REQUEST
+  // NORMAL TEXT REQUEST + FOOTBALL DATA
 
   if (images.length === 0) {
-    const history = makeTextHistory(messages, system);
+    let extraInstructions =
+      typeof system === "string" ? system : "";
+
+    const latestQuestion =
+      getLatestUserText(messages);
+
+    if (isFootballQuestion(latestQuestion)) {
+      try {
+        const footballContext = await getFootballContext(
+          latestQuestion,
+          controller.signal
+        );
+
+        if (controller.signal.aborted) return;
+
+        extraInstructions = [
+          extraInstructions,
+          footballContext
+        ].filter(Boolean).join("\n\n");
+
+      } catch (error) {
+        if (controller.signal.aborted) return;
+
+        console.error("Football integration error:", error);
+
+        extraInstructions = [
+          extraInstructions,
+          "Football data could not be retrieved. Do not invent live scores or fixtures."
+        ].filter(Boolean).join("\n\n");
+      }
+    }
+
+    const history = makeTextHistory(
+      messages,
+      extraInstructions
+    );
 
     if (!history.some(message => message.role === "user")) {
       return fail(res, 400, "No usable message content.");
@@ -986,6 +1295,8 @@ export default async function handler(req, res) {
       );
 
     } catch (error) {
+      if (controller.signal.aborted) return;
+
       if (!res.headersSent) {
         return fail(res, 502, error.message);
       }
