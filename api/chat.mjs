@@ -1,1616 +1,749 @@
-import { createHash, randomUUID } from "node:crypto";
 
-// MAYNARD AI — Vercel + Groq + Upstash Redis
-// + Stability AI + API-Football
+import { randomUUID } from "node:crypto";
 
-export const config = { maxDuration: 60 };
+export const config = {
+  maxDuration: 60,
+};
 
-const API_URL = "https://api.groq.com/openai/v1/chat/completions";
-const STABILITY_IMAGE_URL =
-"https://api.stability.ai/v2beta/stable-image/generate/core";
-const FOOTBALL_API_URL = "https://v3.football.api-sports.io";
+const GROQ_API_URL =
+  "https://api.groq.com/openai/v1/chat/completions";
 
-const TEXT_MODEL =
-process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+const STABILITY_API_URL =
+  "https://api.stability.ai/v2beta/stable-image/generate/core";
 
-const VISION_MODEL =
-process.env.GROQ_VISION_MODEL || "qwen/qwen3.8-27b";
+const FOOTBALL_API_URL =
+  "https://v3.football.api-sports.io/fixtures";
 
-const MAX_TOKENS = 3072;
-const MAX_MESSAGES = 60;
-const DAILY_IMAGE_LIMIT = 15;
-const DAILY_GENERATION_LIMIT = 3;
-const IMAGES_PER_BATCH = 3;
-const HISTORY_MESSAGES = 8;
-const MAX_GENERATION_PROMPT = 2000;
-const MAX_FOOTBALL_RESULTS = 150;
+const COOKIE_NAME = "maynard_browser_v2";
+const HISTORY_LIMIT = 50;
+const MESSAGE_LIMIT = 100;
+const HISTORY_TTL = 60 * 60 * 24 * 365;
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
-const IMAGE_REQUEST_TIMEOUT = 40000;
-const IMAGE_RETRY_DELAY = 1500;
-const IMAGE_MAX_RETRIES = 1;
-const IMAGE_LOCK_SECONDS = 60;
-
-const ALLOWED_ASPECT_RATIOS = new Set([
-"1:1", "16:9", "21:9", "2:3", "3:2",
-"4:5", "5:4", "9:16", "9:21"
+const allowedActions = new Set([
+  "chat",
+  "history_save",
+  "history_list",
+  "history_get",
+  "history_rename",
+  "history_delete",
+  "history_clear",
+  "image_generate",
+  "football_live",
 ]);
 
-// ==========================================
-// MAYNARD AI RESPONSE RULES
-// ==========================================
-
-const MAYNARD_RESPONSE_RULES = `
-You are Maynard AI, an intelligent, helpful and accurate AI assistant.
-
-YOUR MAIN GOAL:
-Give users accurate, useful, understandable and complete answers.
-Prioritize correctness over speed and unnecessary detail.
-
-1. ACCURACY AND RELIABILITY
-
-- Understand the user's question before answering.
-- Answer the actual question.
-- Never invent facts, statistics, quotations or sources.
-- Do not present guesses as confirmed facts.
-- Explain uncertainty when information is incomplete.
-- Check calculations and logical conclusions.
-- Correct mistakes when identified.
-- Never pretend to have checked information or performed an action you have not performed.
-- Do not claim information is current if it has not been verified.
-
-2. ANSWER FORMATTING
-
-- Use clear, natural paragraphs.
-- Use headings when helpful.
-- Use numbered steps for procedures and multi-step explanations.
-- Use bullet points for lists.
-- Avoid unnecessary tables.
-- Do not use tables unless the user explicitly requests one.
-- Keep answers focused on the question.
-- Avoid unnecessary repetition.
-- Explain technical terms in understandable language.
-
-3. MATHEMATICS
-
-- Support arithmetic, algebra, geometry, trigonometry, calculus and statistics.
-- Use accurate mathematical notation.
-- Use LaTeX for mathematical expressions.
-- Use \( ... \) for inline mathematics.
-- Use \[ ... \] for displayed mathematics.
-- Show important calculations step by step.
-- Explain why important operations are performed.
-- Check arithmetic and algebraic results.
-- Verify answers by substitution when possible.
-- Clearly identify the final answer.
-- Never put an entire mathematical solution inside a table.
-
-4. SCIENCE AND TECHNICAL SUBJECTS
-
-- Explain scientific concepts accurately.
-- Use correct terminology and units.
-- Distinguish facts from estimates and hypotheses.
-- Explain formulas and their symbols.
-- Never invent experimental results or evidence.
-
-5. EDUCATION
-
-- Answer each part of a question.
-- Explain difficult concepts in simple language.
-- Show working for calculations.
-- Use examples when useful.
-- Respect requested answer lengths and formats.
-- Avoid unrelated information.
-
-6. WRITING AND LANGUAGE
-
-- Use correct spelling, grammar and punctuation.
-- Write naturally and clearly.
-- Preserve meaning when rewriting.
-- Follow the requested language and tone.
-- Do not change important names or figures without a reason.
-
-7. IMAGE UNDERSTANDING
-
-- Examine available uploaded images carefully.
-- Read visible text accurately.
-- Do not invent details that cannot be seen.
-- Explain when something is unclear.
-- Consider all supplied images.
-
-8. GENERAL KNOWLEDGE
-
-- Separate facts from opinions.
-- Avoid unsupported claims.
-- Explain when information may be outdated.
-- Give useful context without overwhelming the user.
-
-9. CONVERSATION
-
-- Use relevant previous messages.
-- Do not ask users to repeat information already available.
-- Follow user corrections.
-- Do not claim to have permanent memory unless that feature is actually available.
-
-10. FINAL QUALITY CHECK
-
-Before answering, check:
-
-- Did I answer the actual question?
-- Is the answer accurate and understandable?
-- Are calculations correct?
-- Did I avoid unnecessary tables?
-- Did I explain uncertainty?
-- Did I cover all important parts?
-
-Give the best accurate answer you can.
-`;
-
-// ==========================================
-// BASIC HELPERS
-// ==========================================
-
-function fail(res, status, message) {
-return res.status(status).json({
-error: { message }
-});
+function send(res, status, data) {
+  res.status(status).json(data);
 }
 
 function getCookie(req, name) {
-const cookies = (req.headers.cookie || "").split(";");
-
-for (const cookie of cookies) {
-const index = cookie.indexOf("=");
-if (index < 0) continue;
-
-const key = cookie.slice(0, index).trim();  
-const value = cookie.slice(index + 1).trim();  
-
-if (key === name) {  
-  try {  
-    return decodeURIComponent(value);  
-  } catch {  
-    return null;  
-  }  
-}
-
-}
-
-return null;
-}
-
-// ==========================================
-// VISITOR IDENTIFICATION
-// ==========================================
-
-function getVisitorId(req, res) {
-let id = getCookie(req, "maynard_visitor");
-
-if (!id || !/^[a-f0-9-]{36}$/i.test(id)) {
-id = randomUUID();
-
-res.setHeader(  
-  "Set-Cookie",  
-  "maynard_visitor=" + id +  
-  "; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=31536000"  
-);
-
-}
-
-return createHash("sha256")
-.update(id)
-.digest("hex");
-}
-
-// ==========================================
-// GHANA DATE AND USAGE LIMITS
-// ==========================================
-
-function getGhanaDate() {
-const parts = new Intl.DateTimeFormat("en-GB", {
-timeZone: "Africa/Accra",
-year: "numeric",
-month: "2-digit",
-day: "2-digit"
-}).formatToParts(new Date());
-
-const values = {};
-
-for (const part of parts) {
-values[part.type] = part.value;
-}
-
-return ${values.year}-${values.month}-${values.day};
-}
-
-function getGhanaDateOffset(days = 0) {
-const [year, month, day] = getGhanaDate()
-.split("-")
-.map(Number);
-
-const date = new Date(Date.UTC(
-year,
-month - 1,
-day + days
-));
-
-return date.toISOString().slice(0, 10);
-}
-
-function secondsUntilMidnightGhana() {
-const date = getGhanaDate();
-
-const nextMidnight = new Date(
-date + "T00:00:00.000Z"
-);
-
-nextMidnight.setUTCDate(
-nextMidnight.getUTCDate() + 1
-);
-
-return Math.max(
-60,
-Math.ceil(
-(nextMidnight.getTime() - Date.now()) / 1000
-)
-);
-}
-
-// ==========================================
-// REDIS
-// ==========================================
-
-async function redisCommand(command) {
-const url = process.env.UPSTASH_REDIS_REST_URL;
-const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-
-if (!url || !token) {
-throw new Error("Redis is not configured.");
-}
-
-const response = await fetch(url, {
-method: "POST",
-headers: {
-Authorization: "Bearer " + token,
-"Content-Type": "application/json"
-},
-body: JSON.stringify(command)
-});
-
-if (!response.ok) {
-throw new Error("Redis request failed.");
-}
-
-const data = await response.json();
-
-if (data.error) {
-throw new Error("Redis command failed.");
-}
-
-return data.result;
-}
-
-// ==========================================
-// IMAGE GENERATION LOCK
-// ==========================================
-
-async function acquireImageLock(visitorId) {
-const key = maynard:image-lock:${visitorId};
-const token = randomUUID();
-
-const result = await redisCommand([
-"SET",
-key,
-token,
-"NX",
-"EX",
-String(IMAGE_LOCK_SECONDS)
-]);
-
-return result === "OK" ? { key, token } : null;
-}
-
-async function releaseImageLock(lock) {
-if (!lock) return;
-
-try {
-await redisCommand([
-"EVAL",
-  if redis.call("GET", KEYS[1]) == ARGV[1] then   return redis.call("DEL", KEYS[1])   end   return 0  ,
-"1",
-lock.key,
-lock.token
-]);
-} catch (error) {
-console.error("Image lock release error:", error);
-}
-}
-
-// ==========================================
-// REFUND FAILED GENERATION
-// ==========================================
-
-async function refundGeneration(visitorId) {
-const key =
-maynard:generations:${visitorId}:${getGhanaDate()};
-
-try {
-await redisCommand([
-"EVAL",
-`
-local current = tonumber(redis.call("GET", KEYS[1]) or "0")
-
-if current > 0 then  
-      return redis.call("DECR", KEYS[1])  
-    end  
-
-    return 0  
-  `,  
-  "1",  
-  key  
-]);
-
-} catch (error) {
-console.error("Generation refund error:", error);
-}
-}
-
-// ==========================================
-// USAGE RESERVATION
-// ==========================================
-
-async function reserveUsage(visitorId, amount, category, maximum) {
-const url = process.env.UPSTASH_REDIS_REST_URL;
-const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-
-if (!url || !token) {
-throw new Error("Usage tracking is not configured.");
-}
-
-const key =
-maynard:${category}:${visitorId}:${getGhanaDate()};
-
-const ttl = secondsUntilMidnightGhana();
-
-const script = `
-local current = tonumber(redis.call("GET", KEYS[1]) or "0")
-local requested = tonumber(ARGV[1])
-local maximum = tonumber(ARGV[2])
-
-if current + requested > maximum then  
-  return {0, current}  
-end  
-
-local updated = redis.call("INCRBY", KEYS[1], requested)  
-redis.call("EXPIRE", KEYS[1], tonumber(ARGV[3]))  
-
-return {1, updated}
-
-`;
-
-const response = await fetch(url, {
-method: "POST",
-headers: {
-Authorization: "Bearer " + token,
-"Content-Type": "application/json"
-},
-body: JSON.stringify([
-"EVAL",
-script,
-"1",
-key,
-String(amount),
-String(maximum),
-String(ttl)
-])
-});
-
-if (!response.ok) {
-throw new Error("Could not contact usage database.");
-}
-
-const data = await response.json();
-
-if (data.error) {
-throw new Error("Usage database error.");
-}
-
-if (!Array.isArray(data.result)) {
-throw new Error("Invalid usage database response.");
-}
-
-return {
-allowed: Number(data.result[0]) === 1,
-used: Number(data.result[1])
-};
-}
-
-async function reserveImages(visitorId, amount) {
-return reserveUsage(
-visitorId,
-amount,
-"images",
-DAILY_IMAGE_LIMIT
-);
-}
-
-async function reserveGenerations(visitorId) {
-return reserveUsage(
-visitorId,
-1,
-"generations",
-DAILY_GENERATION_LIMIT
-);
-}
-
-// ==========================================
-// IMAGE GENERATION
-// ==========================================
-
-function wait(ms) {
-return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-async function generateStabilityImage(prompt, aspectRatio) {
-const apiKey = process.env.STABILITY_API_KEY;
-
-if (!apiKey) {
-const error = new Error(
-"Image generation is not configured. Add STABILITY_API_KEY to Vercel."
-);
-
-error.status = 500;  
-throw error;
-
-}
-
-for (
-let attempt = 0;
-attempt <= IMAGE_MAX_RETRIES;
-attempt++
-) {
-const controller = new AbortController();
-
-const timeout = setTimeout(  
-  () => controller.abort(),  
-  IMAGE_REQUEST_TIMEOUT  
-);  
-
-try {  
-  const form = new FormData();  
-
-  form.append("prompt", prompt);  
-  form.append("aspect_ratio", aspectRatio);  
-  form.append("output_format", "png");  
-
-  const response = await fetch(STABILITY_IMAGE_URL, {  
-    method: "POST",  
-    signal: controller.signal,  
-    headers: {  
-      Authorization: "Bearer " + apiKey,  
-      Accept: "image/*"  
-    },  
-    body: form  
-  });  
-
-  if (!response.ok) {  
-    const responseText = await response.text();  
-
-    let providerMessage = "";  
-
-    try {  
-      const parsed = JSON.parse(responseText);  
-
-      providerMessage =  
-        parsed.message ||  
-        parsed.error?.message ||  
-        parsed.name ||  
-        "";  
-    } catch {  
-      providerMessage = responseText.slice(0, 300);  
-    }  
-
-    const error = new Error(  
-      providerMessage ||  
-      "Stability AI could not generate the image."  
-    );  
-
-    error.status = response.status;  
-
-    if (  
-      (response.status === 429 ||  
-       response.status === 503) &&  
-      attempt < IMAGE_MAX_RETRIES  
-    ) {  
-      const retryAfter = Number(  
-        response.headers.get("retry-after")  
-      );  
-
-      const delay =  
-        Number.isFinite(retryAfter) && retryAfter > 0  
-          ? Math.min(retryAfter * 1000, 5000)  
-          : IMAGE_RETRY_DELAY;  
-
-      await wait(delay);  
-      continue;  
-    }  
-
-    throw error;  
-  }  
-
-  const mimeType =  
-    response.headers.get("content-type") || "image/png";  
-
-  if (!mimeType.startsWith("image/")) {  
-    const error = new Error(  
-      "Stability AI returned an unexpected response."  
-    );  
-
-    error.status = 502;  
-    throw error;  
-  }  
-
-  const buffer = Buffer.from(  
-    await response.arrayBuffer()  
-  );  
-
-  if (!buffer.length) {  
-    const error = new Error(  
-      "Stability AI returned an empty image."  
-    );  
-
-    error.status = 502;  
-    throw error;  
-  }  
-
-  return {  
-    imageData:  
-      `data:${mimeType};base64,${buffer.toString("base64")}`,  
-    mimeType  
-  };  
-
-} catch (error) {  
-  if (controller.signal.aborted) {  
-    const timeoutError = new Error(  
-      "Image generation took too long. Please try again."  
-    );  
-
-    timeoutError.status = 504;  
-    throw timeoutError;  
-  }  
-
-  throw error;  
-
-} finally {  
-  clearTimeout(timeout);  
-}
-
-}
-
-throw new Error("Image generation could not be completed.");
-}
-
-// ==========================================
-// IMAGE GENERATION HANDLER
-// ==========================================
-
-async function handleImageGeneration(req, res) {
-const prompt =
-typeof req.body?.prompt === "string"
-? req.body.prompt.trim()
-: "";
-
-const aspectRatio =
-typeof req.body?.aspect_ratio === "string"
-? req.body.aspect_ratio
-: "1:1";
-
-if (prompt.length < 3) {
-return fail(res, 400, "Please enter a longer image description.");
-}
-
-if (prompt.length > MAX_GENERATION_PROMPT) {
-return fail(
-res,
-400,
-Your image description must be ${MAX_GENERATION_PROMPT} characters or fewer.
-);
-}
-
-if (!ALLOWED_ASPECT_RATIOS.has(aspectRatio)) {
-return fail(res, 400, "That image aspect ratio is not supported.");
-}
-
-let visitorId;
-let lock;
-let generationReserved = false;
-
-try {
-visitorId = getVisitorId(req, res);
-
-lock = await acquireImageLock(visitorId);  
-
-if (!lock) {  
-  return fail(  
-    res,  
-    429,  
-    "An image is already being generated. Please wait for it to finish."  
-  );  
-}  
-
-const usage = await reserveGenerations(visitorId);  
-
-if (!usage.allowed) {  
-  return fail(  
-    res,  
-    429,  
-    "You have reached your daily image-generation limit of 3. Your allowance resets at midnight Ghana time."  
-  );  
-}  
-
-generationReserved = true;  
-
-const result = await generateStabilityImage(  
-  prompt,  
-  aspectRatio  
-);  
-
-return res.status(200).json(result);
-
-} catch (error) {
-console.error("Image generation error:", error);
-
-if (generationReserved && visitorId) {  
-  await refundGeneration(visitorId);  
-}  
-
-const status = Number(error.status) || 502;  
-
-let message = "Image generation failed. Please try again.";  
-
-if (status === 401) {  
-  message = "Stability AI rejected your API key. Check STABILITY_API_KEY in Vercel.";  
-} else if (status === 402) {  
-  message = "Your Stability AI account needs more credits.";  
-} else if (status === 403) {  
-  message = "Stability AI refused this request. Check your account permissions and prompt.";  
-} else if (status === 429) {  
-  message = "Stability AI is temporarily rate-limiting image generation. Please wait.";  
-} else if (status === 503) {  
-  message = "Stability AI is temporarily unavailable.";  
-} else if (status === 504) {  
-  message = "Image generation timed out. Please try again.";  
-}  
-
-return fail(  
-  res,  
-  status >= 400 && status <= 599 ? status : 502,  
-  message  
-);
-
-} finally {
-await releaseImageLock(lock);
-}
-}
-
-// ==========================================
-// IMAGE EXTRACTION
-// ==========================================
-
-function extractImageBlocks(messages) {
-const latestUser = [...messages]
-.reverse()
-.find(message => message && message.role === "user");
-
-if (!latestUser || !Array.isArray(latestUser.content)) {
-return { images: [], question: "" };
-}
-
-const images = [];
-const text = [];
-
-for (const block of latestUser.content) {
-if (!block) continue;
-
-if (block.type === "text" && block.text) {  
-  text.push(String(block.text));  
-}  
-
-if (  
-  block.type === "image" &&  
-  block.source &&  
-  block.source.type === "base64" &&  
-  /^image\/(jpeg|png|webp|gif)$/i.test(  
-    block.source.media_type || ""  
-  ) &&  
-  typeof block.source.data === "string" &&  
-  block.source.data.length > 0  
-) {  
-  images.push({  
-    media_type: block.source.media_type,  
-    data: block.source.data  
-  });  
-}
-
-}
-
-return {
-images,
-question: text.join("\n").slice(0, 5000)
-};
-}
-
-// ==========================================
-// CONVERSATION HISTORY
-// ==========================================
-
-function makeTextHistory(messages, system, excludeLatestUser = false) {
-const output = [];
-
-const systemInstructions = [
-MAYNARD_RESPONSE_RULES,
-`
-RESPONSE FORMATTING RULES:
-
-- Use clear, numbered steps for tutorials.  
-- Use Step 1, Step 2, Step 3 when explaining procedures.  
-- Do not use tables unless the user explicitly requests one.  
-- Explain mathematics line by line.  
-- Show calculations clearly.  
-- Use bullet points for lists.  
-- Keep explanations beginner-friendly.  
-`
-
-];
-
-if (typeof system === "string" && system.trim()) {
-systemInstructions.push(
-"ADDITIONAL APP INSTRUCTIONS:\n" +
-system.slice(0, 4000)
-);
-}
-
-output.push({
-role: "system",
-content: systemInstructions.join("\n\n")
-});
-
-let history = messages.slice(-HISTORY_MESSAGES);
-
-if (excludeLatestUser) {
-let lastUserIndex = -1;
-
-for (let i = history.length - 1; i >= 0; i--) {  
-  if (history[i]?.role === "user") {  
-    lastUserIndex = i;  
-    break;  
-  }  
-}  
-
-if (lastUserIndex >= 0) {  
-  history = history.filter(  
-    (_, index) => index !== lastUserIndex  
-  );  
-}
-
-}
-
-for (const message of history) {
-if (
-!message ||
-!["user", "assistant"].includes(message.role)
-) {
-continue;
-}
-
-let content = "";  
-
-if (typeof message.content === "string") {  
-  content = message.content;  
-} else if (Array.isArray(message.content)) {  
-  content = message.content  
-    .filter(block => block && block.type === "text")  
-    .map(block => String(block.text || ""))  
-    .join("\n");  
-}  
-
-if (!content.trim()) continue;  
-
-output.push({  
-  role: message.role,  
-  content: content.slice(0, 4000)  
-});
-
-}
-
-return output;
-}
-
-// ==========================================
-// FOOTBALL
-// ==========================================
-
-function getLatestUserText(messages) {
-for (let i = messages.length - 1; i >= 0; i--) {
-const message = messages[i];
-
-if (!message || message.role !== "user") continue;  
-
-if (typeof message.content === "string") {  
-  return message.content.trim();  
-}  
-
-if (Array.isArray(message.content)) {  
-  return message.content  
-    .filter(part => part?.type === "text")  
-    .map(part => String(part.text || ""))  
-    .join("\n")  
-    .trim();  
-}
-
-}
-
-return "";
-}
-
-function isFootballQuestion(message) {
-return /\b(football|soccer|live matches|live football|live scores?|football scores?|match scores?|fixtures?|kick.?off|premier league|champions league|la liga|serie a|bundesliga|ligue 1|afcon|black stars|ghana match|arsenal|real madrid|barcelona|manchester united|liverpool|chelsea|manchester city|inter miami|juventus|bayern|psg|football match|soccer match)\b/i.test(message);
-}
-
-async function getFootballData(path, apiKey, signal) {
-const response = await fetch(
-${FOOTBALL_API_URL}/${path},
-{
-method: "GET",
-signal,
-headers: {
-"x-apisports-key": apiKey
-}
-}
-);
-
-const data = await response.json();
-
-if (!response.ok) {
-throw new Error(
-data.errors
-? JSON.stringify(data.errors)
-: API-Football returned HTTP ${response.status}.
-);
-}
-
-if (data.errors && Object.keys(data.errors).length > 0) {
-throw new Error(JSON.stringify(data.errors));
-}
-
-return data;
-}
-
-function formatFootballMatch(match) {
-const fixture = match.fixture || {};
-const league = match.league || {};
-const teams = match.teams || {};
-const goals = match.goals || {};
-const status = fixture.status || {};
-
-const home = teams.home?.name || "Home team";
-const away = teams.away?.name || "Away team";
-
-const homeScore =
-goals.home === null || goals.home === undefined
-? "-"
-: goals.home;
-
-const awayScore =
-goals.away === null || goals.away === undefined
-? "-"
-: goals.away;
-
-const elapsed =
-status.elapsed !== null && status.elapsed !== undefined
-? ${status.elapsed}'
-: status.short || "Scheduled";
-
-let kickoff = "Time unavailable";
-
-if (fixture.date) {
-const parsedDate = new Date(fixture.date);
-
-if (!Number.isNaN(parsedDate.getTime())) {  
-  kickoff = new Intl.DateTimeFormat("en-GH", {  
-    timeZone: "Africa/Accra",  
-    dateStyle: "medium",  
-    timeStyle: "short"  
-  }).format(parsedDate);  
-}
-
-}
-
-return [
-${home} ${homeScore} - ${awayScore} ${away},
-Competition: ${league.name || "Unknown competition"},
-Country: ${league.country || "Unknown"},
-Status: ${status.long || status.short || "Unknown"},
-Match time: ${elapsed},
-Ghana kickoff time: ${kickoff},
-Venue: ${fixture.venue?.name || "Not provided"}
-].join(" | ");
-}
-
-async function getFootballContext(question, signal) {
-const apiKey = process.env.FOOTBALL_API_KEY;
-
-if (!apiKey) {
-return `
-FOOTBALL DATA NOTICE:
-
-The football feature is not configured.
-Tell the user to add FOOTBALL_API_KEY to Vercel Environment Variables.
-Do not invent live scores or fixtures.
-`;
-}
-
-try {
-const text = question.toLowerCase();
-
-const wantsTomorrow =  
-  /\b(tomorrow|tomorrow's)\b/i.test(text);  
-
-const wantsToday =  
-  /\b(today|today's|tonight)\b/i.test(text);  
-
-let endpoint;  
-let requestType;  
-
-if (wantsTomorrow) {  
-  endpoint =  
-    `fixtures?date=${getGhanaDateOffset(1)}&timezone=Africa/Accra`;  
-
-  requestType = "Tomorrow's fixtures";  
-
-} else if (wantsToday) {  
-  endpoint =  
-    `fixtures?date=${getGhanaDateOffset(0)}&timezone=Africa/Accra`;  
-
-  requestType = "Today's fixtures";  
-
-} else {  
-  endpoint = "fixtures?live=all&timezone=Africa/Accra";  
-  requestType = "Worldwide live matches";  
-}  
-
-const data = await getFootballData(  
-  endpoint,  
-  apiKey,  
-  signal  
-);  
-
-const matches = Array.isArray(data.response)  
-  ? data.response  
-  : [];  
-
-if (matches.length === 0) {  
-  return `
-
-FOOTBALL DATA RESULTS:
-
-The football provider returned no matches for:
-${requestType}.
-
-Explain that no matching results were returned.
-Do not invent matches, teams, scores or kickoff times.
-`;
-}
-
-const displayedMatches = matches.slice(  
-  0,  
-  MAX_FOOTBALL_RESULTS  
-);  
-
-const formattedMatches = displayedMatches.map(  
-  (match, index) =>  
-    `${index + 1}. ${formatFootballMatch(match)}`  
-);  
-
-return `
-
-VERIFIED FOOTBALL DATA FROM API-FOOTBALL
-
-Request type: ${requestType}
-Timezone: Africa/Accra (Ghana)
-Matches returned: ${matches.length}
-Matches included: ${displayedMatches.length}
-
-MATCH RESULTS:
-
-${formattedMatches.join("\n")}
-
-IMPORTANT:
-
-- Use these results as the source of truth.
-
-- Show team names, scores, competition and match status.
-
-- Show elapsed minutes for live matches when available.
-
-- Show Ghana kickoff times for scheduled matches.
-
-- Do not invent missing scores, matches or times.
-
-- Do not claim that the provider returned every match in the world.
-
-- ${
-  matches.length > displayedMatches.length
-  ? "More results were returned than displayed."
-  : "All results returned by this request are included."
+  const cookie = req.headers.cookie || "";
+  const parts = cookie.split(";");
+
+  for (const part of parts) {
+    const index = part.indexOf("=");
+    if (index === -1) continue;
+
+    const key = part.slice(0, index).trim();
+    const value = part.slice(index + 1).trim();
+
+    if (key === name) {
+      return decodeURIComponent(value);
+    }
   }
 
-- Distinguish live matches from scheduled matches.
-  `;
-  } catch (error) {
-  if (signal?.aborted) throw error;
-
-  console.error("API-Football error:", error);
-
-  return `
-  FOOTBALL DATA UNAVAILABLE
-
-The football data provider could not return reliable data.
-Explain that football information is temporarily unavailable.
-Do not guess or invent scores, fixtures or match times.
-`;
-}
+  return null;
 }
 
-// ==========================================
-// GROQ API
-// ==========================================
+function setVisitorCookie(res, visitorId) {
+  const secure =
+    process.env.NODE_ENV === "production" ? "; Secure" : "";
 
-async function groqRequest(apiKey, body, signal) {
-const response = await fetch(API_URL, {
-method: "POST",
-signal,
-headers: {
-"Content-Type": "application/json",
-Authorization: "Bearer " + apiKey
-},
-body: JSON.stringify(body)
-});
-
-if (!response.ok) {
-const errorText = await response.text();
-
-if (response.status === 429) {  
-  throw new Error(  
-    "The AI service is busy or its usage limit has been reached. Please wait and try again."  
-  );  
-}  
-
-let providerMessage = "";  
-
-try {  
-  const parsed = JSON.parse(errorText);  
-  providerMessage = parsed.error?.message || "";  
-} catch {  
-  providerMessage = "";  
-}  
-
-throw new Error(  
-  `AI service error (${response.status}): ` +  
-  (providerMessage || "The AI request could not be completed.")  
-);
-
+  res.setHeader(
+    "Set-Cookie",
+    `${COOKIE_NAME}=${encodeURIComponent(visitorId)}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${HISTORY_TTL}${secure}`
+  );
 }
 
-return response;
+function getVisitor(req, res) {
+  let visitorId = getCookie(req, COOKIE_NAME);
+
+  if (!visitorId || !/^[a-f0-9-]{36}$/i.test(visitorId)) {
+    visitorId = randomUUID();
+    setVisitorCookie(res, visitorId);
+  }
+
+  return visitorId;
 }
 
-// ==========================================
-// IMAGE ANALYSIS
-// ==========================================
+async function readBody(req) {
+  if (req.body && typeof req.body === "object") {
+    return req.body;
+  }
 
-async function analyzeImageBatch(
-apiKey,
-history,
-question,
-images,
-batchNumber,
-totalBatches,
-signal
-) {
-const imageParts = images.map(image => ({
-type: "image_url",
-image_url: {
-url:
-"data:" +
-image.media_type +
-";base64," +
-image.data
-}
-}));
+  let raw = "";
 
-const prompt = question ||
-"Carefully examine these images and explain what they show.";
+  for await (const chunk of req) {
+    raw += chunk;
 
-const messages = [
-...history,
-{
-role: "user",
-content: [
-{
-type: "text",
-text:
-prompt +
-"\n\nThis is image batch " +
-batchNumber +
-" of " +
-totalBatches +
-". Examine every image carefully. " +
-"Read visible text accurately. " +
-"Do not invent details. " +
-"If something is unclear, say so."
-},
-...imageParts
-]
-}
-];
+    if (raw.length > 15 * 1024 * 1024) {
+      throw new Error("Request body is too large.");
+    }
+  }
 
-const response = await groqRequest(
-apiKey,
-{
-model: VISION_MODEL,
-max_tokens: 1500,
-stream: false,
-messages
-},
-signal
-);
+  if (!raw) return {};
 
-const data = await response.json();
-
-const result = data.choices?.[0]?.message?.content;
-
-if (!result) {
-throw new Error(
-"The vision model did not return an image analysis."
-);
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw new Error("Invalid JSON request body.");
+  }
 }
 
-return result;
+function requireEnv(name) {
+  const value = process.env[name];
+
+  if (!value) {
+    throw new Error(`Missing environment variable: ${name}`);
+  }
+
+  return value;
 }
 
-// ==========================================
-// STREAMING FINAL ANSWER
-// ==========================================
-
-async function streamFinalAnswer(
-apiKey,
-messages,
-res,
-signal
-) {
-const upstream = await groqRequest(
-apiKey,
-{
-model: TEXT_MODEL,
-max_tokens: MAX_TOKENS,
-stream: true,
-messages
-},
-signal
-);
-
-if (!upstream.body) {
-throw new Error("The AI service returned an empty response.");
+function historyKey(visitor, id) {
+  return `maynard:history:${visitor}:${id}`;
 }
 
-res.writeHead(200, {
-"Content-Type": "text/event-stream; charset=utf-8",
-"Cache-Control": "no-cache, no-transform",
-Connection: "keep-alive"
-});
-
-const send = object => {
-if (!res.writableEnded && !res.destroyed) {
-res.write("data: " + JSON.stringify(object) + "\n\n");
-}
-};
-
-const decoder = new TextDecoder();
-
-let buffer = "";
-let finished = false;
-
-function processLine(line) {
-if (!line.startsWith("data:")) return;
-
-const payload = line.slice(5).trim();  
-
-if (!payload) return;  
-
-if (payload === "[DONE]") {  
-  finished = true;  
-  return;  
-}  
-
-let event;  
-
-try {  
-  event = JSON.parse(payload);  
-} catch {  
-  return;  
-}  
-
-if (event.error) {  
-  send({  
-    type: "error",  
-    error: {  
-      message:  
-        event.error.message ||  
-        "The AI stream encountered an error."  
-    }  
-  });  
-
-  return;  
-}  
-
-const content =  
-  event.choices?.[0]?.delta?.content;  
-
-if (typeof content === "string" && content.length > 0) {  
-  send({  
-    type: "content_block_delta",  
-    delta: {  
-      type: "text_delta",  
-      text: content  
-    }  
-  });  
+function historyIndexKey(visitor) {
+  return `maynard:history-index:${visitor}`;
 }
 
+async function redis(command, ...args) {
+  const url = requireEnv("UPSTASH_REDIS_REST_URL");
+  const token = requireEnv("UPSTASH_REDIS_REST_TOKEN");
+
+  const response = await fetch(
+    `${url.replace(/\/$/, "")}/${command}/${args
+      .map((value) => encodeURIComponent(String(value)))
+      .join("/")}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  const result = await response.json();
+
+  if (!response.ok || result.error) {
+    throw new Error(result.error || "Redis request failed.");
+  }
+
+  return result.result;
 }
 
-try {
-for await (const chunk of upstream.body) {
-if (
-signal.aborted ||
-res.destroyed ||
-finished
-) {
-break;
+function cleanMessages(messages) {
+  if (!Array.isArray(messages)) return [];
+
+  return messages
+    .slice(-MESSAGE_LIMIT)
+    .filter(
+      (message) =>
+        message &&
+        ["user", "assistant"].includes(message.role) &&
+        typeof message.content === "string"
+    )
+    .map((message) => ({
+      role: message.role,
+      content: message.content.slice(0, 20000),
+      ...(message.imageOmitted ? { imageOmitted: true } : {}),
+    }));
 }
 
-buffer += decoder.decode(chunk, { stream: true });  
+async function saveHistory(visitor, body) {
+  const messages = cleanMessages(body.messages);
 
-  const lines = buffer.split("\n");  
-  buffer = lines.pop() || "";  
+  if (!messages.length) {
+    throw new Error("There are no messages to save.");
+  }
 
-  for (const line of lines) {  
-    processLine(line);  
-    if (finished) break;  
-  }  
-}  
+  const id =
+    typeof body.id === "string" &&
+    /^[a-f0-9-]{36}$/i.test(body.id)
+      ? body.id
+      : randomUUID();
 
-buffer += decoder.decode();  
+  const now = new Date().toISOString();
 
-if (buffer.trim() && !finished) {  
-  processLine(buffer);  
+  const existingRaw = await redis(
+    "GET",
+    historyKey(visitor, id)
+  );
+
+  let existing = null;
+
+  if (existingRaw) {
+    try {
+      existing = JSON.parse(existingRaw);
+    } catch {
+      existing = null;
+    }
+  }
+
+  const title =
+    typeof body.title === "string" && body.title.trim()
+      ? body.title.trim().slice(0, 100)
+      : existing?.title ||
+        messages.find((message) => message.role === "user")
+          ?.content.slice(0, 60) ||
+        "New conversation";
+
+  const record = {
+    id,
+    title,
+    messages,
+    createdAt: existing?.createdAt || now,
+    updatedAt: now,
+  };
+
+  await redis(
+    "SET",
+    historyKey(visitor, id),
+    JSON.stringify(record),
+    "EX",
+    HISTORY_TTL
+  );
+
+  await redis(
+    "ZADD",
+    historyIndexKey(visitor),
+    Date.now(),
+    id
+  );
+
+  await redis(
+    "EXPIRE",
+    historyIndexKey(visitor),
+    HISTORY_TTL
+  );
+
+  const count = await redis(
+    "ZCARD",
+    historyIndexKey(visitor)
+  );
+
+  if (Number(count) > HISTORY_LIMIT) {
+    const oldIds = await redis(
+      "ZRANGE",
+      historyIndexKey(visitor),
+      0,
+      Number(count) - HISTORY_LIMIT - 1
+    );
+
+    if (Array.isArray(oldIds)) {
+      for (const oldId of oldIds) {
+        await redis(
+          "DEL",
+          historyKey(visitor, oldId)
+        );
+      }
+
+      if (oldIds.length) {
+        await redis(
+          "ZREMRANGEBYRANK",
+          historyIndexKey(visitor),
+          0,
+          oldIds.length - 1
+        );
+      }
+    }
+  }
+
+  return record;
 }
 
-} catch (error) {
-if (!signal.aborted && !res.destroyed) {
-send({
-type: "error",
-error: {
-message:
-"The response was interrupted. Please try again."
-}
-});
-}
+async function listHistory(visitor) {
+  const ids = await redis(
+    "ZREVRANGE",
+    historyIndexKey(visitor),
+    0,
+    HISTORY_LIMIT - 1
+  );
+
+  if (!Array.isArray(ids)) return [];
+
+  const histories = [];
+
+  for (const id of ids) {
+    const raw = await redis(
+      "GET",
+      historyKey(visitor, id)
+    );
+
+    if (!raw) continue;
+
+    try {
+      const record = JSON.parse(raw);
+
+      histories.push({
+        id: record.id,
+        title: record.title,
+        createdAt: record.createdAt,
+        updatedAt: record.updatedAt,
+        messageCount: record.messages?.length || 0,
+      });
+    } catch {
+      // Ignore invalid history records.
+    }
+  }
+
+  return histories;
 }
 
-if (!res.writableEnded && !res.destroyed) {
-res.end();
-}
+async function getHistory(visitor, id) {
+  if (!id || !/^[a-f0-9-]{36}$/i.test(id)) {
+    throw new Error("Invalid conversation ID.");
+  }
+
+  const raw = await redis(
+    "GET",
+    historyKey(visitor, id)
+  );
+
+  if (!raw) return null;
+
+  return JSON.parse(raw);
 }
 
-// ==========================================
-// MAIN VERCEL HANDLER
-// ==========================================
+async function renameHistory(visitor, id, title) {
+  const record = await getHistory(visitor, id);
+
+  if (!record) return null;
+
+  if (typeof title !== "string" || !title.trim()) {
+    throw new Error("A conversation title is required.");
+  }
+
+  record.title = title.trim().slice(0, 100);
+  record.updatedAt = new Date().toISOString();
+
+  await redis(
+    "SET",
+    historyKey(visitor, id),
+    JSON.stringify(record),
+    "EX",
+    HISTORY_TTL
+  );
+
+  return record;
+}
+
+async function deleteHistory(visitor, id) {
+  if (!id || !/^[a-f0-9-]{36}$/i.test(id)) {
+    throw new Error("Invalid conversation ID.");
+  }
+
+  await redis("DEL", historyKey(visitor, id));
+  await redis("ZREM", historyIndexKey(visitor), id);
+
+  return true;
+}
+
+async function clearHistory(visitor) {
+  const ids = await redis(
+    "ZRANGE",
+    historyIndexKey(visitor),
+    0,
+    -1
+  );
+
+  if (Array.isArray(ids)) {
+    for (const id of ids) {
+      await redis(
+        "DEL",
+        historyKey(visitor, id)
+      );
+    }
+  }
+
+  await redis("DEL", historyIndexKey(visitor));
+
+  return true;
+}
+
+function extractImageData(image) {
+  if (typeof image !== "string") {
+    throw new Error("Image data is missing.");
+  }
+
+  const match = image.match(
+    /^data:image\/(png|jpeg|jpg|webp);base64,([A-Za-z0-9+/=]+)$/
+  );
+
+  if (!match) {
+    throw new Error(
+      "Use a PNG, JPEG, or WEBP image."
+    );
+  }
+
+  const buffer = Buffer.from(match[2], "base64");
+
+  if (buffer.length > MAX_IMAGE_BYTES) {
+    throw new Error("Image must be 8 MB or smaller.");
+  }
+
+  return {
+    mimeType:
+      match[1] === "jpg" ? "image/jpeg" : `image/${match[1]}`,
+    data: match[2],
+  };
+}
+
+async function groqChat(body) {
+  const apiKey = requireEnv("GROQ_API_KEY");
+
+  const model =
+    process.env.GROQ_MODEL ||
+    "llama-3.3-70b-versatile";
+
+  const messages = Array.isArray(body.messages)
+    ? body.messages
+        .filter(
+          (message) =>
+            message &&
+            ["system", "user", "assistant"].includes(message.role)
+        )
+        .slice(-MESSAGE_LIMIT)
+        .map((message) => ({
+          role: message.role,
+          content:
+            typeof message.content === "string"
+              ? message.content.slice(0, 20000)
+              : message.content,
+        }))
+    : [];
+
+  if (!messages.length && typeof body.message === "string") {
+    messages.push({
+      role: "user",
+      content: body.message.slice(0, 20000),
+    });
+  }
+
+  if (!messages.length) {
+    throw new Error("Enter a message before sending.");
+  }
+
+  if (body.image) {
+    const image = extractImageData(body.image);
+    const visionModel =
+      process.env.GROQ_VISION_MODEL || model;
+
+    const lastUserIndex = messages.findLastIndex(
+      (message) => message.role === "user"
+    );
+
+    if (lastUserIndex === -1) {
+      throw new Error("An image needs a user message.");
+    }
+
+    const previousContent =
+      messages[lastUserIndex].content;
+
+    messages[lastUserIndex] = {
+      role: "user",
+      content: [
+        {
+          type: "text",
+          text:
+            typeof previousContent === "string"
+              ? previousContent
+              : "Please describe this image.",
+        },
+        {
+          type: "image_url",
+          image_url: {
+            url: `data:${image.mimeType};base64,${image.data}`,
+          },
+        },
+      ],
+    };
+
+    return await callGroq(apiKey, visionModel, messages);
+  }
+
+  return await callGroq(apiKey, model, messages);
+}
+
+async function callGroq(apiKey, model, messages) {
+  const response = await fetch(GROQ_API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature: 0.7,
+      max_tokens: 4096,
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data.error?.message ||
+        `Groq request failed (${response.status}).`
+    );
+  }
+
+  const reply = data.choices?.[0]?.message?.content;
+
+  if (!reply) {
+    throw new Error("Groq returned an empty response.");
+  }
+
+  return {
+    reply,
+    model: data.model || model,
+    usage: data.usage || null,
+  };
+}
+
+async function generateImage(body) {
+  const apiKey = requireEnv("STABILITY_API_KEY");
+
+  const prompt =
+    typeof body.prompt === "string"
+      ? body.prompt.trim().slice(0, 4000)
+      : "";
+
+  if (!prompt) {
+    throw new Error("Enter an image generation prompt.");
+  }
+
+  const form = new FormData();
+
+  form.append("prompt", prompt);
+  form.append("output_format", "png");
+
+  if (body.aspectRatio) {
+    const allowedRatios = [
+      "1:1",
+      "16:9",
+      "9:16",
+      "4:3",
+      "3:4",
+      "21:9",
+      "9:21",
+    ];
+
+    if (allowedRatios.includes(body.aspectRatio)) {
+      form.append("aspect_ratio", body.aspectRatio);
+    }
+  }
+
+  const response = await fetch(STABILITY_API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      Accept: "image/*",
+    },
+    body: form,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+
+    throw new Error(
+      `Stability AI failed (${response.status}): ${errorText.slice(0, 500)}`
+    );
+  }
+
+  const contentType =
+    response.headers.get("content-type") || "";
+
+  if (!contentType.includes("image")) {
+    throw new Error(
+      "Stability AI did not return an image."
+    );
+  }
+
+  const imageBuffer = Buffer.from(
+    await response.arrayBuffer()
+  );
+
+  return {
+    image: `data:image/png;base64,${imageBuffer.toString("base64")}`,
+    format: "png",
+  };
+}
+
+async function liveFootball() {
+  const apiKey = requireEnv("FOOTBALL_API_KEY");
+
+  const response = await fetch(
+    `${FOOTBALL_API_URL}?live=all`,
+    {
+      headers: {
+        "x-apisports-key": apiKey,
+      },
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok || data.errors?.length) {
+    throw new Error(
+      JSON.stringify(data.errors || "Football API request failed.")
+    );
+  }
+
+  return {
+    fixtures: data.response || [],
+    results: data.results || 0,
+  };
+}
 
 export default async function handler(req, res) {
-if (req.method !== "POST") {
-res.setHeader("Allow", "POST");
-return fail(res, 405, "Use POST.");
-}
+  res.setHeader("Cache-Control", "no-store");
 
-const body = req.body || {};
+  if (req.method !== "POST") {
+    return send(res, 405, {
+      error: "Method not allowed. Use POST.",
+    });
+  }
 
-// IMAGE GENERATION
+  try {
+    const body = await readBody(req);
+    const action = body.action;
 
-if (body.action === "generate_image") {
-return handleImageGeneration(req, res);
-}
+    if (!allowedActions.has(action)) {
+      return send(res, 400, {
+        error: "Unknown or missing action.",
+      });
+    }
 
-// API KEY
+    const visitor = getVisitor(req, res);
 
-const apiKey = process.env.GROQ_API_KEY;
+    switch (action) {
+      case "chat": {
+        const result = await groqChat(body);
 
-if (!apiKey) {
-return fail(res, 500, "The server is missing GROQ_API_KEY.");
-}
-
-// REQUEST VALIDATION
-
-const { messages, system } = body;
-
-if (
-!Array.isArray(messages) ||
-messages.length === 0 ||
-messages.length > MAX_MESSAGES
-) {
-return fail(
-res,
-400,
-Send a non-empty messages array with a maximum of ${MAX_MESSAGES} messages.
-);
-}
-
-for (const message of messages) {
-if (
-!message ||
-!["user", "assistant"].includes(message.role) ||
-!(
-typeof message.content === "string" ||
-Array.isArray(message.content)
-)
-) {
-return fail(
-res,
-400,
-"One or more conversation messages are invalid."
-);
-}
-}
-
-if (
-system !== undefined &&
-typeof system !== "string"
-) {
-return fail(res, 400, "Invalid app instructions.");
-}
-
-// IMAGE EXTRACTION
-
-const { images, question } =
-extractImageBlocks(messages);
-
-if (images.length > DAILY_IMAGE_LIMIT) {
-return fail(
-res,
-400,
-"You can upload up to 15 images in one request."
-);
-}
-
-// CANCELLATION
-
-const controller = new AbortController();
-
-res.on("close", () => {
-if (!res.writableEnded) {
-controller.abort();
-}
-});
-
-// NORMAL TEXT REQUEST
-
-if (images.length === 0) {
-let extraInstructions =
-typeof system === "string" ? system : "";
-
-const latestQuestion = getLatestUserText(messages);  
-
-if (isFootballQuestion(latestQuestion)) {  
-  try {  
-    const footballContext = await getFootballContext(  
-      latestQuestion,  
-      controller.signal  
-    );  
-
-    if (controller.signal.aborted) return;  
-
-    extraInstructions = [  
-      extraInstructions,  
-      footballContext  
-    ].filter(Boolean).join("\n\n");  
-
-  } catch (error) {  
-    if (controller.signal.aborted) return;  
-
-    console.error("Football integration error:", error);  
-
-    extraInstructions = [  
-      extraInstructions,  
-      "Football data could not be retrieved. Do not invent live scores or fixtures."  
-    ].filter(Boolean).join("\n\n");  
-  }  
-}  
-
-const history = makeTextHistory(  
-  messages,  
-  extraInstructions  
-);  
-
-if (!history.some(message => message.role === "user")) {  
-  return fail(res, 400, "No usable message content.");  
-}  
-
-try {  
-  await streamFinalAnswer(  
-    apiKey,  
-    history,  
-    res,  
-    controller.signal  
-  );  
-
-} catch (error) {  
-  if (controller.signal.aborted) return;  
-
-  if (!res.headersSent) {  
-    return fail(res, 502, error.message);  
-  }  
-
-  if (!res.writableEnded && !res.destroyed) {  
-    res.write(  
-      "data: " +  
-      JSON.stringify({  
-        type: "error",  
-        error: { message: error.message }  
-      }) +  
-      "\n\n"  
-    );  
-
-    res.end();  
-  }  
-}  
-
-return;
-
-}
-
-// RESERVE IMAGE ANALYSIS ALLOWANCE
-
-let usage;
-
-try {
-const visitorId = getVisitorId(req, res);
-
-usage = await reserveImages(  
-  visitorId,  
-  images.length  
-);
-
-} catch (error) {
-console.error("Image usage reservation error:", error);
-
-return fail(  
-  res,  
-  503,  
-  "Image usage tracking is temporarily unavailable. Please try again later."  
-);
-
-}
-
-if (!usage.allowed) {
-return fail(
-res,
-429,
-"You have used your 15-image daily allowance. Your allowance resets at midnight Ghana time."
-);
-}
-
-// PROCESS IMAGES
-
-try {
-const history = makeTextHistory(
-messages,
-system,
-true
-);
-
-const batches = [];  
-
-for (  
-  let i = 0;  
-  i < images.length;  
-  i += IMAGES_PER_BATCH  
-) {  
-  batches.push(  
-    images.slice(i, i + IMAGES_PER_BATCH)  
-  );  
-}  
-
-const findings = [];  
-
-for (let i = 0; i < batches.length; i++) {  
-  if (controller.signal.aborted) return;  
-
-  const result = await analyzeImageBatch(  
-    apiKey,  
-    history,  
-    question,  
-    batches[i],  
-    i + 1,  
-    batches.length,  
-    controller.signal  
-  );  
-
-  findings.push(  
-    "IMAGE BATCH " +  
-    (i + 1) +  
-    ":\n" +  
-    result  
-  );  
-}  
-
-if (controller.signal.aborted) return;  
-
-const finalMessages = [  
-  ...history,  
-  {  
-    role: "user",  
-    content:  
-      "I uploaded " +  
-      images.length +  
-      " images.\n\n" +  
-      "Here are the analysis results from all image batches:\n\n" +  
-      findings.join("\n\n") +  
-      "\n\nAnswer my original request using these findings. " +  
-      "Combine information from all images. " +  
-      "Avoid repeating yourself. " +  
-      "Do not invent details that were not visible. " +  
-      "If an image is unclear, explain that limitation. " +  
-      "Give a complete and understandable answer.\n\n" +  
-      "My original request: " +  
-      (question || "Explain what these images show.")  
-  }  
-];  
-
-await streamFinalAnswer(  
-  apiKey,  
-  finalMessages,  
-  res,  
-  controller.signal  
-);
-
-} catch (error) {
-if (controller.signal.aborted) return;
-
-console.error("Image processing error:", error);  
-
-if (!res.headersSent) {  
-  return fail(  
-    res,  
-    502,  
-    error.message || "Image processing failed."  
-  );  
-}  
-
-if (!res.writableEnded && !res.destroyed) {  
-  res.write(  
-    "data: " +  
-    JSON.stringify({  
-      type: "error",  
-      error: {  
-        message:  
-          error.message ||  
-          "Image processing failed."  
-      }  
-    }) +  
-    "\n\n"  
-  );  
-
-  res.end();  
-}
-
-}
+        return send(res, 200, {
+          success: true,
+          ...result,
+        });
       }
+
+      case "history_save": {
+        const record = await saveHistory(visitor, body);
+
+        return send(res, 200, {
+          success: true,
+          history: record,
+          id: record.id,
+        });
+      }
+
+      case "history_list": {
+        const histories = await listHistory(visitor);
+
+        return send(res, 200, {
+          success: true,
+          histories,
+        });
+      }
+
+      case "history_get": {
+        const history = await getHistory(
+          visitor,
+          body.id
+        );
+
+        if (!history) {
+          return send(res, 404, {
+            error: "Conversation not found.",
+          });
+        }
+
+        return send(res, 200, {
+          success: true,
+          history,
+        });
+      }
+
+      case "history_rename": {
+        const history = await renameHistory(
+          visitor,
+          body.id,
+          body.title
+        );
+
+        if (!history) {
+          return send(res, 404, {
+            error: "Conversation not found.",
+          });
+        }
+
+        return send(res, 200, {
+          success: true,
+          history,
+        });
+      }
+
+      case "history_delete": {
+        await deleteHistory(visitor, body.id);
+
+        return send(res, 200, {
+          success: true,
+          message: "Conversation deleted.",
+        });
+      }
+
+      case "history_clear": {
+        await clearHistory(visitor);
+
+        return send(res, 200, {
+          success: true,
+          message: "Conversation history cleared.",
+        });
+      }
+
+      case "image_generate": {
+        const result = await generateImage(body);
+
+        return send(res, 200, {
+          success: true,
+          ...result,
+        });
+      }
+
+      case "football_live": {
+        const result = await liveFootball();
+
+        return send(res, 200, {
+          success: true,
+          ...result,
+        });
+      }
+
+      default:
+        return send(res, 400, {
+          error: "Unsupported action.",
+        });
+    }
+  } catch (error) {
+    console.error("MAYNARD AI API error:", error);
+
+    return send(res, 500, {
+      success: false,
+      error:
+        error.message ||
+        "An unexpected server error occurred.",
+    });
+  }
+}
