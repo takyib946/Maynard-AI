@@ -11,8 +11,7 @@ const API_URL = "https://api.groq.com/openai/v1/chat/completions";
 const STABILITY_IMAGE_URL =
   "https://api.stability.ai/v2beta/stable-image/generate/core";
 
-const FOOTBALL_API_URL =
-  "https://v3.football.api-sports.io";
+const FOOTBALL_API_URL = "https://v3.football.api-sports.io";
 
 const TEXT_MODEL =
   process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
@@ -28,6 +27,13 @@ const IMAGES_PER_BATCH = 3;
 const HISTORY_MESSAGES = 8;
 const MAX_GENERATION_PROMPT = 2000;
 const MAX_FOOTBALL_RESULTS = 150;
+
+// IMAGE GENERATION PROTECTION
+
+const IMAGE_REQUEST_TIMEOUT = 20000;
+const IMAGE_RETRY_DELAY = 1500;
+const IMAGE_MAX_RETRIES = 1;
+const IMAGE_LOCK_SECONDS = 60;
 
 const ALLOWED_ASPECT_RATIOS = new Set([
   "1:1",
@@ -275,6 +281,111 @@ function secondsUntilMidnightGhana() {
 }
 
 // ==========================================
+// UPSTASH REDIS HELPERS
+// ==========================================
+
+async function redisCommand(command) {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  if (!url || !token) {
+    throw new Error("Redis is not configured.");
+  }
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: "Bearer " + token,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(command)
+  });
+
+  if (!response.ok) {
+    throw new Error("Redis request failed.");
+  }
+
+  const data = await response.json();
+
+  if (data.error) {
+    throw new Error("Redis command failed.");
+  }
+
+  return data.result;
+}
+
+// ==========================================
+// IMAGE GENERATION LOCK
+// ==========================================
+
+async function acquireImageLock(visitorId) {
+  const key = `maynard:image-lock:${visitorId}`;
+  const token = randomUUID();
+
+  const result = await redisCommand([
+    "SET",
+    key,
+    token,
+    "NX",
+    "EX",
+    String(IMAGE_LOCK_SECONDS)
+  ]);
+
+  return result === "OK"
+    ? { key, token }
+    : null;
+}
+
+async function releaseImageLock(lock) {
+  if (!lock) return;
+
+  try {
+    await redisCommand([
+      "EVAL",
+      `
+        if redis.call("GET", KEYS[1]) == ARGV[1] then
+          return redis.call("DEL", KEYS[1])
+        end
+        return 0
+      `,
+      "1",
+      lock.key,
+      lock.token
+    ]);
+  } catch (error) {
+    console.error("Image lock release error:", error);
+  }
+}
+
+// ==========================================
+// RESTORE FAILED GENERATION ALLOWANCE
+// ==========================================
+
+async function refundGeneration(visitorId) {
+  const key =
+    `maynard:generations:${visitorId}:${getGhanaDate()}`;
+
+  try {
+    await redisCommand([
+      "EVAL",
+      `
+        local current = tonumber(redis.call("GET", KEYS[1]) or "0")
+
+        if current > 0 then
+          return redis.call("DECR", KEYS[1])
+        end
+
+        return 0
+      `,
+      "1",
+      key
+    ]);
+  } catch (error) {
+    console.error("Generation allowance refund error:", error);
+  }
+}
+
+// ==========================================
 // UPSTASH REDIS USAGE RESERVATION
 // ==========================================
 
@@ -363,6 +474,14 @@ async function reserveGenerations(visitorId) {
 }
 
 // ==========================================
+// IMAGE GENERATION WAIT HELPER
+// ==========================================
+
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// ==========================================
 // STABILITY AI IMAGE GENERATION
 // ==========================================
 
@@ -373,78 +492,140 @@ async function generateStabilityImage(prompt, aspectRatio) {
     const error = new Error(
       "Image generation is not configured. Add STABILITY_API_KEY to your Vercel environment variables."
     );
+
     error.status = 500;
     throw error;
   }
 
-  const form = new FormData();
+  for (
+    let attempt = 0;
+    attempt <= IMAGE_MAX_RETRIES;
+    attempt++
+  ) {
+    const controller = new AbortController();
 
-  form.append("prompt", prompt);
-  form.append("aspect_ratio", aspectRatio);
-  form.append("output_format", "png");
-
-  const response = await fetch(STABILITY_IMAGE_URL, {
-    method: "POST",
-    headers: {
-      Authorization: "Bearer " + apiKey,
-      Accept: "image/*"
-    },
-    body: form
-  });
-
-  if (!response.ok) {
-    const responseText = await response.text();
-    let providerMessage = "";
+    const timeout = setTimeout(
+      () => controller.abort(),
+      IMAGE_REQUEST_TIMEOUT
+    );
 
     try {
-      const parsed = JSON.parse(responseText);
-      providerMessage =
-        parsed.message ||
-        parsed.error?.message ||
-        parsed.name ||
-        "";
-    } catch {
-      providerMessage = responseText.slice(0, 500);
+      const form = new FormData();
+
+      form.append("prompt", prompt);
+      form.append("aspect_ratio", aspectRatio);
+      form.append("output_format", "png");
+
+      const response = await fetch(STABILITY_IMAGE_URL, {
+        method: "POST",
+        signal: controller.signal,
+        headers: {
+          Authorization: "Bearer " + apiKey,
+          Accept: "image/*"
+        },
+        body: form
+      });
+
+      if (!response.ok) {
+        const responseText = await response.text();
+
+        let providerMessage = "";
+
+        try {
+          const parsed = JSON.parse(responseText);
+
+          providerMessage =
+            parsed.message ||
+            parsed.error?.message ||
+            parsed.name ||
+            "";
+        } catch {
+          providerMessage = responseText.slice(0, 300);
+        }
+
+        const error = new Error(
+          providerMessage ||
+          "Stability AI could not generate the image."
+        );
+
+        error.status = response.status;
+
+        if (
+          (response.status === 429 ||
+           response.status === 503) &&
+          attempt < IMAGE_MAX_RETRIES
+        ) {
+          const retryAfter = Number(
+            response.headers.get("retry-after")
+          );
+
+          const delay =
+            Number.isFinite(retryAfter) &&
+            retryAfter > 0
+              ? Math.min(retryAfter * 1000, 5000)
+              : IMAGE_RETRY_DELAY;
+
+          await wait(delay);
+          continue;
+        }
+
+        throw error;
+      }
+
+      const mimeType =
+        response.headers.get("content-type") || "image/png";
+
+      if (!mimeType.startsWith("image/")) {
+        const error = new Error(
+          "Stability AI returned an unexpected response."
+        );
+
+        error.status = 502;
+        throw error;
+      }
+
+      const buffer = Buffer.from(
+        await response.arrayBuffer()
+      );
+
+      if (!buffer.length) {
+        const error = new Error(
+          "Stability AI returned an empty image."
+        );
+
+        error.status = 502;
+        throw error;
+      }
+
+      return {
+        imageData:
+          `data:${mimeType};base64,${buffer.toString("base64")}`,
+        mimeType
+      };
+
+    } catch (error) {
+      if (controller.signal.aborted) {
+        const timeoutError = new Error(
+          "Image generation took too long. Please try again later."
+        );
+
+        timeoutError.status = 504;
+        throw timeoutError;
+      }
+
+      throw error;
+
+    } finally {
+      clearTimeout(timeout);
     }
-
-    const error = new Error(
-      providerMessage ||
-      "Stability AI could not generate the image."
-    );
-
-    error.status = response.status;
-    throw error;
   }
 
-  const mimeType =
-    response.headers.get("content-type") || "image/png";
-
-  if (!mimeType.startsWith("image/")) {
-    const error = new Error(
-      "Stability AI returned an unexpected response."
-    );
-    error.status = 502;
-    throw error;
-  }
-
-  const buffer = Buffer.from(
-    await response.arrayBuffer()
-  );
-
-  if (!buffer.length) {
-    const error = new Error(
-      "Stability AI returned an empty image."
-    );
-    error.status = 502;
-    throw error;
-  }
-
-  return {
-    imageData:
-      `data:${mimeType};base64,${buffer.toString("base64")}`,
-    mimeType
-  };
+  throw new Error("Image generation could not be completed.");
 }
+
+// ==========================================
+// IMAGE GENERATION REQUEST HANDLER
+// ==========================================
 
 async function handleImageGeneration(req, res) {
   const prompt =
@@ -482,9 +663,21 @@ async function handleImageGeneration(req, res) {
   }
 
   let visitorId;
+  let lock;
+  let generationReserved = false;
 
   try {
     visitorId = getVisitorId(req, res);
+
+    lock = await acquireImageLock(visitorId);
+
+    if (!lock) {
+      return fail(
+        res,
+        429,
+        "An image is already being generated. Please wait for it to finish before requesting another."
+      );
+    }
 
     const usage = await reserveGenerations(visitorId);
 
@@ -492,20 +685,12 @@ async function handleImageGeneration(req, res) {
       return fail(
         res,
         429,
-        "You have reached your daily image-generation limit of 3 images. Your allowance resets at midnight Ghana time."
+        "You have reached your daily image-generation limit of 3. Your allowance resets at midnight Ghana time."
       );
     }
-  } catch (error) {
-    console.error("Image generation usage error:", error);
 
-    return fail(
-      res,
-      503,
-      "Image generation usage tracking is temporarily unavailable. Please try again later."
-    );
-  }
+    generationReserved = true;
 
-  try {
     const result = await generateStabilityImage(
       prompt,
       aspectRatio
@@ -514,23 +699,40 @@ async function handleImageGeneration(req, res) {
     return res.status(200).json(result);
 
   } catch (error) {
-    console.error("Stability AI error:", error);
+    console.error("Image generation error:", error);
+
+    if (generationReserved && visitorId) {
+      await refundGeneration(visitorId);
+    }
 
     const status = Number(error.status) || 502;
 
-    let message = error.message ||
+    let message =
       "Image generation failed. Please try again.";
 
     if (status === 401) {
-      message = "Stability AI rejected the API key. Check STABILITY_API_KEY in Vercel.";
+      message =
+        "Stability AI rejected your API key. Check STABILITY_API_KEY in Vercel.";
+
     } else if (status === 402) {
-      message = "Your Stability AI account does not have enough credits to generate this image.";
+      message =
+        "Your Stability AI account needs more credits to generate this flyer.";
+
     } else if (status === 403) {
-      message = "Stability AI could not process this prompt. Try changing the description.";
+      message =
+        "Stability AI refused this request. Check your account permissions and prompt.";
+
     } else if (status === 429) {
-      message = "Stability AI is receiving too many requests. Please wait and try again.";
-    } else if (status >= 500) {
-      message = "Stability AI is temporarily unavailable. Please try again later.";
+      message =
+        "Stability AI is temporarily rate-limiting image generation. Wait a little before trying again.";
+
+    } else if (status === 503) {
+      message =
+        "Stability AI is temporarily unavailable. Please try again later.";
+
+    } else if (status === 504) {
+      message =
+        "Image generation timed out. Please try again later.";
     }
 
     return fail(
@@ -538,6 +740,9 @@ async function handleImageGeneration(req, res) {
       status >= 400 && status <= 599 ? status : 502,
       message
     );
+
+  } finally {
+    await releaseImageLock(lock);
   }
 }
 
@@ -1183,7 +1388,7 @@ export default async function handler(req, res) {
 
   const body = req.body || {};
 
-  // IMAGE GENERATION REQUESTS ARE HANDLED SEPARATELY.
+  // IMAGE GENERATION REQUESTS
 
   if (body.action === "generate_image") {
     return handleImageGeneration(req, res);
