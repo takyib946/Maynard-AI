@@ -1,11 +1,12 @@
 
 import { randomUUID } from "node:crypto";
+import { put } from "@vercel/blob";
 
 // ============================================
 // MAYNARD AI
 // Groq + Stability AI + Upstash Redis
-// API-Football + Saved Conversation History
-// Vertical Formatting + Diagrams
+// API-Football + Vercel Blob Image Storage
+// Persistent Conversation Images
 // ============================================
 
 export const config = {
@@ -19,7 +20,7 @@ const STABILITY_API_URL =
   "https://api.stability.ai/v2beta/stable-image/generate/core";
 
 const FOOTBALL_API_URL =
-  "https://v3.football.api-sports.io/fixtures";
+  "https://v3.football.api-sports.com/fixtures";
 
 const COOKIE_NAME = "maynard_browser_v2";
 
@@ -27,8 +28,8 @@ const HISTORY_LIMIT = 50;
 const MESSAGE_LIMIT = 100;
 const HISTORY_TTL = 60 * 60 * 24 * 365;
 
-const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
-const MAX_BODY_BYTES = 15 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
+const MAX_BODY_BYTES = 4.4 * 1024 * 1024;
 
 const ALLOWED_ACTIONS = new Set([
   "chat",
@@ -125,17 +126,13 @@ function errorMessage(error) {
 
 // ============================================
 // TABLE AND SEPARATOR CLEANER
-// Converts Markdown tables into vertical text.
 // ============================================
 
 function cleanAIResponse(text) {
-  if (typeof text !== "string") {
-    return "";
-  }
+  if (typeof text !== "string") return "";
 
   const lines = text.split("\n");
   const output = [];
-
   let insideCode = false;
 
   function parseCells(line) {
@@ -154,16 +151,12 @@ function cleanAIResponse(text) {
   }
 
   function isTableRow(line) {
-    return (
-      line.includes("|") &&
-      line.trim().length > 0
-    );
+    return line.includes("|") && line.trim().length > 0;
   }
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Preserve code blocks exactly.
     if (/^\s*```/.test(line)) {
       insideCode = !insideCode;
       output.push(line);
@@ -175,32 +168,23 @@ function cleanAIResponse(text) {
       continue;
     }
 
-    // Detect a Markdown table separator.
     if (
       isTableSeparator(line) &&
       output.length > 0 &&
       isTableRow(output[output.length - 1])
     ) {
       const headers = parseCells(output.pop());
-
-      // Skip the Markdown separator row.
       i++;
 
-      while (
-        i < lines.length &&
-        isTableRow(lines[i])
-      ) {
+      while (i < lines.length && isTableRow(lines[i])) {
         const values = parseCells(lines[i]);
 
         const formattedRow = headers
           .map((header, index) => {
             const value = values[index] || "";
-
             if (!value) return "";
 
-            const label =
-              header || `Item ${index + 1}`;
-
+            const label = header || `Item ${index + 1}`;
             return `**${label}:** ${value}`;
           })
           .filter(Boolean)
@@ -214,15 +198,11 @@ function cleanAIResponse(text) {
         i++;
       }
 
-      // Reprocess the first line after the table.
       i--;
       continue;
     }
 
-    // Remove unnecessary horizontal separator lines.
-    if (
-      /^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/.test(line)
-    ) {
+    if (/^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
       continue;
     }
 
@@ -244,7 +224,6 @@ function getCookie(req, name) {
 
   for (const part of cookieHeader.split(";")) {
     const index = part.indexOf("=");
-
     if (index === -1) continue;
 
     const key = part.slice(0, index).trim();
@@ -277,10 +256,7 @@ function setVisitorCookie(res, visitorId) {
 function getVisitor(req, res) {
   let visitorId = getCookie(req, COOKIE_NAME);
 
-  if (
-    !visitorId ||
-    !/^[a-f0-9-]{36}$/i.test(visitorId)
-  ) {
+  if (!visitorId || !/^[a-f0-9-]{36}$/i.test(visitorId)) {
     visitorId = randomUUID();
     setVisitorCookie(res, visitorId);
   }
@@ -307,7 +283,9 @@ async function readBody(req) {
     raw += chunk.toString();
 
     if (Buffer.byteLength(raw) > MAX_BODY_BYTES) {
-      throw new Error("Request body is too large.");
+      throw new Error(
+        "Request is too large. Please use an image smaller than 3 MB."
+      );
     }
   }
 
@@ -324,9 +302,7 @@ function requireEnv(name) {
   const value = process.env[name];
 
   if (!value || !value.trim()) {
-    throw new Error(
-      `Missing environment variable: ${name}`
-    );
+    throw new Error(`Missing environment variable: ${name}`);
   }
 
   return value.trim();
@@ -376,6 +352,28 @@ async function redis(command, ...args) {
 }
 
 // ============================================
+// BLOB URL VALIDATION
+// ============================================
+
+function isTrustedBlobUrl(value) {
+  if (typeof value !== "string") return false;
+
+  try {
+    const url = new URL(value);
+
+    return (
+      url.protocol === "https:" &&
+      (
+        url.hostname.endsWith(".public.blob.vercel-storage.com") ||
+        url.hostname === "public.blob.vercel-storage.com"
+      )
+    );
+  } catch {
+    return false;
+  }
+}
+
+// ============================================
 // MESSAGE CLEANING
 // ============================================
 
@@ -390,13 +388,86 @@ function cleanMessages(messages) {
         ["user", "assistant"].includes(message.role) &&
         typeof message.content === "string"
     )
-    .map((message) => ({
-      role: message.role,
-      content: message.content.slice(0, 20000),
-      ...(message.imageOmitted
-        ? { imageOmitted: true }
-        : {}),
-    }));
+    .map((message) => {
+      const cleaned = {
+        role: message.role,
+        content: message.content.slice(0, 20000),
+      };
+
+      if (message.imageOmitted) {
+        cleaned.imageOmitted = true;
+      }
+
+      if (isTrustedBlobUrl(message.imageUrl)) {
+        cleaned.imageUrl = message.imageUrl;
+      }
+
+      return cleaned;
+    });
+}
+
+// ============================================
+// IMAGE VALIDATION
+// ============================================
+
+function extractImageData(image) {
+  if (typeof image !== "string") {
+    throw new Error("Image data is missing.");
+  }
+
+  const match = image.match(
+    /^data:image\/(png|jpeg|jpg|webp);base64,([A-Za-z0-9+/=]+)$/
+  );
+
+  if (!match) {
+    throw new Error("Use a PNG, JPEG, or WEBP image.");
+  }
+
+  const data = match[2];
+  const buffer = Buffer.from(data, "base64");
+
+  if (!buffer.length || buffer.length > MAX_IMAGE_BYTES) {
+    throw new Error("Image must be 3 MB or smaller.");
+  }
+
+  return {
+    mimeType:
+      match[1] === "jpg"
+        ? "image/jpeg"
+        : `image/${match[1]}`,
+    extension:
+      match[1] === "jpeg" || match[1] === "jpg"
+        ? "jpg"
+        : match[1],
+    data,
+    buffer,
+  };
+}
+
+// ============================================
+// UPLOAD IMAGE TO VERCEL BLOB
+// ============================================
+
+async function uploadImageToBlob(image) {
+  requireEnv("BLOB_READ_WRITE_TOKEN");
+
+  const parsed = extractImageData(image);
+
+  const pathname =
+    `maynard-uploads/${Date.now()}-${randomUUID()}.${parsed.extension}`;
+
+  const blob = await put(pathname, parsed.buffer, {
+    access: "public",
+    addRandomSuffix: true,
+    contentType: parsed.mimeType,
+    cacheControlMaxAge: 60 * 60 * 24 * 30,
+  });
+
+  if (!blob?.url || !isTrustedBlobUrl(blob.url)) {
+    throw new Error("Blob storage returned an invalid image URL.");
+  }
+
+  return blob.url;
 }
 
 // ============================================
@@ -417,7 +488,6 @@ async function saveHistory(visitor, body) {
       : randomUUID();
 
   const key = historyKey(visitor, id);
-
   const existingRaw = await redis("GET", key);
 
   let existing = null;
@@ -437,8 +507,7 @@ async function saveHistory(visitor, body) {
   );
 
   const title =
-    typeof body.title === "string" &&
-    body.title.trim()
+    typeof body.title === "string" && body.title.trim()
       ? body.title.trim().slice(0, 100)
       : existing?.title ||
         firstUserMessage?.content.slice(0, 60) ||
@@ -487,10 +556,7 @@ async function saveHistory(visitor, body) {
 
     if (Array.isArray(oldIds)) {
       for (const oldId of oldIds) {
-        await redis(
-          "DEL",
-          historyKey(visitor, oldId)
-        );
+        await redis("DEL", historyKey(visitor, oldId));
       }
 
       if (oldIds.length) {
@@ -571,9 +637,7 @@ async function getHistory(visitor, id) {
   try {
     return JSON.parse(raw);
   } catch {
-    throw new Error(
-      "Saved conversation data is invalid."
-    );
+    throw new Error("Saved conversation data is invalid.");
   }
 }
 
@@ -586,13 +650,8 @@ async function renameHistory(visitor, id, title) {
 
   if (!record) return null;
 
-  if (
-    typeof title !== "string" ||
-    !title.trim()
-  ) {
-    throw new Error(
-      "A conversation title is required."
-    );
+  if (typeof title !== "string" || !title.trim()) {
+    throw new Error("A conversation title is required.");
   }
 
   record.title = title.trim().slice(0, 100);
@@ -621,16 +680,8 @@ async function deleteHistory(visitor, id) {
     throw new Error("Invalid conversation ID.");
   }
 
-  await redis(
-    "DEL",
-    historyKey(visitor, id)
-  );
-
-  await redis(
-    "ZREM",
-    historyIndexKey(visitor),
-    id
-  );
+  await redis("DEL", historyKey(visitor, id));
+  await redis("ZREM", historyIndexKey(visitor), id);
 
   return true;
 }
@@ -649,56 +700,13 @@ async function clearHistory(visitor) {
 
   if (Array.isArray(ids)) {
     for (const id of ids) {
-      await redis(
-        "DEL",
-        historyKey(visitor, id)
-      );
+      await redis("DEL", historyKey(visitor, id));
     }
   }
 
-  await redis(
-    "DEL",
-    historyIndexKey(visitor)
-  );
+  await redis("DEL", historyIndexKey(visitor));
 
   return true;
-}
-
-// ============================================
-// IMAGE VALIDATION
-// ============================================
-
-function extractImageData(image) {
-  if (typeof image !== "string") {
-    throw new Error("Image data is missing.");
-  }
-
-  const match = image.match(
-    /^data:image\/(png|jpeg|jpg|webp);base64,([A-Za-z0-9+/=]+)$/
-  );
-
-  if (!match) {
-    throw new Error(
-      "Use a PNG, JPEG, or WEBP image."
-    );
-  }
-
-  const data = match[2];
-  const buffer = Buffer.from(data, "base64");
-
-  if (buffer.length > MAX_IMAGE_BYTES) {
-    throw new Error(
-      "Image must be 8 MB or smaller."
-    );
-  }
-
-  return {
-    mimeType:
-      match[1] === "jpg"
-        ? "image/jpeg"
-        : `image/${match[1]}`,
-    data,
-  };
 }
 
 // ============================================
@@ -740,12 +748,9 @@ async function groqChat(body) {
   }
 
   if (!messages.length) {
-    throw new Error(
-      "Enter a message before sending."
-    );
+    throw new Error("Enter a message before sending.");
   }
 
-  // Server-controlled assistant instructions.
   const chatMessages = [
     {
       role: "system",
@@ -754,7 +759,6 @@ async function groqChat(body) {
     ...messages,
   ];
 
-  // Image understanding.
   if (body.image) {
     const image = extractImageData(body.image);
 
@@ -763,11 +767,7 @@ async function groqChat(body) {
 
     let lastUserIndex = -1;
 
-    for (
-      let i = chatMessages.length - 1;
-      i >= 0;
-      i--
-    ) {
+    for (let i = chatMessages.length - 1; i >= 0; i--) {
       if (chatMessages[i].role === "user") {
         lastUserIndex = i;
         break;
@@ -775,9 +775,7 @@ async function groqChat(body) {
     }
 
     if (lastUserIndex === -1) {
-      throw new Error(
-        "An image needs a user message."
-      );
+      throw new Error("An image needs a user message.");
     }
 
     const previousContent =
@@ -802,18 +800,10 @@ async function groqChat(body) {
       ],
     };
 
-    return callGroq(
-      apiKey,
-      visionModel,
-      chatMessages
-    );
+    return callGroq(apiKey, visionModel, chatMessages);
   }
 
-  return callGroq(
-    apiKey,
-    model,
-    chatMessages
-  );
+  return callGroq(apiKey, model, chatMessages);
 }
 
 // ============================================
@@ -848,9 +838,7 @@ async function callGroq(apiKey, model, messages) {
     data.choices?.[0]?.message?.content;
 
   if (!rawReply) {
-    throw new Error(
-      "Groq returned an empty response."
-    );
+    throw new Error("Groq returned an empty response.");
   }
 
   return {
@@ -873,9 +861,7 @@ async function generateImage(body) {
       : "";
 
   if (!prompt) {
-    throw new Error(
-      "Enter an image generation prompt."
-    );
+    throw new Error("Enter an image generation prompt.");
   }
 
   const form = new FormData();
@@ -894,10 +880,7 @@ async function generateImage(body) {
   ];
 
   if (allowedRatios.includes(body.aspectRatio)) {
-    form.append(
-      "aspect_ratio",
-      body.aspectRatio
-    );
+    form.append("aspect_ratio", body.aspectRatio);
   }
 
   const response = await fetch(STABILITY_API_URL, {
@@ -921,9 +904,7 @@ async function generateImage(body) {
     response.headers.get("content-type") || "";
 
   if (!contentType.includes("image")) {
-    throw new Error(
-      "Stability AI did not return an image."
-    );
+    throw new Error("Stability AI did not return an image.");
   }
 
   const imageBuffer = Buffer.from(
@@ -958,8 +939,7 @@ async function liveFootball() {
   if (!response.ok || data.errors?.length) {
     throw new Error(
       JSON.stringify(
-        data.errors ||
-          "Football API request failed."
+        data.errors || "Football API request failed."
       )
     );
   }
@@ -1006,29 +986,24 @@ export default async function handler(req, res) {
     const visitor = getVisitor(req, res);
 
     switch (action) {
-
-      // ======================================
-      // AI CHAT
-      // ======================================
-
       case "chat": {
         const result = await groqChat(body);
+
+        let imageUrl = null;
+
+        if (body.image) {
+          imageUrl = await uploadImageToBlob(body.image);
+        }
 
         return send(res, 200, {
           success: true,
           ...result,
+          imageUrl,
         });
       }
 
-      // ======================================
-      // SAVE HISTORY
-      // ======================================
-
       case "history_save": {
-        const record = await saveHistory(
-          visitor,
-          body
-        );
+        const record = await saveHistory(visitor, body);
 
         return send(res, 200, {
           success: true,
@@ -1036,10 +1011,6 @@ export default async function handler(req, res) {
           history: record,
         });
       }
-
-      // ======================================
-      // LIST HISTORY
-      // ======================================
 
       case "history_list": {
         const histories = await listHistory(visitor);
@@ -1051,15 +1022,8 @@ export default async function handler(req, res) {
         });
       }
 
-      // ======================================
-      // OPEN HISTORY
-      // ======================================
-
       case "history_get": {
-        const history = await getHistory(
-          visitor,
-          body.id
-        );
+        const history = await getHistory(visitor, body.id);
 
         if (!history) {
           return send(res, 404, {
@@ -1078,10 +1042,6 @@ export default async function handler(req, res) {
           history,
         });
       }
-
-      // ======================================
-      // RENAME HISTORY
-      // ======================================
 
       case "history_rename": {
         const history = await renameHistory(
@@ -1103,25 +1063,14 @@ export default async function handler(req, res) {
         });
       }
 
-      // ======================================
-      // DELETE HISTORY
-      // ======================================
-
       case "history_delete": {
-        await deleteHistory(
-          visitor,
-          body.id
-        );
+        await deleteHistory(visitor, body.id);
 
         return send(res, 200, {
           success: true,
           message: "Conversation deleted.",
         });
       }
-
-      // ======================================
-      // CLEAR HISTORY
-      // ======================================
 
       case "history_clear": {
         await clearHistory(visitor);
@@ -1132,10 +1081,6 @@ export default async function handler(req, res) {
         });
       }
 
-      // ======================================
-      // IMAGE GENERATION
-      // ======================================
-
       case "image_generate": {
         const result = await generateImage(body);
 
@@ -1144,10 +1089,6 @@ export default async function handler(req, res) {
           ...result,
         });
       }
-
-      // ======================================
-      // LIVE FOOTBALL
-      // ======================================
 
       case "football_live": {
         const result = await liveFootball();
@@ -1164,12 +1105,8 @@ export default async function handler(req, res) {
           error: "Unsupported action.",
         });
     }
-
   } catch (error) {
-    console.error(
-      "MAYNARD AI API error:",
-      error
-    );
+    console.error("MAYNARD AI API error:", error);
 
     return send(res, 500, {
       success: false,
