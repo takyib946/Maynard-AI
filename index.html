@@ -43,9 +43,7 @@ window.MathJax = {
   --accent: #a78bfa;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 html, body {
   margin: 0;
@@ -56,17 +54,9 @@ html, body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-body {
-  overflow: hidden;
-}
-
-button, input, textarea {
-  font: inherit;
-}
-
-button {
-  cursor: pointer;
-}
+body { overflow: hidden; }
+button, input, textarea { font: inherit; }
+button { cursor: pointer; }
 
 .app {
   width: 100%;
@@ -96,9 +86,7 @@ button {
   padding: 8px 4px 16px;
 }
 
-.brand span {
-  color: var(--accent);
-}
+.brand span { color: var(--accent); }
 
 .new-chat, .side-button {
   width: 100%;
@@ -110,9 +98,7 @@ button {
   text-align: left;
 }
 
-.new-chat:hover, .side-button:hover {
-  background: #171717;
-}
+.new-chat:hover, .side-button:hover { background: #171717; }
 
 .side-heading {
   color: #888;
@@ -121,10 +107,7 @@ button {
   margin: 12px 4px 4px;
 }
 
-.history-list {
-  overflow: auto;
-  flex: 1;
-}
+.history-list { overflow: auto; flex: 1; }
 
 .history-item {
   display: flex;
@@ -161,9 +144,7 @@ button {
   padding: 7px;
 }
 
-.history-action:hover {
-  color: white;
-}
+.history-action:hover { color: white; }
 
 /* MAIN */
 
@@ -188,10 +169,7 @@ button {
   background: #000;
 }
 
-.top-title {
-  font-weight: 700;
-  letter-spacing: .5px;
-}
+.top-title { font-weight: 700; letter-spacing: .5px; }
 
 .top-actions {
   display: flex;
@@ -207,15 +185,11 @@ button {
   border-radius: 8px;
 }
 
-.small-button:hover {
-  background: #1a1a1a;
-}
+.small-button:hover { background: #1a1a1a; }
 
 /* MODE MENU */
 
-.mode-wrap {
-  position: relative;
-}
+.mode-wrap { position: relative; }
 
 .mode-menu {
   display: none;
@@ -231,9 +205,7 @@ button {
   box-shadow: 0 12px 35px #000;
 }
 
-.mode-menu.open {
-  display: block;
-}
+.mode-menu.open { display: block; }
 
 .mode-menu button {
   display: block;
@@ -247,9 +219,7 @@ button {
 }
 
 .mode-menu button:hover,
-.mode-menu button.active {
-  background: #242424;
-}
+.mode-menu button.active { background: #242424; }
 
 .mode-description {
   color: #999;
@@ -282,10 +252,7 @@ button {
   margin-bottom: 10px;
 }
 
-.welcome p {
-  color: var(--muted);
-  line-height: 1.6;
-}
+.welcome p { color: var(--muted); line-height: 1.6; }
 
 .quick-actions {
   display: flex;
@@ -321,15 +288,10 @@ button {
   background: transparent;
 }
 
-.message.user-message {
-  justify-content: flex-end;
-}
+.message.user-message { justify-content: flex-end; }
+.message.assistant-message { justify-content: flex-start; }
 
-.message.assistant-message {
-  justify-content: flex-start;
-}
-
-/* CLEAN CHAT BUBBLES */
+/* CHAT BUBBLES */
 
 .bubble {
   min-width: 0;
@@ -367,29 +329,16 @@ button {
   border-radius: 0;
 }
 
-.bubble p {
-  margin: 0 0 12px;
-}
+.bubble p { margin: 0 0 12px; }
+.bubble p:last-child { margin-bottom: 0; }
 
-.bubble p:last-child {
-  margin-bottom: 0;
-}
-
-.bubble h1,
-.bubble h2,
-.bubble h3 {
+.bubble h1, .bubble h2, .bubble h3 {
   margin: 17px 0 9px;
   line-height: 1.4;
 }
 
-.bubble ul,
-.bubble ol {
-  padding-left: 24px;
-}
-
-.bubble li {
-  margin: 5px 0;
-}
+.bubble ul, .bubble ol { padding-left: 24px; }
+.bubble li { margin: 5px 0; }
 
 .bubble pre {
   white-space: pre-wrap;
@@ -407,10 +356,7 @@ button {
   overflow-wrap: anywhere;
 }
 
-.bubble pre code {
-  background: transparent;
-  padding: 0;
-}
+.bubble pre code { background: transparent; padding: 0; }
 
 .bubble img {
   display: block;
@@ -420,15 +366,11 @@ button {
   margin-top: 10px;
 }
 
-.bubble hr {
-  display: none !important;
-}
+.bubble hr { display: none !important; }
 
-/* MATH DISPLAY */
+/* MATH */
 
-.mjx-container {
-  max-width: 100% !important;
-}
+.mjx-container { max-width: 100% !important; }
 
 .mjx-container[display="true"] {
   display: block !important;
@@ -441,13 +383,8 @@ button {
   box-sizing: border-box;
 }
 
-.mjx-container[display="true"] mjx-math {
-  max-width: none;
-}
-
-.bubble .mjx-container {
-  color: white;
-}
+.mjx-container[display="true"] mjx-math { max-width: none; }
+.bubble .mjx-container { color: white; }
 
 /* TABLES */
 
@@ -467,16 +404,13 @@ button {
   margin: 10px 0;
 }
 
-.bubble th,
-.bubble td {
+.bubble th, .bubble td {
   border: 1px solid #383838;
   padding: 9px;
   text-align: left;
 }
 
-.bubble th {
-  background: #171717;
-}
+.bubble th { background: #171717; }
 
 /* DIAGRAMS */
 
@@ -504,17 +438,8 @@ button {
   min-width: 280px;
 }
 
-.diagram-error {
-  color: #ffaaaa;
-  font-size: 13px;
-  padding: 8px;
-}
-
-.typing {
-  color: #aaa;
-  font-size: 13px;
-  padding: 8px 0;
-}
+.diagram-error { color: #ffaaaa; font-size: 13px; padding: 8px; }
+.typing { color: #aaa; font-size: 13px; padding: 8px 0; }
 
 /* COMPOSER */
 
@@ -565,9 +490,7 @@ button {
   padding: 9px 11px;
 }
 
-.tool-button:hover {
-  background: #202020;
-}
+.tool-button:hover { background: #202020; }
 
 .send-button {
   margin-left: auto;
@@ -579,14 +502,9 @@ button {
   font-weight: 700;
 }
 
-.send-button:disabled {
-  opacity: .5;
-  cursor: not-allowed;
-}
+.send-button:disabled { opacity: .5; cursor: not-allowed; }
 
-#fileInput {
-  display: none;
-}
+#fileInput, #cameraInput { display: none; }
 
 /* IMAGE PREVIEW */
 
@@ -621,10 +539,7 @@ button {
   overflow-wrap: anywhere;
 }
 
-.preview-info p {
-  margin: 5px 0;
-  color: #999;
-}
+.preview-info p { margin: 5px 0; color: #999; }
 
 .remove-image {
   background: #292929;
@@ -664,12 +579,9 @@ button {
   padding: 20px;
 }
 
-.modal h2 {
-  margin-top: 0;
-}
+.modal h2 { margin-top: 0; }
 
-.modal input,
-.modal textarea {
+.modal input, .modal textarea {
   width: 100%;
   background: #111;
   border: 1px solid #333;
@@ -679,15 +591,9 @@ button {
   margin: 7px 0 12px;
 }
 
-.modal textarea {
-  min-height: 100px;
-}
+.modal textarea { min-height: 100px; }
 
-.modal-row {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
+.modal-row { display: flex; gap: 8px; flex-wrap: wrap; }
 
 .modal-row button {
   border: 1px solid #333;
@@ -697,9 +603,7 @@ button {
   border-radius: 8px;
 }
 
-.modal-close {
-  float: right;
-}
+.modal-close { float: right; }
 
 .result {
   margin-top: 15px;
@@ -716,28 +620,28 @@ button {
   border-radius: 9px;
 }
 
-/* RESPONSIVE LAYOUT */
+.download-image-btn {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: #eee;
+  color: #000;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+/* RESPONSIVE */
 
 @media(max-width: 760px) {
-  .sidebar {
-    display: none;
-  }
+  .sidebar { display: none; }
+  .main { width: 100%; }
 
-  .main {
-    width: 100%;
-  }
+  .chat-area { padding: 18px 14px 24px; }
+  .composer-wrap { padding: 10px 12px 14px; }
 
-  .chat-area {
-    padding: 18px 14px 24px;
-  }
-
-  .composer-wrap {
-    padding: 10px 12px 14px;
-  }
-
-  .bubble {
-    max-width: 96%;
-  }
+  .bubble { max-width: 96%; }
 
   .assistant-message .bubble {
     width: 100%;
@@ -745,64 +649,30 @@ button {
     padding: 7px 0;
   }
 
-  .user-message .bubble {
-    max-width: 90%;
-  }
+  .user-message .bubble { max-width: 90%; }
+  .preview-container { flex-wrap: wrap; }
+  .top-title { font-size: 13px; }
 
-  .preview-container {
-    flex-wrap: wrap;
-  }
-
-  .top-title {
-    font-size: 13px;
-  }
-
-  .small-button {
-    padding: 7px;
-    font-size: 12px;
-  }
-
-  .welcome {
-    margin-top: 8vh;
-  }
+  .small-button { padding: 7px; font-size: 12px; }
+  .welcome { margin-top: 8vh; }
 }
 
 @media(max-width: 380px) {
-  .topbar {
-    padding: 0 8px;
-  }
+  .topbar { padding: 0 8px; }
+  .top-actions { gap: 4px; }
 
-  .top-actions {
-    gap: 4px;
-  }
-
-  .small-button {
-    font-size: 11px;
-    padding: 6px;
-  }
-
-  .composer-tools {
-    gap: 5px;
-  }
-
-  .tool-button {
-    font-size: 12px;
-    padding: 8px;
-  }
-
-  .send-button {
-    padding: 9px 12px;
-  }
+  .small-button { font-size: 11px; padding: 6px; }
+  .composer-tools { gap: 5px; }
+  .tool-button { font-size: 12px; padding: 8px; }
+  .send-button { padding: 9px 12px; }
 }
 </style>
 </head>
 
 <body>
-
 <div class="app">
 
   <aside class="sidebar">
-
     <div class="brand">MAYNARD <span>AI</span></div>
 
     <button class="new-chat" id="newChatBtn">
@@ -810,7 +680,6 @@ button {
     </button>
 
     <div class="side-heading">SAVED HISTORY</div>
-
     <div class="history-list" id="historyList"></div>
 
     <button class="side-button" id="clearHistoryBtn">
@@ -828,65 +697,38 @@ button {
     <button class="side-button" id="footballBtn">
       ⚽ Live football
     </button>
-
   </aside>
 
   <main class="main">
 
     <header class="topbar">
-
       <div class="top-title">MAYNARD AI</div>
 
       <div class="top-actions">
-
         <div class="mode-wrap">
-
           <button class="small-button" id="modeBtn">
             ⋯ <span id="currentModeLabel">General Assistant</span>
           </button>
 
           <div class="mode-menu" id="modeMenu">
-
             <div class="mode-description">
               Choose how MAYNARD AI should assist you.
             </div>
 
-            <button data-mode="general" class="active">
-              ✦ General Assistant
-            </button>
-
-            <button data-mode="coding">
-              &lt;/&gt; Coding
-            </button>
-
-            <button data-mode="essay">
-              ✎ Essay Writing
-            </button>
-
-            <button data-mode="mathematics">
-              ∑ Mathematics
-            </button>
-
+            <button data-mode="general" class="active">✦ General Assistant</button>
+            <button data-mode="coding">&lt;/&gt; Coding</button>
+            <button data-mode="essay">✎ Essay Writing</button>
+            <button data-mode="mathematics">∑ Mathematics</button>
           </div>
-
         </div>
 
-        <button class="small-button" id="mobileNewBtn">
-          ＋ New
-        </button>
-
-        <button class="small-button" id="mobileHistoryBtn">
-          History
-        </button>
-
+        <button class="small-button" id="mobileNewBtn">＋ New</button>
+        <button class="small-button" id="mobileHistoryBtn">History</button>
       </div>
-
     </header>
 
     <section class="chat-area" id="chatArea">
-
       <div class="welcome" id="welcome">
-
         <h1>Welcome to MAYNARD AI</h1>
 
         <p>
@@ -895,92 +737,67 @@ button {
         </p>
 
         <div class="quick-actions">
-
-          <button data-prompt="Explain this topic step by step.">
-            Learn a topic
-          </button>
-
-          <button data-prompt="Solve this mathematical problem step by step. Include a relevant diagram or graph where useful.">
-            Mathematics
-          </button>
-
-          <button data-prompt="Help me write and improve a professional business document.">
-            Business writing
-          </button>
-
-          <button data-prompt="Explain how artificial intelligence works. Use a diagram if it helps.">
-            Explore AI
-          </button>
-
+          <button data-prompt="Explain this topic step by step.">Learn a topic</button>
+          <button data-prompt="Solve this mathematical problem step by step. Include a relevant diagram or graph where useful.">Mathematics</button>
+          <button data-prompt="Help me write and improve a professional business document.">Business writing</button>
+          <button data-prompt="Explain how artificial intelligence works. Use a diagram if it helps.">Explore AI</button>
         </div>
-
       </div>
 
       <div class="messages" id="messages"></div>
-
     </section>
 
     <section class="composer-wrap">
-
       <div class="composer">
 
-        <textarea
-          id="prompt"
-          placeholder="Message MAYNARD AI..."
-        ></textarea>
+        <textarea id="prompt" placeholder="Message MAYNARD AI..."></textarea>
 
         <div id="imagePreview"></div>
 
         <div class="composer-tools">
 
-          <button class="tool-button" id="attachBtn">
-            ＋ Image
-          </button>
+          <button class="tool-button" id="attachBtn">＋ Image</button>
 
           <input
             id="fileInput"
             type="file"
             accept="image/png,image/jpeg,image/webp"
+            hidden
           >
 
-          <button class="tool-button" id="mathBtn">
-            ∑ Math
+          <!-- SEPARATE CAMERA INPUT -->
+          <input
+            id="cameraInput"
+            type="file"
+            accept="image/*"
+            capture="environment"
+            hidden
+          >
+
+          <!-- SEPARATE CAMERA BUTTON -->
+          <button class="tool-button" id="cameraBtn">
+            📷 Camera
           </button>
 
-          <button class="tool-button" id="studioBtn">
-            ✦ Create image
-          </button>
+          <button class="tool-button" id="mathBtn">∑ Math</button>
+          <button class="tool-button" id="studioBtn">✦ Create image</button>
 
-          <button class="send-button" id="sendBtn">
-            Send ↑
-          </button>
-
+          <button class="send-button" id="sendBtn">Send ↑</button>
         </div>
-
       </div>
 
       <div class="note">
         MAYNARD AI can make mistakes. Verify important information.
       </div>
-
     </section>
-
   </main>
-
 </div>
 
 <div class="modal-backdrop" id="modalBackdrop">
-
   <div class="modal">
-
-    <button class="modal-row modal-close" id="closeModalBtn">
-      Close ✕
-    </button>
-
+    <button class="modal-row modal-close" id="closeModalBtn">Close ✕</button>
     <div id="modalContent"></div>
-
   </div>
-
 </div>
 
 <script>
@@ -998,7 +815,7 @@ const state = {
   mode: "general"
 };
 
-/* VISUAL AND FORMATTING INSTRUCTIONS */
+/* VISUAL INSTRUCTIONS */
 
 const VISUAL_INSTRUCTIONS = `
 VISUAL PROBLEM SOLVING:
@@ -1068,26 +885,19 @@ If asked who created you, say David Takyi.
 const MODE_SETTINGS = {
   general: {
     label: "General Assistant",
-    instruction:
-      "You are MAYNARD AI, a helpful general-purpose assistant. Give clear, accurate and useful answers. Explain difficult subjects step by step when appropriate."
+    instruction: "You are MAYNARD AI, a helpful general-purpose assistant. Give clear, accurate and useful answers. Explain difficult subjects step by step when appropriate."
   },
-
   coding: {
     label: "Coding",
-    instruction:
-      "You are MAYNARD AI in Coding mode. Act as a programming tutor and coding assistant. Explain code clearly, identify errors, provide complete working examples when requested, and prioritize safe, maintainable code."
+    instruction: "You are MAYNARD AI in Coding mode. Act as a programming tutor and coding assistant. Explain code clearly, identify errors, provide complete working examples when requested, and prioritize safe, maintainable code."
   },
-
   essay: {
     label: "Essay Writing",
-    instruction:
-      "You are MAYNARD AI in Essay Writing mode. Help with essay planning, introductions, thesis statements, paragraphs, grammar, structure, editing and conclusions. Use clear academic writing."
+    instruction: "You are MAYNARD AI in Essay Writing mode. Help with essay planning, introductions, thesis statements, paragraphs, grammar, structure, editing and conclusions. Use clear academic writing."
   },
-
   mathematics: {
     label: "Mathematics",
-    instruction:
-      "You are MAYNARD AI in Mathematics mode. Solve mathematical problems accurately. Show calculations and use LaTeX notation. Include relevant graphs, geometry diagrams or flowcharts where they genuinely help. Explain the reasoning clearly. Break long equations into readable steps."
+    instruction: "You are MAYNARD AI in Mathematics mode. Solve mathematical problems accurately. Show calculations and use LaTeX notation. Include relevant graphs, geometry diagrams or flowcharts where they genuinely help. Explain the reasoning clearly. Break long equations into readable steps."
   }
 };
 
@@ -1096,13 +906,8 @@ const MODE_SETTINGS = {
 async function api(action, data = {}) {
   const response = await fetch("/api/chat", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      action,
-      ...data
-    })
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action, ...data })
   });
 
   const result = await response.json().catch(() => ({}));
@@ -1131,20 +936,9 @@ function escapeHTML(value) {
 function renderInline(value) {
   let safe = escapeHTML(value);
 
-  safe = safe.replace(
-    /`([^`]+)`/g,
-    "<code>$1</code>"
-  );
-
-  safe = safe.replace(
-    /\*\*(.*?)\*\*/g,
-    "<strong>$1</strong>"
-  );
-
-  safe = safe.replace(
-    /\*(.*?)\*/g,
-    "<em>$1</em>"
-  );
+  safe = safe.replace(/`([^`]+)`/g, "<code>$1</code>");
+  safe = safe.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+  safe = safe.replace(/\*(.*?)\*/g, "<em>$1</em>");
 
   safe = safe.replace(
     /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
@@ -1157,9 +951,7 @@ function renderInline(value) {
 /* MARKDOWN RENDERER */
 
 function renderMarkdown(text) {
-  const lines = String(text)
-    .replace(/\r/g, "")
-    .split("\n");
+  const lines = String(text).replace(/\r/g, "").split("\n");
 
   let html = "";
   let paragraph = [];
@@ -1170,10 +962,7 @@ function renderMarkdown(text) {
   function flushParagraph() {
     if (!paragraph.length) return;
 
-    html += "<p>" +
-      paragraph.map(renderInline).join("<br>") +
-      "</p>";
-
+    html += "<p>" + paragraph.map(renderInline).join("<br>") + "</p>";
     paragraph = [];
   }
 
@@ -1204,13 +993,10 @@ function renderMarkdown(text) {
 
       rows.forEach((cells, index) => {
         const tag = index === 0 ? "th" : "td";
-
         html += "<tr>";
 
         cells.forEach(cell => {
-          html += "<" + tag + ">" +
-            renderInline(cell) +
-            "</" + tag + ">";
+          html += "<" + tag + ">" + renderInline(cell) + "</" + tag + ">";
         });
 
         html += "</tr>";
@@ -1238,19 +1024,12 @@ function renderMarkdown(text) {
       flushList();
       flushTable();
 
-      const language = line.trim()
-        .slice(3)
-        .trim()
-        .toLowerCase();
-
+      const language = line.trim().slice(3).trim().toLowerCase();
       const codeLines = [];
 
       i++;
 
-      while (
-        i < lines.length &&
-        !lines[i].trim().startsWith("```")
-      ) {
+      while (i < lines.length && !lines[i].trim().startsWith("```")) {
         codeLines.push(lines[i]);
         i++;
       }
@@ -1258,22 +1037,14 @@ function renderMarkdown(text) {
       const code = codeLines.join("\n");
 
       if (language === "mermaid") {
-        html +=
-          '<div class="diagram-container">' +
-          '<pre class="mermaid">' +
-          escapeHTML(code) +
-          "</pre></div>";
+        html += '<div class="diagram-container"><pre class="mermaid">' +
+          escapeHTML(code) + "</pre></div>";
       } else {
-        html +=
-          "<pre><code>" +
-          escapeHTML(code) +
-          "</code></pre>";
+        html += "<pre><code>" + escapeHTML(code) + "</code></pre>";
       }
 
       continue;
     }
-
-    /* Remove decorative horizontal lines */
 
     if (/^\s*(---+|\*\*\*+|___+)\s*$/.test(line)) {
       flushParagraph();
@@ -1292,14 +1063,11 @@ function renderMarkdown(text) {
     if (line.includes("|") && line.trim().startsWith("|")) {
       flushParagraph();
       flushList();
-
       tableRows.push(splitTableRow(line));
       continue;
     }
 
-    if (tableRows.length) {
-      flushTable();
-    }
+    if (tableRows.length) flushTable();
 
     const heading = line.match(/^(#{1,3})\s+(.+)$/);
 
@@ -1308,11 +1076,7 @@ function renderMarkdown(text) {
       flushList();
 
       const level = heading[1].length;
-
-      html += "<h" + level + ">" +
-        renderInline(heading[2]) +
-        "</h" + level + ">";
-
+      html += "<h" + level + ">" + renderInline(heading[2]) + "</h" + level + ">";
       continue;
     }
 
@@ -1374,11 +1138,7 @@ async function typeset(element) {
         ".mermaid:not([data-processed])"
       );
 
-      if (diagrams.length) {
-        await mermaid.run({
-          nodes: diagrams
-        });
-      }
+      if (diagrams.length) await mermaid.run({ nodes: diagrams });
 
     } catch (error) {
       console.warn("Diagram rendering issue:", error);
@@ -1401,33 +1161,24 @@ function addMessage(role, content, options = {}) {
 
   const row = document.createElement("div");
 
-  row.className =
-    "message " +
-    (role === "user"
-      ? "user-message"
-      : "assistant-message");
+  row.className = "message " +
+    (role === "user" ? "user-message" : "assistant-message");
 
   const bubble = document.createElement("div");
   bubble.className = "bubble";
-
   bubble.innerHTML = renderMarkdown(content);
 
   if (options.imageUrl) {
     const img = document.createElement("img");
-
     img.src = options.imageUrl;
     img.alt = "Uploaded image";
-
     bubble.appendChild(img);
   }
 
   row.appendChild(bubble);
-
   $("messages").appendChild(row);
 
-  $("chatArea").scrollTop =
-    $("chatArea").scrollHeight;
-
+  $("chatArea").scrollTop = $("chatArea").scrollHeight;
   typeset(bubble);
 }
 
@@ -1437,15 +1188,10 @@ function setMode(mode) {
   if (!MODE_SETTINGS[mode]) return;
 
   state.mode = mode;
-
-  $("currentModeLabel").textContent =
-    MODE_SETTINGS[mode].label;
+  $("currentModeLabel").textContent = MODE_SETTINGS[mode].label;
 
   document.querySelectorAll("[data-mode]").forEach(button => {
-    button.classList.toggle(
-      "active",
-      button.dataset.mode === mode
-    );
+    button.classList.toggle("active", button.dataset.mode === mode);
   });
 
   $("modeMenu").classList.remove("open");
@@ -1495,6 +1241,7 @@ function resetChat() {
   $("imagePreview").style.display = "none";
 
   $("fileInput").value = "";
+  $("cameraInput").value = "";
 }
 
 function newChat() {
@@ -1508,14 +1255,12 @@ async function saveHistory() {
   if (!state.messages.length) return;
 
   try {
-    const first = state.messages.find(
-      item => item.role === "user"
-    )?.content || "New conversation";
+    const first = state.messages.find(item => item.role === "user")?.content ||
+      "New conversation";
 
-    const title =
-      state.title === "New conversation"
-        ? first.slice(0, 55)
-        : state.title;
+    const title = state.title === "New conversation"
+      ? first.slice(0, 55)
+      : state.title;
 
     const result = await api("history_save", {
       id: state.activeId,
@@ -1556,8 +1301,7 @@ async function loadHistory() {
       rename.className = "history-action";
       rename.textContent = "✎";
       rename.title = "Rename conversation";
-      rename.onclick = () =>
-        renameHistory(item.id, item.title || "");
+      rename.onclick = () => renameHistory(item.id, item.title || "");
 
       const remove = document.createElement("button");
       remove.className = "history-action";
@@ -1589,10 +1333,7 @@ async function openHistory(id) {
     $("welcome").style.display = "none";
 
     state.messages.forEach(message => {
-      addMessage(
-        message.role,
-        message.content || ""
-      );
+      addMessage(message.role, message.content || "");
     });
 
   } catch (error) {
@@ -1608,14 +1349,9 @@ async function renameHistory(id, oldTitle) {
   if (!title || !title.trim()) return;
 
   try {
-    await api("history_rename", {
-      id,
-      title: title.trim()
-    });
+    await api("history_rename", { id, title: title.trim() });
 
-    if (state.activeId === id) {
-      state.title = title.trim();
-    }
+    if (state.activeId === id) state.title = title.trim();
 
     await loadHistory();
 
@@ -1632,9 +1368,7 @@ async function deleteHistory(id) {
   try {
     await api("history_delete", { id });
 
-    if (state.activeId === id) {
-      newChat();
-    }
+    if (state.activeId === id) newChat();
 
     await loadHistory();
 
@@ -1646,9 +1380,7 @@ async function deleteHistory(id) {
 /* CLEAR HISTORY */
 
 async function clearHistory() {
-  if (!confirm("Delete all saved conversations?")) {
-    return;
-  }
+  if (!confirm("Delete all saved conversations?")) return;
 
   try {
     await api("history_clear");
@@ -1665,11 +1397,7 @@ async function clearHistory() {
 function attachImage(file) {
   if (!file) return;
 
-  if (![
-    "image/jpeg",
-    "image/png",
-    "image/webp"
-  ].includes(file.type)) {
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
     alert("Choose a JPG, PNG or WEBP image.");
     $("fileInput").value = "";
     return;
@@ -1722,6 +1450,7 @@ function attachImage(file) {
       preview.innerHTML = "";
       preview.style.display = "none";
       $("fileInput").value = "";
+      $("cameraInput").value = "";
     };
 
     container.append(img, info, remove);
@@ -1736,14 +1465,65 @@ function attachImage(file) {
   reader.readAsDataURL(file);
 }
 
+/* CAMERA ACCESS */
+
+$("cameraBtn").onclick = () => {
+  $("cameraInput").click();
+};
+
+$("cameraInput").onchange = event => {
+  const file = event.target.files[0];
+
+  if (file) {
+    attachImage(file);
+  }
+
+  event.target.value = "";
+};
+
+/* IMAGE DOWNLOADER */
+
+async function downloadImage(imageSource) {
+  if (!imageSource) {
+    alert("No image is available to download.");
+    return;
+  }
+
+  try {
+    const response = await fetch(imageSource);
+
+    if (!response.ok) {
+      throw new Error("Could not retrieve the image.");
+    }
+
+    const blob = await response.blob();
+    const objectURL = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = objectURL;
+    link.download = "maynard-ai-image.png";
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    setTimeout(() => URL.revokeObjectURL(objectURL), 30000);
+
+  } catch (error) {
+    alert(
+      "Automatic download was blocked. The image will open in a new tab so you can save it."
+    );
+
+    window.open(imageSource, "_blank");
+  }
+}
+
 /* SEND MESSAGE */
 
 async function sendMessage() {
   const text = $("prompt").value.trim();
 
-  if ((!text && !state.image) || state.busy) {
-    return;
-  }
+  if ((!text && !state.image) || state.busy) return;
 
   state.busy = true;
   $("sendBtn").disabled = true;
@@ -1768,23 +1548,20 @@ async function sendMessage() {
   $("imagePreview").innerHTML = "";
   $("imagePreview").style.display = "none";
   $("fileInput").value = "";
+  $("cameraInput").value = "";
 
   const typing = document.createElement("div");
   typing.className = "typing";
   typing.textContent = "MAYNARD AI is thinking...";
 
   $("messages").appendChild(typing);
-
-  $("chatArea").scrollTop =
-    $("chatArea").scrollHeight;
+  $("chatArea").scrollTop = $("chatArea").scrollHeight;
 
   try {
     const systemMessage = {
       role: "system",
-      content:
-        MODE_SETTINGS[state.mode].instruction +
-        "\n\n" +
-        VISUAL_INSTRUCTIONS
+      content: MODE_SETTINGS[state.mode].instruction +
+        "\n\n" + VISUAL_INSTRUCTIONS
     };
 
     const requestMessages = [
@@ -1802,8 +1579,7 @@ async function sendMessage() {
 
     typing.remove();
 
-    const answer =
-      result.reply || "I could not generate a response.";
+    const answer = result.reply || "I could not generate a response.";
 
     addMessage("assistant", answer);
 
@@ -1817,10 +1593,7 @@ async function sendMessage() {
   } catch (error) {
     typing.remove();
 
-    addMessage(
-      "assistant",
-      "I encountered an error: " + error.message
-    );
+    addMessage("assistant", "I encountered an error: " + error.message);
 
   } finally {
     state.busy = false;
@@ -1840,8 +1613,7 @@ function openCalculator() {
       sqrt(144), sin(pi / 2), or 2^8.
     </p>
 
-    <input id="calcInput"
-      placeholder="Enter mathematical expression">
+    <input id="calcInput" placeholder="Enter mathematical expression">
 
     <div class="modal-row">
       <button id="calculateBtn">Calculate</button>
@@ -1861,29 +1633,24 @@ function openCalculator() {
     try {
       const expression = $("calcInput").value.trim();
 
-      if (!expression) {
-        throw new Error("Enter an expression first.");
-      }
+      if (!expression) throw new Error("Enter an expression first.");
 
       const result = math.evaluate(expression);
 
-      $("calcResult").textContent =
-        math.format(result, { precision: 14 });
+      $("calcResult").textContent = math.format(result, { precision: 14 });
 
     } catch (error) {
-      $("calcResult").textContent =
-        "Calculation error: " + error.message;
+      $("calcResult").textContent = "Calculation error: " + error.message;
     }
   };
 
   $("clearCalcBtn").onclick = () => {
     $("calcInput").value = "";
-    $("calcResult").textContent =
-      "Your result will appear here.";
+    $("calcResult").textContent = "Your result will appear here.";
   };
 }
 
-/* STABILITY AI IMAGE STUDIO */
+/* IMAGE STUDIO */
 
 function openImageStudio() {
   showModal(`
@@ -1893,15 +1660,13 @@ function openImageStudio() {
       Describe the original image you want MAYNARD AI to create.
     </p>
 
-    <textarea id="imagePrompt"
-      placeholder="Describe your image..."></textarea>
+    <textarea id="imagePrompt" placeholder="Describe your image..."></textarea>
 
     <div class="modal-row">
       <button id="generateImageBtn">Generate image</button>
     </div>
 
-    <div id="imageResult" class="result"
-      style="display:none"></div>
+    <div id="imageResult" class="result" style="display:none"></div>
 
     <p class="note">
       Image generation requires a configured Stability AI key.
@@ -1926,8 +1691,7 @@ function openImageStudio() {
       box.style.display = "block";
       box.innerHTML = "";
 
-      const imageSource =
-        result.image || result.imageUrl || result.url;
+      const imageSource = result.image || result.imageUrl || result.url;
 
       if (imageSource) {
         const img = document.createElement("img");
@@ -1935,24 +1699,19 @@ function openImageStudio() {
         img.alt = "Generated image";
         box.appendChild(img);
 
-        const download = document.createElement("a");
-        download.href = imageSource;
-        download.download = "maynard-ai-image.png";
-        download.target = "_blank";
-        download.rel = "noopener noreferrer";
-        download.textContent = "Download image";
-        download.style.display = "inline-block";
-        download.style.marginTop = "12px";
-        download.style.padding = "10px 14px";
-        download.style.background = "#eee";
-        download.style.color = "#000";
-        download.style.borderRadius = "8px";
-        download.style.textDecoration = "none";
+        /* SEPARATE IMAGE DOWNLOAD BUTTON */
+
+        const download = document.createElement("button");
+        download.type = "button";
+        download.className = "download-image-btn";
+        download.textContent = "⬇ Download image";
+
+        download.onclick = () => downloadImage(imageSource);
+
         box.appendChild(download);
 
       } else {
-        box.textContent =
-          result.message || "No image was returned.";
+        box.textContent = result.message || "No image was returned.";
       }
 
     } catch (error) {
@@ -2005,14 +1764,9 @@ function loadFootball() {
         row.textContent =
           (fixture.league || "Football") + " — " +
           fixture.home + " " +
-          (fixture.homeGoals ?? "-") +
-          " : " +
-          (fixture.awayGoals ?? "-") +
-          " " +
-          fixture.away +
-          " (" +
-          fixture.status +
-          ")";
+          (fixture.homeGoals ?? "-") + " : " +
+          (fixture.awayGoals ?? "-") + " " +
+          fixture.away + " (" + fixture.status + ")";
 
         $("footballResult").appendChild(row);
       });
@@ -2059,9 +1813,7 @@ $("fileInput").onchange = event => {
 $("closeModalBtn").onclick = closeModal;
 
 $("modalBackdrop").addEventListener("click", event => {
-  if (event.target === $("modalBackdrop")) {
-    closeModal();
-  }
+  if (event.target === $("modalBackdrop")) closeModal();
 });
 
 /* MOBILE HISTORY */
@@ -2126,6 +1878,5 @@ setMode("general");
 loadHistory();
 
 </script>
-
 </body>
 </html>
