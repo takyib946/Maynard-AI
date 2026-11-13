@@ -1,26 +1,24 @@
-
 import { randomUUID } from "node:crypto";
-import { put } from "@vercel/blob";
 
 // ============================================
 // MAYNARD AI
 // Groq + Stability AI + Upstash Redis
-// API-Football + Vercel Blob Image Storage
-// Persistent Conversation Images
+// API-Football + Saved Conversation History
+// Vertical Formatting + Diagrams
 // ============================================
 
 export const config = {
-  maxDuration: 60,
+maxDuration: 60,
 };
 
 const GROQ_API_URL =
-  "https://api.groq.com/openai/v1/chat/completions";
+"https://api.groq.com/openai/v1/chat/completions";
 
 const STABILITY_API_URL =
-  "https://api.stability.ai/v2beta/stable-image/generate/core";
+"https://api.stability.ai/v2beta/stable-image/generate/core";
 
 const FOOTBALL_API_URL =
-  "https://v3.football.api-sports.com/fixtures";
+"https://v3.football.api-sports.io/fixtures";
 
 const COOKIE_NAME = "maynard_browser_v2";
 
@@ -28,19 +26,19 @@ const HISTORY_LIMIT = 50;
 const MESSAGE_LIMIT = 100;
 const HISTORY_TTL = 60 * 60 * 24 * 365;
 
-const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
-const MAX_BODY_BYTES = 4.4 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const MAX_BODY_BYTES = 15 * 1024 * 1024;
 
 const ALLOWED_ACTIONS = new Set([
-  "chat",
-  "history_save",
-  "history_list",
-  "history_get",
-  "history_rename",
-  "history_delete",
-  "history_clear",
-  "image_generate",
-  "football_live",
+"chat",
+"history_save",
+"history_list",
+"history_get",
+"history_rename",
+"history_delete",
+"history_clear",
+"image_generate",
+"football_live",
 ]);
 
 // ============================================
@@ -74,8 +72,8 @@ MATHEMATICS:
 2. Write every calculation vertically.
 3. Put each equation on its own line.
 4. Use proper LaTeX mathematical notation.
-5. Use \\( ... \\) for inline equations.
-6. Use \\[ ... \\] for displayed equations.
+5. Use ( ... ) for inline equations.
+6. Use [ ... ] for displayed equations.
 7. Explain formulas before substituting values.
 8. Show important calculations clearly.
 9. Present final answers clearly.
@@ -115,104 +113,127 @@ If asked your name, respond:
 // ============================================
 
 function send(res, status, data) {
-  return res.status(status).json(data);
+return res.status(status).json(data);
 }
 
 function errorMessage(error) {
-  return error instanceof Error
-    ? error.message
-    : "An unexpected server error occurred.";
+return error instanceof Error
+? error.message
+: "An unexpected server error occurred.";
 }
 
 // ============================================
 // TABLE AND SEPARATOR CLEANER
+// Converts Markdown tables into vertical text.
 // ============================================
 
 function cleanAIResponse(text) {
-  if (typeof text !== "string") return "";
+if (typeof text !== "string") {
+return "";
+}
 
-  const lines = text.split("\n");
-  const output = [];
-  let insideCode = false;
+const lines = text.split("\n");
+const output = [];
 
-  function parseCells(line) {
-    return line
-      .trim()
-      .replace(/^\|/, "")
-      .replace(/\|$/, "")
-      .split("|")
-      .map((cell) => cell.trim());
-  }
+let insideCode = false;
 
-  function isTableSeparator(line) {
-    return /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(
-      line
-    );
-  }
+function parseCells(line) {
+return line
+.trim()
+.replace(/^|/, "")
+.replace(/|$/, "")
+.split("|")
+.map((cell) => cell.trim());
+}
 
-  function isTableRow(line) {
-    return line.includes("|") && line.trim().length > 0;
-  }
+function isTableSeparator(line) {
+return /^\s*|?\s*:?-{3,}:?\s*(|\s*:?-{3,}:?\s*)+|?\s*$/.test(
+line
+);
+}
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+function isTableRow(line) {
+return (
+line.includes("|") &&
+line.trim().length > 0
+);
+}
 
-    if (/^\s*```/.test(line)) {
-      insideCode = !insideCode;
-      output.push(line);
-      continue;
-    }
+for (let i = 0; i < lines.length; i++) {
+const line = lines[i];
 
-    if (insideCode) {
-      output.push(line);
-      continue;
-    }
+// Preserve code blocks exactly.
+if (/^\s*```/.test(line)) {
+insideCode = !insideCode;
+output.push(line);
+continue;
+}
 
-    if (
-      isTableSeparator(line) &&
-      output.length > 0 &&
-      isTableRow(output[output.length - 1])
-    ) {
-      const headers = parseCells(output.pop());
-      i++;
+if (insideCode) {
+output.push(line);
+continue;
+}
 
-      while (i < lines.length && isTableRow(lines[i])) {
-        const values = parseCells(lines[i]);
+// Detect a Markdown table separator.
+if (
+isTableSeparator(line) &&
+output.length > 0 &&
+isTableRow(output[output.length - 1])
+) {
+const headers = parseCells(output.pop());
 
-        const formattedRow = headers
-          .map((header, index) => {
-            const value = values[index] || "";
-            if (!value) return "";
+// Skip the Markdown separator row.
+i++;
 
-            const label = header || `Item ${index + 1}`;
-            return `**${label}:** ${value}`;
-          })
-          .filter(Boolean)
-          .join("\n");
+while (
+i < lines.length &&
+isTableRow(lines[i])
+) {
+const values = parseCells(lines[i]);
 
-        if (formattedRow) {
-          output.push(formattedRow);
-          output.push("");
-        }
+const formattedRow = headers    
+  .map((header, index) => {    
+    const value = values[index] || "";    
 
-        i++;
-      }
+    if (!value) return "";    
 
-      i--;
-      continue;
-    }
+    const label =    
+      header || `Item ${index + 1}`;    
 
-    if (/^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
-      continue;
-    }
+    return `**${label}:** ${value}`;    
+  })    
+  .filter(Boolean)    
+  .join("\n");    
 
-    output.push(line);
-  }
+if (formattedRow) {    
+  output.push(formattedRow);    
+  output.push("");    
+}    
 
-  return output
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+i++;
+
+}
+
+// Reprocess the first line after the table.
+i--;
+continue;
+}
+
+// Remove unnecessary horizontal separator lines.
+if (
+/^\s*(?:-{3,}|*{3,}|_{3,})\s*$/.test(line)
+) {
+continue;
+}
+
+output.push(line);
+
+}
+
+return output
+.join("\n")
+.replace(/\n{3,}/g, "\n\n")
+.trim();
 }
 
 // ============================================
@@ -220,48 +241,53 @@ function cleanAIResponse(text) {
 // ============================================
 
 function getCookie(req, name) {
-  const cookieHeader = req.headers.cookie || "";
+const cookieHeader = req.headers.cookie || "";
 
-  for (const part of cookieHeader.split(";")) {
-    const index = part.indexOf("=");
-    if (index === -1) continue;
+for (const part of cookieHeader.split(";")) {
+const index = part.indexOf("=");
 
-    const key = part.slice(0, index).trim();
-    const value = part.slice(index + 1).trim();
+if (index === -1) continue;
 
-    if (key === name) {
-      try {
-        return decodeURIComponent(value);
-      } catch {
-        return null;
-      }
-    }
-  }
+const key = part.slice(0, index).trim();
+const value = part.slice(index + 1).trim();
 
-  return null;
+if (key === name) {
+try {
+return decodeURIComponent(value);
+} catch {
+return null;
+}
+}
+
+}
+
+return null;
 }
 
 function setVisitorCookie(res, visitorId) {
-  const secure =
-    process.env.NODE_ENV === "production"
-      ? "; Secure"
-      : "";
+const secure =
+process.env.NODE_ENV === "production"
+? "; Secure"
+: "";
 
-  res.setHeader(
-    "Set-Cookie",
-    `${COOKIE_NAME}=${encodeURIComponent(visitorId)}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${HISTORY_TTL}${secure}`
-  );
+res.setHeader(
+"Set-Cookie",
+${COOKIE_NAME}=${encodeURIComponent(visitorId)}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${HISTORY_TTL}${secure}
+);
 }
 
 function getVisitor(req, res) {
-  let visitorId = getCookie(req, COOKIE_NAME);
+let visitorId = getCookie(req, COOKIE_NAME);
 
-  if (!visitorId || !/^[a-f0-9-]{36}$/i.test(visitorId)) {
-    visitorId = randomUUID();
-    setVisitorCookie(res, visitorId);
-  }
+if (
+!visitorId ||
+!/^[a-f0-9-]{36}$/i.test(visitorId)
+) {
+visitorId = randomUUID();
+setVisitorCookie(res, visitorId);
+}
 
-  return visitorId;
+return visitorId;
 }
 
 // ============================================
@@ -269,43 +295,44 @@ function getVisitor(req, res) {
 // ============================================
 
 async function readBody(req) {
-  if (
-    req.body &&
-    typeof req.body === "object" &&
-    !Buffer.isBuffer(req.body)
-  ) {
-    return req.body;
-  }
+if (
+req.body &&
+typeof req.body === "object" &&
+!Buffer.isBuffer(req.body)
+) {
+return req.body;
+}
 
-  let raw = "";
+let raw = "";
 
-  for await (const chunk of req) {
-    raw += chunk.toString();
+for await (const chunk of req) {
+raw += chunk.toString();
 
-    if (Buffer.byteLength(raw) > MAX_BODY_BYTES) {
-      throw new Error(
-        "Request is too large. Please use an image smaller than 3 MB."
-      );
-    }
-  }
+if (Buffer.byteLength(raw) > MAX_BODY_BYTES) {
+throw new Error("Request body is too large.");
+}
 
-  if (!raw) return {};
+}
 
-  try {
-    return JSON.parse(raw);
-  } catch {
-    throw new Error("Invalid JSON request body.");
-  }
+if (!raw) return {};
+
+try {
+return JSON.parse(raw);
+} catch {
+throw new Error("Invalid JSON request body.");
+}
 }
 
 function requireEnv(name) {
-  const value = process.env[name];
+const value = process.env[name];
 
-  if (!value || !value.trim()) {
-    throw new Error(`Missing environment variable: ${name}`);
-  }
+if (!value || !value.trim()) {
+throw new Error(
+Missing environment variable: ${name}
+);
+}
 
-  return value.trim();
+return value.trim();
 }
 
 // ============================================
@@ -313,64 +340,42 @@ function requireEnv(name) {
 // ============================================
 
 function historyKey(visitor, id) {
-  return `maynard:history:${visitor}:${id}`;
+return maynard:history:${visitor}:${id};
 }
 
 function historyIndexKey(visitor) {
-  return `maynard:history-index:${visitor}`;
+return maynard:history-index:${visitor};
 }
 
 async function redis(command, ...args) {
-  const url = requireEnv("UPSTASH_REDIS_REST_URL");
-  const token = requireEnv("UPSTASH_REDIS_REST_TOKEN");
+const url = requireEnv("UPSTASH_REDIS_REST_URL");
+const token = requireEnv("UPSTASH_REDIS_REST_TOKEN");
 
-  const encodedArgs = args
-    .map((value) => encodeURIComponent(String(value)))
-    .join("/");
+const encodedArgs = args
+.map((value) => encodeURIComponent(String(value)))
+.join("/");
 
-  const endpoint =
-    `${url.replace(/\/$/, "")}/${command}` +
-    (encodedArgs ? `/${encodedArgs}` : "");
+const endpoint =
+${url.replace(//$/, "")}/${command} +
+(encodedArgs ? /${encodedArgs} : "");
 
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+const response = await fetch(endpoint, {
+method: "POST",
+headers: {
+Authorization: Bearer ${token},
+},
+});
 
-  const result = await response.json().catch(() => ({}));
+const result = await response.json().catch(() => ({}));
 
-  if (!response.ok || result.error) {
-    throw new Error(
-      result.error ||
-        `Redis request failed (${response.status}).`
-    );
-  }
-
-  return result.result;
+if (!response.ok || result.error) {
+throw new Error(
+result.error ||
+Redis request failed (${response.status}).
+);
 }
 
-// ============================================
-// BLOB URL VALIDATION
-// ============================================
-
-function isTrustedBlobUrl(value) {
-  if (typeof value !== "string") return false;
-
-  try {
-    const url = new URL(value);
-
-    return (
-      url.protocol === "https:" &&
-      (
-        url.hostname.endsWith(".public.blob.vercel-storage.com") ||
-        url.hostname === "public.blob.vercel-storage.com"
-      )
-    );
-  } catch {
-    return false;
-  }
+return result.result;
 }
 
 // ============================================
@@ -378,96 +383,23 @@ function isTrustedBlobUrl(value) {
 // ============================================
 
 function cleanMessages(messages) {
-  if (!Array.isArray(messages)) return [];
+if (!Array.isArray(messages)) return [];
 
-  return messages
-    .slice(-MESSAGE_LIMIT)
-    .filter(
-      (message) =>
-        message &&
-        ["user", "assistant"].includes(message.role) &&
-        typeof message.content === "string"
-    )
-    .map((message) => {
-      const cleaned = {
-        role: message.role,
-        content: message.content.slice(0, 20000),
-      };
-
-      if (message.imageOmitted) {
-        cleaned.imageOmitted = true;
-      }
-
-      if (isTrustedBlobUrl(message.imageUrl)) {
-        cleaned.imageUrl = message.imageUrl;
-      }
-
-      return cleaned;
-    });
-}
-
-// ============================================
-// IMAGE VALIDATION
-// ============================================
-
-function extractImageData(image) {
-  if (typeof image !== "string") {
-    throw new Error("Image data is missing.");
-  }
-
-  const match = image.match(
-    /^data:image\/(png|jpeg|jpg|webp);base64,([A-Za-z0-9+/=]+)$/
-  );
-
-  if (!match) {
-    throw new Error("Use a PNG, JPEG, or WEBP image.");
-  }
-
-  const data = match[2];
-  const buffer = Buffer.from(data, "base64");
-
-  if (!buffer.length || buffer.length > MAX_IMAGE_BYTES) {
-    throw new Error("Image must be 3 MB or smaller.");
-  }
-
-  return {
-    mimeType:
-      match[1] === "jpg"
-        ? "image/jpeg"
-        : `image/${match[1]}`,
-    extension:
-      match[1] === "jpeg" || match[1] === "jpg"
-        ? "jpg"
-        : match[1],
-    data,
-    buffer,
-  };
-}
-
-// ============================================
-// UPLOAD IMAGE TO VERCEL BLOB
-// ============================================
-
-async function uploadImageToBlob(image) {
-  requireEnv("BLOB_READ_WRITE_TOKEN");
-
-  const parsed = extractImageData(image);
-
-  const pathname =
-    `maynard-uploads/${Date.now()}-${randomUUID()}.${parsed.extension}`;
-
-  const blob = await put(pathname, parsed.buffer, {
-    access: "public",
-    addRandomSuffix: true,
-    contentType: parsed.mimeType,
-    cacheControlMaxAge: 60 * 60 * 24 * 30,
-  });
-
-  if (!blob?.url || !isTrustedBlobUrl(blob.url)) {
-    throw new Error("Blob storage returned an invalid image URL.");
-  }
-
-  return blob.url;
+return messages
+.slice(-MESSAGE_LIMIT)
+.filter(
+(message) =>
+message &&
+["user", "assistant"].includes(message.role) &&
+typeof message.content === "string"
+)
+.map((message) => ({
+role: message.role,
+content: message.content.slice(0, 20000),
+...(message.imageOmitted
+? { imageOmitted: true }
+: {}),
+}));
 }
 
 // ============================================
@@ -475,102 +407,108 @@ async function uploadImageToBlob(image) {
 // ============================================
 
 async function saveHistory(visitor, body) {
-  const messages = cleanMessages(body.messages);
+const messages = cleanMessages(body.messages);
 
-  if (!messages.length) {
-    throw new Error("There are no messages to save.");
-  }
+if (!messages.length) {
+throw new Error("There are no messages to save.");
+}
 
-  const id =
-    typeof body.id === "string" &&
-    /^[a-f0-9-]{36}$/i.test(body.id)
-      ? body.id
-      : randomUUID();
+const id =
+typeof body.id === "string" &&
+/^[a-f0-9-]{36}$/i.test(body.id)
+? body.id
+: randomUUID();
 
-  const key = historyKey(visitor, id);
-  const existingRaw = await redis("GET", key);
+const key = historyKey(visitor, id);
 
-  let existing = null;
+const existingRaw = await redis("GET", key);
 
-  if (existingRaw) {
-    try {
-      existing = JSON.parse(existingRaw);
-    } catch {
-      existing = null;
-    }
-  }
+let existing = null;
 
-  const now = new Date().toISOString();
+if (existingRaw) {
+try {
+existing = JSON.parse(existingRaw);
+} catch {
+existing = null;
+}
+}
 
-  const firstUserMessage = messages.find(
-    (message) => message.role === "user"
-  );
+const now = new Date().toISOString();
 
-  const title =
-    typeof body.title === "string" && body.title.trim()
-      ? body.title.trim().slice(0, 100)
-      : existing?.title ||
-        firstUserMessage?.content.slice(0, 60) ||
-        "New conversation";
+const firstUserMessage = messages.find(
+(message) => message.role === "user"
+);
 
-  const record = {
-    id,
-    title,
-    messages,
-    createdAt: existing?.createdAt || now,
-    updatedAt: now,
-  };
+const title =
+typeof body.title === "string" &&
+body.title.trim()
+? body.title.trim().slice(0, 100)
+: existing?.title ||
+firstUserMessage?.content.slice(0, 60) ||
+"New conversation";
 
-  await redis(
-    "SET",
-    key,
-    JSON.stringify(record),
-    "EX",
-    HISTORY_TTL
-  );
+const record = {
+id,
+title,
+messages,
+createdAt: existing?.createdAt || now,
+updatedAt: now,
+};
 
-  await redis(
-    "ZADD",
-    historyIndexKey(visitor),
-    Date.now(),
-    id
-  );
+await redis(
+"SET",
+key,
+JSON.stringify(record),
+"EX",
+HISTORY_TTL
+);
 
-  await redis(
-    "EXPIRE",
-    historyIndexKey(visitor),
-    HISTORY_TTL
-  );
+await redis(
+"ZADD",
+historyIndexKey(visitor),
+Date.now(),
+id
+);
 
-  const count = Number(
-    await redis("ZCARD", historyIndexKey(visitor))
-  );
+await redis(
+"EXPIRE",
+historyIndexKey(visitor),
+HISTORY_TTL
+);
 
-  if (count > HISTORY_LIMIT) {
-    const oldIds = await redis(
-      "ZRANGE",
-      historyIndexKey(visitor),
-      0,
-      count - HISTORY_LIMIT - 1
-    );
+const count = Number(
+await redis("ZCARD", historyIndexKey(visitor))
+);
 
-    if (Array.isArray(oldIds)) {
-      for (const oldId of oldIds) {
-        await redis("DEL", historyKey(visitor, oldId));
-      }
+if (count > HISTORY_LIMIT) {
+const oldIds = await redis(
+"ZRANGE",
+historyIndexKey(visitor),
+0,
+count - HISTORY_LIMIT - 1
+);
 
-      if (oldIds.length) {
-        await redis(
-          "ZREMRANGEBYRANK",
-          historyIndexKey(visitor),
-          0,
-          oldIds.length - 1
-        );
-      }
-    }
-  }
+if (Array.isArray(oldIds)) {
+for (const oldId of oldIds) {
+await redis(
+"DEL",
+historyKey(visitor, oldId)
+);
+}
 
-  return record;
+if (oldIds.length) {
+await redis(
+"ZREMRANGEBYRANK",
+historyIndexKey(visitor),
+0,
+oldIds.length - 1
+);
+}
+}
+
+}
+
+return record;
 }
 
 // ============================================
@@ -578,41 +516,42 @@ async function saveHistory(visitor, body) {
 // ============================================
 
 async function listHistory(visitor) {
-  const ids = await redis(
-    "ZREVRANGE",
-    historyIndexKey(visitor),
-    0,
-    HISTORY_LIMIT - 1
-  );
+const ids = await redis(
+"ZREVRANGE",
+historyIndexKey(visitor),
+0,
+HISTORY_LIMIT - 1
+);
 
-  if (!Array.isArray(ids)) return [];
+if (!Array.isArray(ids)) return [];
 
-  const histories = [];
+const histories = [];
 
-  for (const id of ids) {
-    const raw = await redis(
-      "GET",
-      historyKey(visitor, id)
-    );
+for (const id of ids) {
+const raw = await redis(
+"GET",
+historyKey(visitor, id)
+);
 
-    if (!raw) continue;
+if (!raw) continue;
 
-    try {
-      const record = JSON.parse(raw);
+try {
+const record = JSON.parse(raw);
 
-      histories.push({
-        id: record.id,
-        title: record.title,
-        createdAt: record.createdAt,
-        updatedAt: record.updatedAt,
-        messageCount: record.messages?.length || 0,
-      });
-    } catch {
-      // Skip invalid records.
-    }
-  }
+histories.push({
+id: record.id,
+title: record.title,
+createdAt: record.createdAt,
+updatedAt: record.updatedAt,
+messageCount: record.messages?.length || 0,
+});
+} catch {
+// Skip invalid records.
+}
 
-  return histories;
+}
+
+return histories;
 }
 
 // ============================================
@@ -620,25 +559,27 @@ async function listHistory(visitor) {
 // ============================================
 
 async function getHistory(visitor, id) {
-  if (
-    typeof id !== "string" ||
-    !/^[a-f0-9-]{36}$/i.test(id)
-  ) {
-    throw new Error("Invalid conversation ID.");
-  }
+if (
+typeof id !== "string" ||
+!/^[a-f0-9-]{36}$/i.test(id)
+) {
+throw new Error("Invalid conversation ID.");
+}
 
-  const raw = await redis(
-    "GET",
-    historyKey(visitor, id)
-  );
+const raw = await redis(
+"GET",
+historyKey(visitor, id)
+);
 
-  if (!raw) return null;
+if (!raw) return null;
 
-  try {
-    return JSON.parse(raw);
-  } catch {
-    throw new Error("Saved conversation data is invalid.");
-  }
+try {
+return JSON.parse(raw);
+} catch {
+throw new Error(
+"Saved conversation data is invalid."
+);
+}
 }
 
 // ============================================
@@ -646,26 +587,31 @@ async function getHistory(visitor, id) {
 // ============================================
 
 async function renameHistory(visitor, id, title) {
-  const record = await getHistory(visitor, id);
+const record = await getHistory(visitor, id);
 
-  if (!record) return null;
+if (!record) return null;
 
-  if (typeof title !== "string" || !title.trim()) {
-    throw new Error("A conversation title is required.");
-  }
+if (
+typeof title !== "string" ||
+!title.trim()
+) {
+throw new Error(
+"A conversation title is required."
+);
+}
 
-  record.title = title.trim().slice(0, 100);
-  record.updatedAt = new Date().toISOString();
+record.title = title.trim().slice(0, 100);
+record.updatedAt = new Date().toISOString();
 
-  await redis(
-    "SET",
-    historyKey(visitor, id),
-    JSON.stringify(record),
-    "EX",
-    HISTORY_TTL
-  );
+await redis(
+"SET",
+historyKey(visitor, id),
+JSON.stringify(record),
+"EX",
+HISTORY_TTL
+);
 
-  return record;
+return record;
 }
 
 // ============================================
@@ -673,17 +619,25 @@ async function renameHistory(visitor, id, title) {
 // ============================================
 
 async function deleteHistory(visitor, id) {
-  if (
-    typeof id !== "string" ||
-    !/^[a-f0-9-]{36}$/i.test(id)
-  ) {
-    throw new Error("Invalid conversation ID.");
-  }
+if (
+typeof id !== "string" ||
+!/^[a-f0-9-]{36}$/i.test(id)
+) {
+throw new Error("Invalid conversation ID.");
+}
 
-  await redis("DEL", historyKey(visitor, id));
-  await redis("ZREM", historyIndexKey(visitor), id);
+await redis(
+"DEL",
+historyKey(visitor, id)
+);
 
-  return true;
+await redis(
+"ZREM",
+historyIndexKey(visitor),
+id
+);
+
+return true;
 }
 
 // ============================================
@@ -691,22 +645,65 @@ async function deleteHistory(visitor, id) {
 // ============================================
 
 async function clearHistory(visitor) {
-  const ids = await redis(
-    "ZRANGE",
-    historyIndexKey(visitor),
-    0,
-    -1
-  );
+const ids = await redis(
+"ZRANGE",
+historyIndexKey(visitor),
+0,
+-1
+);
 
-  if (Array.isArray(ids)) {
-    for (const id of ids) {
-      await redis("DEL", historyKey(visitor, id));
-    }
-  }
+if (Array.isArray(ids)) {
+for (const id of ids) {
+await redis(
+"DEL",
+historyKey(visitor, id)
+);
+}
+}
 
-  await redis("DEL", historyIndexKey(visitor));
+await redis(
+"DEL",
+historyIndexKey(visitor)
+);
 
-  return true;
+return true;
+}
+
+// ============================================
+// IMAGE VALIDATION
+// ============================================
+
+function extractImageData(image) {
+if (typeof image !== "string") {
+throw new Error("Image data is missing.");
+}
+
+const match = image.match(
+/^data:image/(png|jpeg|jpg|webp);base64,([A-Za-z0-9+/=]+)$/
+);
+
+if (!match) {
+throw new Error(
+"Use a PNG, JPEG, or WEBP image."
+);
+}
+
+const data = match[2];
+const buffer = Buffer.from(data, "base64");
+
+if (buffer.length > MAX_IMAGE_BYTES) {
+throw new Error(
+"Image must be 8 MB or smaller."
+);
+}
+
+return {
+mimeType:
+match[1] === "jpg"
+? "image/jpeg"
+: image/${match[1]},
+data,
+};
 }
 
 // ============================================
@@ -714,96 +711,115 @@ async function clearHistory(visitor) {
 // ============================================
 
 async function groqChat(body) {
-  const apiKey = requireEnv("GROQ_API_KEY");
+const apiKey = requireEnv("GROQ_API_KEY");
 
-  const model =
-    process.env.GROQ_MODEL ||
-    "llama-3.3-70b-versatile";
+const model =
+process.env.GROQ_MODEL ||
+"llama-3.3-70b-versatile";
 
-  const messages = Array.isArray(body.messages)
-    ? body.messages
-        .filter(
-          (message) =>
-            message &&
-            ["user", "assistant"].includes(message.role)
-        )
-        .slice(-MESSAGE_LIMIT)
-        .map((message) => ({
-          role: message.role,
-          content:
-            typeof message.content === "string"
-              ? message.content.slice(0, 20000)
-              : message.content,
-        }))
-    : [];
+const messages = Array.isArray(body.messages)
+? body.messages
+.filter(
+(message) =>
+message &&
+["user", "assistant"].includes(message.role)
+)
+.slice(-MESSAGE_LIMIT)
+.map((message) => ({
+role: message.role,
+content:
+typeof message.content === "string"
+? message.content.slice(0, 20000)
+: message.content,
+}))
+: [];
 
-  if (
-    !messages.length &&
-    typeof body.message === "string"
-  ) {
-    messages.push({
-      role: "user",
-      content: body.message.slice(0, 20000),
-    });
-  }
+if (
+!messages.length &&
+typeof body.message === "string"
+) {
+messages.push({
+role: "user",
+content: body.message.slice(0, 20000),
+});
+}
 
-  if (!messages.length) {
-    throw new Error("Enter a message before sending.");
-  }
+if (!messages.length) {
+throw new Error(
+"Enter a message before sending."
+);
+}
 
-  const chatMessages = [
-    {
-      role: "system",
-      content: MAYNARD_SYSTEM_PROMPT,
-    },
-    ...messages,
-  ];
+// Server-controlled assistant instructions.
+const chatMessages = [
+{
+role: "system",
+content: MAYNARD_SYSTEM_PROMPT,
+},
+...messages,
+];
 
-  if (body.image) {
-    const image = extractImageData(body.image);
+// Image understanding.
+if (body.image) {
+const image = extractImageData(body.image);
 
-    const visionModel =
-      process.env.GROQ_VISION_MODEL || model;
+const visionModel =
+process.env.GROQ_VISION_MODEL || model;
 
-    let lastUserIndex = -1;
+let lastUserIndex = -1;
 
-    for (let i = chatMessages.length - 1; i >= 0; i--) {
-      if (chatMessages[i].role === "user") {
-        lastUserIndex = i;
-        break;
-      }
-    }
+for (
+let i = chatMessages.length - 1;
+i >= 0;
+i--
+) {
+if (chatMessages[i].role === "user") {
+lastUserIndex = i;
+break;
+}
+}
 
-    if (lastUserIndex === -1) {
-      throw new Error("An image needs a user message.");
-    }
+if (lastUserIndex === -1) {
+throw new Error(
+"An image needs a user message."
+);
+}
 
-    const previousContent =
-      chatMessages[lastUserIndex].content;
+const previousContent =
+chatMessages[lastUserIndex].content;
 
-    chatMessages[lastUserIndex] = {
-      role: "user",
-      content: [
-        {
-          type: "text",
-          text:
-            typeof previousContent === "string"
-              ? previousContent
-              : "Please examine this image.",
-        },
-        {
-          type: "image_url",
-          image_url: {
-            url: `data:${image.mimeType};base64,${image.data}`,
-          },
-        },
-      ],
-    };
+chatMessages[lastUserIndex] = {
+role: "user",
+content: [
+{
+type: "text",
+text:
+typeof previousContent === "string"
+? previousContent
+: "Please examine this image.",
+},
+{
+type: "image_url",
+image_url: {
+url: data:${image.mimeType};base64,${image.data},
+},
+},
+],
+};
 
-    return callGroq(apiKey, visionModel, chatMessages);
-  }
+return callGroq(
+apiKey,
+visionModel,
+chatMessages
+);
 
-  return callGroq(apiKey, model, chatMessages);
+}
+
+return callGroq(
+apiKey,
+model,
+chatMessages
+);
 }
 
 // ============================================
@@ -811,41 +827,43 @@ async function groqChat(body) {
 // ============================================
 
 async function callGroq(apiKey, model, messages) {
-  const response = await fetch(GROQ_API_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature: 0.7,
-      max_tokens: 4096,
-    }),
-  });
+const response = await fetch(GROQ_API_URL, {
+method: "POST",
+headers: {
+Authorization: Bearer ${apiKey},
+"Content-Type": "application/json",
+},
+body: JSON.stringify({
+model,
+messages,
+temperature: 0.7,
+max_tokens: 4096,
+}),
+});
 
-  const data = await response.json().catch(() => ({}));
+const data = await response.json().catch(() => ({}));
 
-  if (!response.ok) {
-    throw new Error(
-      data.error?.message ||
-        `Groq request failed (${response.status}).`
-    );
-  }
+if (!response.ok) {
+throw new Error(
+data.error?.message ||
+Groq request failed (${response.status}).
+);
+}
 
-  const rawReply =
-    data.choices?.[0]?.message?.content;
+const rawReply =
+data.choices?.[0]?.message?.content;
 
-  if (!rawReply) {
-    throw new Error("Groq returned an empty response.");
-  }
+if (!rawReply) {
+throw new Error(
+"Groq returned an empty response."
+);
+}
 
-  return {
-    reply: cleanAIResponse(rawReply),
-    model: data.model || model,
-    usage: data.usage || null,
-  };
+return {
+reply: cleanAIResponse(rawReply),
+model: data.model || model,
+usage: data.usage || null,
+};
 }
 
 // ============================================
@@ -853,69 +871,77 @@ async function callGroq(apiKey, model, messages) {
 // ============================================
 
 async function generateImage(body) {
-  const apiKey = requireEnv("STABILITY_API_KEY");
+const apiKey = requireEnv("STABILITY_API_KEY");
 
-  const prompt =
-    typeof body.prompt === "string"
-      ? body.prompt.trim().slice(0, 4000)
-      : "";
+const prompt =
+typeof body.prompt === "string"
+? body.prompt.trim().slice(0, 4000)
+: "";
 
-  if (!prompt) {
-    throw new Error("Enter an image generation prompt.");
-  }
+if (!prompt) {
+throw new Error(
+"Enter an image generation prompt."
+);
+}
 
-  const form = new FormData();
+const form = new FormData();
 
-  form.append("prompt", prompt);
-  form.append("output_format", "png");
+form.append("prompt", prompt);
+form.append("output_format", "png");
 
-  const allowedRatios = [
-    "1:1",
-    "16:9",
-    "9:16",
-    "4:3",
-    "3:4",
-    "21:9",
-    "9:21",
-  ];
+const allowedRatios = [
+"1:1",
+"16:9",
+"9:16",
+"4:3",
+"3:4",
+"21:9",
+"9:21",
+];
 
-  if (allowedRatios.includes(body.aspectRatio)) {
-    form.append("aspect_ratio", body.aspectRatio);
-  }
+if (allowedRatios.includes(body.aspectRatio)) {
+form.append(
+"aspect_ratio",
+body.aspectRatio
+);
+}
 
-  const response = await fetch(STABILITY_API_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      Accept: "image/*",
-    },
-    body: form,
-  });
+const response = await fetch(STABILITY_API_URL, {
+method: "POST",
+headers: {
+Authorization: Bearer ${apiKey},
+Accept: "image/*",
+},
+body: form,
+});
 
-  if (!response.ok) {
-    const errorText = await response.text();
+if (!response.ok) {
+const errorText = await response.text();
 
-    throw new Error(
-      `Stability AI failed (${response.status}): ${errorText.slice(0, 500)}`
-    );
-  }
+throw new Error(
+Stability AI failed (${response.status}): ${errorText.slice(0, 500)}
+);
 
-  const contentType =
-    response.headers.get("content-type") || "";
+}
 
-  if (!contentType.includes("image")) {
-    throw new Error("Stability AI did not return an image.");
-  }
+const contentType =
+response.headers.get("content-type") || "";
 
-  const imageBuffer = Buffer.from(
-    await response.arrayBuffer()
-  );
+if (!contentType.includes("image")) {
+throw new Error(
+"Stability AI did not return an image."
+);
+}
 
-  return {
-    image:
-      `data:image/png;base64,${imageBuffer.toString("base64")}`,
-    format: "png",
-  };
+const imageBuffer = Buffer.from(
+await response.arrayBuffer()
+);
+
+return {
+image:
+data:image/png;base64,${imageBuffer.toString("base64")},
+format: "png",
+};
 }
 
 // ============================================
@@ -923,39 +949,40 @@ async function generateImage(body) {
 // ============================================
 
 async function liveFootball() {
-  const apiKey = requireEnv("FOOTBALL_API_KEY");
+const apiKey = requireEnv("FOOTBALL_API_KEY");
 
-  const response = await fetch(
-    `${FOOTBALL_API_URL}?live=all`,
-    {
-      headers: {
-        "x-apisports-key": apiKey,
-      },
-    }
-  );
+const response = await fetch(
+${FOOTBALL_API_URL}?live=all,
+{
+headers: {
+"x-apisports-key": apiKey,
+},
+}
+);
 
-  const data = await response.json().catch(() => ({}));
+const data = await response.json().catch(() => ({}));
 
-  if (!response.ok || data.errors?.length) {
-    throw new Error(
-      JSON.stringify(
-        data.errors || "Football API request failed."
-      )
-    );
-  }
+if (!response.ok || data.errors?.length) {
+throw new Error(
+JSON.stringify(
+data.errors ||
+"Football API request failed."
+)
+);
+}
 
-  return {
-    fixtures: (data.response || []).map((item) => ({
-      league: item.league?.name || "Competition",
-      home: item.teams?.home?.name || "Home",
-      away: item.teams?.away?.name || "Away",
-      homeGoals: item.goals?.home ?? null,
-      awayGoals: item.goals?.away ?? null,
-      status: item.fixture?.status?.long || "Unknown",
-      elapsed: item.fixture?.status?.elapsed ?? null,
-    })),
-    results: data.results || 0,
-  };
+return {
+fixtures: (data.response || []).map((item) => ({
+league: item.league?.name || "Competition",
+home: item.teams?.home?.name || "Home",
+away: item.teams?.away?.name || "Away",
+homeGoals: item.goals?.home ?? null,
+awayGoals: item.goals?.away ?? null,
+status: item.fixture?.status?.long || "Unknown",
+elapsed: item.fixture?.status?.elapsed ?? null,
+})),
+results: data.results || 0,
+};
 }
 
 // ============================================
@@ -963,154 +990,207 @@ async function liveFootball() {
 // ============================================
 
 export default async function handler(req, res) {
-  res.setHeader("Cache-Control", "no-store");
+res.setHeader("Cache-Control", "no-store");
 
-  if (req.method !== "POST") {
-    return send(res, 405, {
-      success: false,
-      error: "Method not allowed. Use POST.",
-    });
-  }
+if (req.method !== "POST") {
+return send(res, 405, {
+success: false,
+error: "Method not allowed. Use POST.",
+});
+}
 
-  try {
-    const body = await readBody(req);
-    const action = body.action;
+try {
+const body = await readBody(req);
+const action = body.action;
 
-    if (!ALLOWED_ACTIONS.has(action)) {
-      return send(res, 400, {
-        success: false,
-        error: "Unknown or missing action.",
-      });
-    }
+if (!ALLOWED_ACTIONS.has(action)) {
+return send(res, 400, {
+success: false,
+error: "Unknown or missing action.",
+});
+}
 
-    const visitor = getVisitor(req, res);
+const visitor = getVisitor(req, res);
 
-    switch (action) {
-      case "chat": {
-        const result = await groqChat(body);
+switch (action) {
 
-        let imageUrl = null;
+// ======================================
+// AI CHAT
+// ======================================
 
-        if (body.image) {
-          imageUrl = await uploadImageToBlob(body.image);
-        }
+case "chat": {
+const result = await groqChat(body);
 
-        return send(res, 200, {
-          success: true,
-          ...result,
-          imageUrl,
-        });
-      }
+return send(res, 200, {    
+  success: true,    
+  ...result,    
+});
 
-      case "history_save": {
-        const record = await saveHistory(visitor, body);
+}
 
-        return send(res, 200, {
-          success: true,
-          id: record.id,
-          history: record,
-        });
-      }
+// ======================================
+// SAVE HISTORY
+// ======================================
 
-      case "history_list": {
-        const histories = await listHistory(visitor);
+case "history_save": {
+const record = await saveHistory(
+visitor,
+body
+);
 
-        return send(res, 200, {
-          success: true,
-          items: histories,
-          histories,
-        });
-      }
+return send(res, 200, {    
+  success: true,    
+  id: record.id,    
+  history: record,    
+});
 
-      case "history_get": {
-        const history = await getHistory(visitor, body.id);
+}
 
-        if (!history) {
-          return send(res, 404, {
-            success: false,
-            error: "Conversation not found.",
-          });
-        }
+// ======================================
+// LIST HISTORY
+// ======================================
 
-        return send(res, 200, {
-          success: true,
-          id: history.id,
-          title: history.title,
-          messages: history.messages,
-          createdAt: history.createdAt,
-          updatedAt: history.updatedAt,
-          history,
-        });
-      }
+case "history_list": {
+const histories = await listHistory(visitor);
 
-      case "history_rename": {
-        const history = await renameHistory(
-          visitor,
-          body.id,
-          body.title
-        );
+return send(res, 200, {    
+  success: true,    
+  items: histories,    
+  histories,    
+});
 
-        if (!history) {
-          return send(res, 404, {
-            success: false,
-            error: "Conversation not found.",
-          });
-        }
+}
 
-        return send(res, 200, {
-          success: true,
-          history,
-        });
-      }
+// ======================================
+// OPEN HISTORY
+// ======================================
 
-      case "history_delete": {
-        await deleteHistory(visitor, body.id);
+case "history_get": {
+const history = await getHistory(
+visitor,
+body.id
+);
 
-        return send(res, 200, {
-          success: true,
-          message: "Conversation deleted.",
-        });
-      }
+if (!history) {    
+  return send(res, 404, {    
+    success: false,    
+    error: "Conversation not found.",    
+  });    
+}    
 
-      case "history_clear": {
-        await clearHistory(visitor);
+return send(res, 200, {    
+  success: true,    
+  id: history.id,    
+  title: history.title,    
+  messages: history.messages,    
+  createdAt: history.createdAt,    
+  updatedAt: history.updatedAt,    
+  history,    
+});
 
-        return send(res, 200, {
-          success: true,
-          message: "Conversation history cleared.",
-        });
-      }
+}
 
-      case "image_generate": {
-        const result = await generateImage(body);
+// ======================================
+// RENAME HISTORY
+// ======================================
 
-        return send(res, 200, {
-          success: true,
-          ...result,
-        });
-      }
+case "history_rename": {
+const history = await renameHistory(
+visitor,
+body.id,
+body.title
+);
 
-      case "football_live": {
-        const result = await liveFootball();
+if (!history) {    
+  return send(res, 404, {    
+    success: false,    
+    error: "Conversation not found.",    
+  });    
+}    
 
-        return send(res, 200, {
-          success: true,
-          ...result,
-        });
-      }
+return send(res, 200, {    
+  success: true,    
+  history,    
+});
 
-      default:
-        return send(res, 400, {
-          success: false,
-          error: "Unsupported action.",
-        });
-    }
-  } catch (error) {
-    console.error("MAYNARD AI API error:", error);
+}
 
-    return send(res, 500, {
-      success: false,
-      error: errorMessage(error),
-    });
-  }
+// ======================================
+// DELETE HISTORY
+// ======================================
+
+case "history_delete": {
+await deleteHistory(
+visitor,
+body.id
+);
+
+return send(res, 200, {    
+  success: true,    
+  message: "Conversation deleted.",    
+});
+
+}
+
+// ======================================
+// CLEAR HISTORY
+// ======================================
+
+case "history_clear": {
+await clearHistory(visitor);
+
+return send(res, 200, {    
+  success: true,    
+  message: "Conversation history cleared.",    
+});
+
+}
+
+// ======================================
+// IMAGE GENERATION
+// ======================================
+
+case "image_generate": {
+const result = await generateImage(body);
+
+return send(res, 200, {    
+  success: true,    
+  ...result,    
+});
+
+}
+
+// ======================================
+// LIVE FOOTBALL
+// ======================================
+
+case "football_live": {
+const result = await liveFootball();
+
+return send(res, 200, {    
+  success: true,    
+  ...result,    
+});
+
+}
+
+default:
+return send(res, 400, {
+success: false,
+error: "Unsupported action.",
+});
+}
+
+} catch (error) {
+console.error(
+"MAYNARD AI API error:",
+error
+);
+
+return send(res, 500, {
+success: false,
+error: errorMessage(error),
+});
+
+}
 }
