@@ -1,6 +1,12 @@
 
 import { randomUUID } from "node:crypto";
 
+// ============================================
+// MAYNARD AI
+// Groq + Stability AI + Upstash Redis
+// API-Football + Saved Conversation History
+// ============================================
+
 export const config = {
   maxDuration: 60,
 };
@@ -15,12 +21,15 @@ const FOOTBALL_API_URL =
   "https://v3.football.api-sports.io/fixtures";
 
 const COOKIE_NAME = "maynard_browser_v2";
+
 const HISTORY_LIMIT = 50;
 const MESSAGE_LIMIT = 100;
 const HISTORY_TTL = 60 * 60 * 24 * 365;
-const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
-const allowedActions = new Set([
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const MAX_BODY_BYTES = 15 * 1024 * 1024;
+
+const ALLOWED_ACTIONS = new Set([
   "chat",
   "history_save",
   "history_list",
@@ -32,23 +41,41 @@ const allowedActions = new Set([
   "football_live",
 ]);
 
+// ============================================
+// RESPONSE HELPERS
+// ============================================
+
 function send(res, status, data) {
-  res.status(status).json(data);
+  return res.status(status).json(data);
 }
 
-function getCookie(req, name) {
-  const cookie = req.headers.cookie || "";
-  const parts = cookie.split(";");
+function errorMessage(error) {
+  return error instanceof Error
+    ? error.message
+    : "An unexpected server error occurred.";
+}
 
-  for (const part of parts) {
+// ============================================
+// COOKIE / VISITOR IDENTIFICATION
+// ============================================
+
+function getCookie(req, name) {
+  const cookieHeader = req.headers.cookie || "";
+
+  for (const part of cookieHeader.split(";")) {
     const index = part.indexOf("=");
+
     if (index === -1) continue;
 
     const key = part.slice(0, index).trim();
     const value = part.slice(index + 1).trim();
 
     if (key === name) {
-      return decodeURIComponent(value);
+      try {
+        return decodeURIComponent(value);
+      } catch {
+        return null;
+      }
     }
   }
 
@@ -57,7 +84,9 @@ function getCookie(req, name) {
 
 function setVisitorCookie(res, visitorId) {
   const secure =
-    process.env.NODE_ENV === "production" ? "; Secure" : "";
+    process.env.NODE_ENV === "production"
+      ? "; Secure"
+      : "";
 
   res.setHeader(
     "Set-Cookie",
@@ -68,7 +97,10 @@ function setVisitorCookie(res, visitorId) {
 function getVisitor(req, res) {
   let visitorId = getCookie(req, COOKIE_NAME);
 
-  if (!visitorId || !/^[a-f0-9-]{36}$/i.test(visitorId)) {
+  if (
+    !visitorId ||
+    !/^[a-f0-9-]{36}$/i.test(visitorId)
+  ) {
     visitorId = randomUUID();
     setVisitorCookie(res, visitorId);
   }
@@ -76,17 +108,25 @@ function getVisitor(req, res) {
   return visitorId;
 }
 
+// ============================================
+// REQUEST BODY
+// ============================================
+
 async function readBody(req) {
-  if (req.body && typeof req.body === "object") {
+  if (
+    req.body &&
+    typeof req.body === "object" &&
+    !Buffer.isBuffer(req.body)
+  ) {
     return req.body;
   }
 
   let raw = "";
 
   for await (const chunk of req) {
-    raw += chunk;
+    raw += chunk.toString();
 
-    if (raw.length > 15 * 1024 * 1024) {
+    if (Buffer.byteLength(raw) > MAX_BODY_BYTES) {
       throw new Error("Request body is too large.");
     }
   }
@@ -103,12 +143,18 @@ async function readBody(req) {
 function requireEnv(name) {
   const value = process.env[name];
 
-  if (!value) {
-    throw new Error(`Missing environment variable: ${name}`);
+  if (!value || !value.trim()) {
+    throw new Error(
+      `Missing environment variable: ${name}`
+    );
   }
 
-  return value;
+  return value.trim();
 }
+
+// ============================================
+// UPSTASH REDIS
+// ============================================
 
 function historyKey(visitor, id) {
   return `maynard:history:${visitor}:${id}`;
@@ -122,26 +168,35 @@ async function redis(command, ...args) {
   const url = requireEnv("UPSTASH_REDIS_REST_URL");
   const token = requireEnv("UPSTASH_REDIS_REST_TOKEN");
 
-  const response = await fetch(
-    `${url.replace(/\/$/, "")}/${command}/${args
-      .map((value) => encodeURIComponent(String(value)))
-      .join("/")}`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
+  const encodedArgs = args
+    .map((value) => encodeURIComponent(String(value)))
+    .join("/");
 
-  const result = await response.json();
+  const endpoint =
+    `${url.replace(/\/$/, "")}/${command}` +
+    (encodedArgs ? `/${encodedArgs}` : "");
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const result = await response.json().catch(() => ({}));
 
   if (!response.ok || result.error) {
-    throw new Error(result.error || "Redis request failed.");
+    throw new Error(
+      result.error || `Redis request failed (${response.status}).`
+    );
   }
 
   return result.result;
 }
+
+// ============================================
+// MESSAGE CLEANING
+// ============================================
 
 function cleanMessages(messages) {
   if (!Array.isArray(messages)) return [];
@@ -157,9 +212,15 @@ function cleanMessages(messages) {
     .map((message) => ({
       role: message.role,
       content: message.content.slice(0, 20000),
-      ...(message.imageOmitted ? { imageOmitted: true } : {}),
+      ...(message.imageOmitted
+        ? { imageOmitted: true }
+        : {}),
     }));
 }
+
+// ============================================
+// SAVE CONVERSATION
+// ============================================
 
 async function saveHistory(visitor, body) {
   const messages = cleanMessages(body.messages);
@@ -174,12 +235,9 @@ async function saveHistory(visitor, body) {
       ? body.id
       : randomUUID();
 
-  const now = new Date().toISOString();
+  const key = historyKey(visitor, id);
 
-  const existingRaw = await redis(
-    "GET",
-    historyKey(visitor, id)
-  );
+  const existingRaw = await redis("GET", key);
 
   let existing = null;
 
@@ -191,12 +249,18 @@ async function saveHistory(visitor, body) {
     }
   }
 
+  const now = new Date().toISOString();
+
+  const firstUserMessage = messages.find(
+    (message) => message.role === "user"
+  );
+
   const title =
-    typeof body.title === "string" && body.title.trim()
+    typeof body.title === "string" &&
+    body.title.trim()
       ? body.title.trim().slice(0, 100)
       : existing?.title ||
-        messages.find((message) => message.role === "user")
-          ?.content.slice(0, 60) ||
+        firstUserMessage?.content.slice(0, 60) ||
         "New conversation";
 
   const record = {
@@ -209,7 +273,7 @@ async function saveHistory(visitor, body) {
 
   await redis(
     "SET",
-    historyKey(visitor, id),
+    key,
     JSON.stringify(record),
     "EX",
     HISTORY_TTL
@@ -228,17 +292,16 @@ async function saveHistory(visitor, body) {
     HISTORY_TTL
   );
 
-  const count = await redis(
-    "ZCARD",
-    historyIndexKey(visitor)
+  const count = Number(
+    await redis("ZCARD", historyIndexKey(visitor))
   );
 
-  if (Number(count) > HISTORY_LIMIT) {
+  if (count > HISTORY_LIMIT) {
     const oldIds = await redis(
       "ZRANGE",
       historyIndexKey(visitor),
       0,
-      Number(count) - HISTORY_LIMIT - 1
+      count - HISTORY_LIMIT - 1
     );
 
     if (Array.isArray(oldIds)) {
@@ -262,6 +325,10 @@ async function saveHistory(visitor, body) {
 
   return record;
 }
+
+// ============================================
+// LIST CONVERSATIONS
+// ============================================
 
 async function listHistory(visitor) {
   const ids = await redis(
@@ -294,15 +361,22 @@ async function listHistory(visitor) {
         messageCount: record.messages?.length || 0,
       });
     } catch {
-      // Ignore invalid history records.
+      // Skip invalid records.
     }
   }
 
   return histories;
 }
 
+// ============================================
+// GET ONE CONVERSATION
+// ============================================
+
 async function getHistory(visitor, id) {
-  if (!id || !/^[a-f0-9-]{36}$/i.test(id)) {
+  if (
+    typeof id !== "string" ||
+    !/^[a-f0-9-]{36}$/i.test(id)
+  ) {
     throw new Error("Invalid conversation ID.");
   }
 
@@ -313,15 +387,26 @@ async function getHistory(visitor, id) {
 
   if (!raw) return null;
 
-  return JSON.parse(raw);
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw new Error("Saved conversation data is invalid.");
+  }
 }
+
+// ============================================
+// RENAME CONVERSATION
+// ============================================
 
 async function renameHistory(visitor, id, title) {
   const record = await getHistory(visitor, id);
 
   if (!record) return null;
 
-  if (typeof title !== "string" || !title.trim()) {
+  if (
+    typeof title !== "string" ||
+    !title.trim()
+  ) {
     throw new Error("A conversation title is required.");
   }
 
@@ -339,16 +424,35 @@ async function renameHistory(visitor, id, title) {
   return record;
 }
 
+// ============================================
+// DELETE ONE CONVERSATION
+// ============================================
+
 async function deleteHistory(visitor, id) {
-  if (!id || !/^[a-f0-9-]{36}$/i.test(id)) {
+  if (
+    typeof id !== "string" ||
+    !/^[a-f0-9-]{36}$/i.test(id)
+  ) {
     throw new Error("Invalid conversation ID.");
   }
 
-  await redis("DEL", historyKey(visitor, id));
-  await redis("ZREM", historyIndexKey(visitor), id);
+  await redis(
+    "DEL",
+    historyKey(visitor, id)
+  );
+
+  await redis(
+    "ZREM",
+    historyIndexKey(visitor),
+    id
+  );
 
   return true;
 }
+
+// ============================================
+// CLEAR ALL CONVERSATIONS
+// ============================================
 
 async function clearHistory(visitor) {
   const ids = await redis(
@@ -367,10 +471,17 @@ async function clearHistory(visitor) {
     }
   }
 
-  await redis("DEL", historyIndexKey(visitor));
+  await redis(
+    "DEL",
+    historyIndexKey(visitor)
+  );
 
   return true;
 }
+
+// ============================================
+// IMAGE VALIDATION
+// ============================================
 
 function extractImageData(image) {
   if (typeof image !== "string") {
@@ -387,18 +498,27 @@ function extractImageData(image) {
     );
   }
 
-  const buffer = Buffer.from(match[2], "base64");
+  const data = match[2];
+  const buffer = Buffer.from(data, "base64");
 
   if (buffer.length > MAX_IMAGE_BYTES) {
-    throw new Error("Image must be 8 MB or smaller.");
+    throw new Error(
+      "Image must be 8 MB or smaller."
+    );
   }
 
   return {
     mimeType:
-      match[1] === "jpg" ? "image/jpeg" : `image/${match[1]}`,
-    data: match[2],
+      match[1] === "jpg"
+        ? "image/jpeg"
+        : `image/${match[1]}`,
+    data,
   };
 }
+
+// ============================================
+// GROQ AI CHAT
+// ============================================
 
 async function groqChat(body) {
   const apiKey = requireEnv("GROQ_API_KEY");
@@ -412,7 +532,9 @@ async function groqChat(body) {
         .filter(
           (message) =>
             message &&
-            ["system", "user", "assistant"].includes(message.role)
+            ["system", "user", "assistant"].includes(
+              message.role
+            )
         )
         .slice(-MESSAGE_LIMIT)
         .map((message) => ({
@@ -424,7 +546,10 @@ async function groqChat(body) {
         }))
     : [];
 
-  if (!messages.length && typeof body.message === "string") {
+  if (
+    !messages.length &&
+    typeof body.message === "string"
+  ) {
     messages.push({
       role: "user",
       content: body.message.slice(0, 20000),
@@ -432,20 +557,31 @@ async function groqChat(body) {
   }
 
   if (!messages.length) {
-    throw new Error("Enter a message before sending.");
+    throw new Error(
+      "Enter a message before sending."
+    );
   }
 
+  // Image understanding
   if (body.image) {
     const image = extractImageData(body.image);
+
     const visionModel =
       process.env.GROQ_VISION_MODEL || model;
 
-    const lastUserIndex = messages.findLastIndex(
-      (message) => message.role === "user"
-    );
+    let lastUserIndex = -1;
+
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "user") {
+        lastUserIndex = i;
+        break;
+      }
+    }
 
     if (lastUserIndex === -1) {
-      throw new Error("An image needs a user message.");
+      throw new Error(
+        "An image needs a user message."
+      );
     }
 
     const previousContent =
@@ -459,7 +595,7 @@ async function groqChat(body) {
           text:
             typeof previousContent === "string"
               ? previousContent
-              : "Please describe this image.",
+              : "Please examine this image.",
         },
         {
           type: "image_url",
@@ -470,11 +606,23 @@ async function groqChat(body) {
       ],
     };
 
-    return await callGroq(apiKey, visionModel, messages);
+    return callGroq(
+      apiKey,
+      visionModel,
+      messages
+    );
   }
 
-  return await callGroq(apiKey, model, messages);
+  return callGroq(
+    apiKey,
+    model,
+    messages
+  );
 }
+
+// ============================================
+// GROQ API REQUEST
+// ============================================
 
 async function callGroq(apiKey, model, messages) {
   const response = await fetch(GROQ_API_URL, {
@@ -491,7 +639,7 @@ async function callGroq(apiKey, model, messages) {
     }),
   });
 
-  const data = await response.json();
+  const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
     throw new Error(
@@ -500,10 +648,13 @@ async function callGroq(apiKey, model, messages) {
     );
   }
 
-  const reply = data.choices?.[0]?.message?.content;
+  const reply =
+    data.choices?.[0]?.message?.content;
 
   if (!reply) {
-    throw new Error("Groq returned an empty response.");
+    throw new Error(
+      "Groq returned an empty response."
+    );
   }
 
   return {
@@ -512,6 +663,10 @@ async function callGroq(apiKey, model, messages) {
     usage: data.usage || null,
   };
 }
+
+// ============================================
+// STABILITY AI IMAGE GENERATION
+// ============================================
 
 async function generateImage(body) {
   const apiKey = requireEnv("STABILITY_API_KEY");
@@ -522,7 +677,9 @@ async function generateImage(body) {
       : "";
 
   if (!prompt) {
-    throw new Error("Enter an image generation prompt.");
+    throw new Error(
+      "Enter an image generation prompt."
+    );
   }
 
   const form = new FormData();
@@ -530,20 +687,23 @@ async function generateImage(body) {
   form.append("prompt", prompt);
   form.append("output_format", "png");
 
-  if (body.aspectRatio) {
-    const allowedRatios = [
-      "1:1",
-      "16:9",
-      "9:16",
-      "4:3",
-      "3:4",
-      "21:9",
-      "9:21",
-    ];
+  const allowedRatios = [
+    "1:1",
+    "16:9",
+    "9:16",
+    "4:3",
+    "3:4",
+    "21:9",
+    "9:21",
+  ];
 
-    if (allowedRatios.includes(body.aspectRatio)) {
-      form.append("aspect_ratio", body.aspectRatio);
-    }
+  if (
+    allowedRatios.includes(body.aspectRatio)
+  ) {
+    form.append(
+      "aspect_ratio",
+      body.aspectRatio
+    );
   }
 
   const response = await fetch(STABILITY_API_URL, {
@@ -577,10 +737,15 @@ async function generateImage(body) {
   );
 
   return {
-    image: `data:image/png;base64,${imageBuffer.toString("base64")}`,
+    image:
+      `data:image/png;base64,${imageBuffer.toString("base64")}`,
     format: "png",
   };
 }
+
+// ============================================
+// LIVE FOOTBALL
+// ============================================
 
 async function liveFootball() {
   const apiKey = requireEnv("FOOTBALL_API_KEY");
@@ -594,25 +759,40 @@ async function liveFootball() {
     }
   );
 
-  const data = await response.json();
+  const data = await response.json().catch(() => ({}));
 
   if (!response.ok || data.errors?.length) {
     throw new Error(
-      JSON.stringify(data.errors || "Football API request failed.")
+      JSON.stringify(
+        data.errors || "Football API request failed."
+      )
     );
   }
 
   return {
-    fixtures: data.response || [],
+    fixtures: (data.response || []).map((item) => ({
+      league: item.league?.name || "Competition",
+      home: item.teams?.home?.name || "Home",
+      away: item.teams?.away?.name || "Away",
+      homeGoals: item.goals?.home ?? null,
+      awayGoals: item.goals?.away ?? null,
+      status: item.fixture?.status?.long || "Unknown",
+      elapsed: item.fixture?.status?.elapsed ?? null,
+    })),
     results: data.results || 0,
   };
 }
+
+// ============================================
+// MAIN VERCEL API HANDLER
+// ============================================
 
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
 
   if (req.method !== "POST") {
     return send(res, 405, {
+      success: false,
       error: "Method not allowed. Use POST.",
     });
   }
@@ -621,8 +801,9 @@ export default async function handler(req, res) {
     const body = await readBody(req);
     const action = body.action;
 
-    if (!allowedActions.has(action)) {
+    if (!ALLOWED_ACTIONS.has(action)) {
       return send(res, 400, {
+        success: false,
         error: "Unknown or missing action.",
       });
     }
@@ -630,6 +811,11 @@ export default async function handler(req, res) {
     const visitor = getVisitor(req, res);
 
     switch (action) {
+
+      // ----------------------------------------
+      // AI CHAT
+      // ----------------------------------------
+
       case "chat": {
         const result = await groqChat(body);
 
@@ -639,24 +825,43 @@ export default async function handler(req, res) {
         });
       }
 
+      // ----------------------------------------
+      // SAVE HISTORY
+      // ----------------------------------------
+
       case "history_save": {
-        const record = await saveHistory(visitor, body);
+        const record = await saveHistory(
+          visitor,
+          body
+        );
 
         return send(res, 200, {
           success: true,
-          history: record,
           id: record.id,
+          history: record,
         });
       }
+
+      // ----------------------------------------
+      // LIST HISTORY
+      // Supports index.html result.items
+      // ----------------------------------------
 
       case "history_list": {
         const histories = await listHistory(visitor);
 
         return send(res, 200, {
           success: true,
+          items: histories,
           histories,
         });
       }
+
+      // ----------------------------------------
+      // OPEN HISTORY
+      // Supports index.html result.title
+      // and result.messages
+      // ----------------------------------------
 
       case "history_get": {
         const history = await getHistory(
@@ -666,15 +871,25 @@ export default async function handler(req, res) {
 
         if (!history) {
           return send(res, 404, {
+            success: false,
             error: "Conversation not found.",
           });
         }
 
         return send(res, 200, {
           success: true,
+          id: history.id,
+          title: history.title,
+          messages: history.messages,
+          createdAt: history.createdAt,
+          updatedAt: history.updatedAt,
           history,
         });
       }
+
+      // ----------------------------------------
+      // RENAME HISTORY
+      // ----------------------------------------
 
       case "history_rename": {
         const history = await renameHistory(
@@ -685,6 +900,7 @@ export default async function handler(req, res) {
 
         if (!history) {
           return send(res, 404, {
+            success: false,
             error: "Conversation not found.",
           });
         }
@@ -695,14 +911,25 @@ export default async function handler(req, res) {
         });
       }
 
+      // ----------------------------------------
+      // DELETE HISTORY
+      // ----------------------------------------
+
       case "history_delete": {
-        await deleteHistory(visitor, body.id);
+        await deleteHistory(
+          visitor,
+          body.id
+        );
 
         return send(res, 200, {
           success: true,
           message: "Conversation deleted.",
         });
       }
+
+      // ----------------------------------------
+      // CLEAR HISTORY
+      // ----------------------------------------
 
       case "history_clear": {
         await clearHistory(visitor);
@@ -713,6 +940,10 @@ export default async function handler(req, res) {
         });
       }
 
+      // ----------------------------------------
+      // IMAGE GENERATION
+      // ----------------------------------------
+
       case "image_generate": {
         const result = await generateImage(body);
 
@@ -721,6 +952,10 @@ export default async function handler(req, res) {
           ...result,
         });
       }
+
+      // ----------------------------------------
+      // LIVE FOOTBALL
+      // ----------------------------------------
 
       case "football_live": {
         const result = await liveFootball();
@@ -733,17 +968,20 @@ export default async function handler(req, res) {
 
       default:
         return send(res, 400, {
+          success: false,
           error: "Unsupported action.",
         });
     }
+
   } catch (error) {
-    console.error("MAYNARD AI API error:", error);
+    console.error(
+      "MAYNARD AI API error:",
+      error
+    );
 
     return send(res, 500, {
       success: false,
-      error:
-        error.message ||
-        "An unexpected server error occurred.",
+      error: errorMessage(error),
     });
   }
 }
