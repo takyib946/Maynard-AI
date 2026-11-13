@@ -14,228 +14,923 @@ window.MathJax = {
     displayMath: [['\\[', '\\]'], ['$$', '$$']],
     packages: {'[+]': ['ams']}
   },
-  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+  options: {
+    skipHtmlTags: ['script','noscript','style','textarea','pre','code']
+  },
   startup: { typeset: false }
 };
 </script>
+
 <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/13.2.0/math.min.js"></script>
 
 <style>
 :root {
   color-scheme: dark;
-  --black:#000;
-  --panel:#080808;
-  --panel2:#101010;
-  --line:#242424;
-  --text:#f5f5f5;
-  --muted:#999;
-  --accent:#a78bfa;
-  --danger:#ff6262;
+  --black: #000;
+  --panel: #080808;
+  --panel2: #111;
+  --line: #292929;
+  --text: #f5f5f5;
+  --muted: #999;
+  --accent: #a78bfa;
 }
-* { box-sizing:border-box; }
-html,body { margin:0; min-height:100%; background:#000; color:var(--text); font-family:Arial,Helvetica,sans-serif; }
-body { overflow:hidden; }
-button,input,textarea { font:inherit; }
-button { cursor:pointer; }
-.app { height:100dvh; display:flex; background:#000; }
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: #000;
+  color: var(--text);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+  overflow: hidden;
+}
+
+button, input, textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.app {
+  height: 100dvh;
+  display: flex;
+  background: #000;
+}
+
 .sidebar {
-  width:270px; flex-shrink:0; background:#000; border-right:1px solid var(--line);
-  display:flex; flex-direction:column; padding:16px; gap:14px;
+  width: 270px;
+  flex-shrink: 0;
+  background: #000;
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  gap: 14px;
 }
-.brand { font-size:21px; font-weight:800; letter-spacing:2px; padding:8px 4px 16px; }
-.brand span { color:var(--accent); }
-.new-chat,.side-button {
-  width:100%; background:#090909; color:#eee; border:1px solid #292929;
-  border-radius:10px; padding:12px; text-align:left;
+
+.brand {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  padding: 8px 4px 16px;
 }
-.new-chat:hover,.side-button:hover { background:#171717; }
-.side-heading { color:#888; font-size:11px; letter-spacing:1.5px; margin:12px 4px 4px; }
-.history-list { overflow:auto; flex:1; }
+
+.brand span {
+  color: var(--accent);
+}
+
+.new-chat, .side-button {
+  width: 100%;
+  background: #090909;
+  color: #eee;
+  border: 1px solid #292929;
+  border-radius: 10px;
+  padding: 12px;
+  text-align: left;
+}
+
+.new-chat:hover, .side-button:hover {
+  background: #171717;
+}
+
+.side-heading {
+  color: #888;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  margin: 12px 4px 4px;
+}
+
+.history-list {
+  overflow: auto;
+  flex: 1;
+}
+
 .history-item {
-  display:flex; align-items:center; gap:5px; margin:5px 0;
-  border:1px solid transparent; border-radius:9px; padding:5px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 5px 0;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  padding: 5px;
 }
-.history-item:hover { background:#111; border-color:#292929; }
+
+.history-item:hover {
+  background: #111;
+  border-color: #292929;
+}
+
 .history-open {
-  flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  border:0; background:transparent; color:#ddd; text-align:left; padding:7px 4px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 0;
+  background: transparent;
+  color: #ddd;
+  text-align: left;
+  padding: 7px 4px;
 }
-.history-action { border:0; background:transparent; color:#888; padding:7px; }
-.history-action:hover { color:white; }
-.main { flex:1; min-width:0; display:flex; flex-direction:column; background:#000; }
+
+.history-action {
+  border: 0;
+  background: transparent;
+  color: #888;
+  padding: 7px;
+}
+
+.history-action:hover {
+  color: white;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+}
+
 .topbar {
-  height:60px; flex-shrink:0; display:flex; align-items:center; justify-content:space-between;
-  border-bottom:1px solid var(--line); padding:0 18px; background:#000;
+  height: 60px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  padding: 0 18px;
+  background: #000;
 }
-.top-title { font-weight:700; letter-spacing:.5px; }
-.top-actions { display:flex; gap:8px; }
+
+.top-title {
+  font-weight: 700;
+  letter-spacing: .5px;
+}
+
+.top-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .small-button {
-  border:1px solid #292929; background:#0b0b0b; color:#ddd; padding:8px 11px; border-radius:8px;
+  border: 1px solid #292929;
+  background: #0b0b0b;
+  color: #ddd;
+  padding: 8px 11px;
+  border-radius: 8px;
 }
-.small-button:hover { background:#1a1a1a; }
-.chat-area { flex:1; overflow:auto; padding:24px 5vw 30px; }
-.welcome { max-width:780px; margin:12vh auto 0; text-align:center; }
-.welcome h1 { font-size:clamp(28px,5vw,44px); margin-bottom:10px; }
-.welcome p { color:var(--muted); line-height:1.6; }
-.quick-actions { display:flex; flex-wrap:wrap; justify-content:center; gap:9px; margin-top:25px; }
-.quick-actions button { background:#090909; border:1px solid #292929; color:#ddd; border-radius:20px; padding:10px 14px; }
-.messages { max-width:900px; margin:0 auto; display:flex; flex-direction:column; gap:18px; }
-.message { width:100%; display:flex; justify-content:flex-start; }
-.message.user-message,.message.assistant-message { justify-content:flex-start; }
+
+.small-button:hover {
+  background: #1a1a1a;
+}
+
+/* MODE MENU */
+
+.mode-wrap {
+  position: relative;
+}
+
+.mode-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 43px;
+  width: 220px;
+  background: #101010;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 7px;
+  z-index: 20;
+  box-shadow: 0 12px 35px #000;
+}
+
+.mode-menu.open {
+  display: block;
+}
+
+.mode-menu button {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  color: #eee;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.mode-menu button:hover,
+.mode-menu button.active {
+  background: #242424;
+}
+
+.mode-description {
+  color: #999;
+  font-size: 11px;
+  padding: 7px 10px;
+  line-height: 1.5;
+}
+
+/* CHAT */
+
+.chat-area {
+  flex: 1;
+  overflow: auto;
+  padding: 24px 5vw 30px;
+}
+
+.welcome {
+  max-width: 780px;
+  margin: 12vh auto 0;
+  text-align: center;
+}
+
+.welcome h1 {
+  font-size: clamp(28px, 5vw, 44px);
+  margin-bottom: 10px;
+}
+
+.welcome p {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 9px;
+  margin-top: 25px;
+}
+
+.quick-actions button {
+  background: #090909;
+  border: 1px solid #292929;
+  color: #ddd;
+  border-radius: 20px;
+  padding: 10px 14px;
+}
+
+.messages {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.message {
+  width: 100%;
+  display: flex;
+}
+
+/* USER ON THE RIGHT */
+
+.message.user-message {
+  justify-content: flex-end;
+}
+
+/* ASSISTANT ON THE LEFT */
+
+.message.assistant-message {
+  justify-content: flex-start;
+}
+
 .bubble {
-  max-width:min(90%,780px); padding:14px 16px; border:1px solid #242424;
-  border-radius:14px; background:#090909; color:#eee; line-height:1.65;
-  overflow-wrap:anywhere; white-space:normal;
+  max-width: min(90%, 780px);
+  padding: 14px 16px;
+  border: 1px solid #242424;
+  border-radius: 14px;
+  background: #090909;
+  color: #eee;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
-.user-message .bubble { background:#111; margin-left:0; margin-right:auto; }
-.assistant-message .bubble { background:#050505; margin-left:0; margin-right:auto; }
-.bubble p { margin:0 0 10px; }
-.bubble p:last-child { margin-bottom:0; }
-.bubble pre { white-space:pre-wrap; overflow:auto; background:#151515; padding:12px; border-radius:8px; }
-.bubble code { background:#191919; padding:2px 5px; border-radius:4px; }
-.bubble pre code { background:transparent; padding:0; }
-.bubble img { max-width:100%; border-radius:10px; }
-.bubble table { border-collapse:collapse; max-width:100%; }
-.bubble th,.bubble td { border:1px solid #444; padding:7px; }
-.typing { color:#aaa; font-size:13px; }
-.composer-wrap { border-top:1px solid var(--line); padding:14px 5vw 18px; background:#000; }
-.composer { max-width:900px; margin:auto; border:1px solid #303030; background:#090909; border-radius:15px; padding:10px; }
-#prompt { display:block; width:100%; min-height:54px; max-height:180px; resize:vertical; border:0; outline:0; color:white; background:transparent; padding:8px; }
-.composer-tools { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-.tool-button { border:1px solid #292929; color:#ddd; background:#111; border-radius:9px; padding:9px 11px; }
-.tool-button:hover { background:#202020; }
-.send-button { margin-left:auto; background:#eee; color:#000; border:0; border-radius:9px; padding:10px 18px; font-weight:700; }
-.send-button:disabled { opacity:.5; cursor:not-allowed; }
-#fileInput { display:none; }
-#imagePreview { display:none; margin:6px 0; color:#aaa; font-size:13px; }
-.note { color:#777; font-size:11px; text-align:center; margin:9px 0 0; }
-.modal-backdrop { position:fixed; inset:0; background:#000c; display:none; align-items:center; justify-content:center; padding:16px; z-index:10; }
-.modal { width:min(600px,100%); max-height:85vh; overflow:auto; background:#050505; border:1px solid #333; border-radius:15px; padding:20px; }
-.modal h2 { margin-top:0; }
-.modal input,.modal textarea { width:100%; background:#111; border:1px solid #333; color:white; padding:11px; border-radius:8px; margin:7px 0 12px; }
-.modal textarea { min-height:100px; }
-.modal-row { display:flex; gap:8px; flex-wrap:wrap; }
-.modal-row button { border:1px solid #333; background:#111; color:#eee; padding:10px 14px; border-radius:8px; }
-.modal-close { float:right; }
-.result { margin-top:15px; padding:12px; background:#101010; border:1px solid #292929; border-radius:9px; overflow-wrap:anywhere; }
-.result img { max-width:100%; border-radius:9px; }
+
+.user-message .bubble {
+  background: #171717;
+  margin-left: auto;
+  margin-right: 0;
+  border-radius: 15px 15px 3px 15px;
+}
+
+.assistant-message .bubble {
+  background: #050505;
+  margin-left: 0;
+  margin-right: auto;
+  border-radius: 15px 15px 15px 3px;
+}
+
+.bubble p {
+  margin: 0 0 10px;
+}
+
+.bubble p:last-child {
+  margin-bottom: 0;
+}
+
+.bubble pre {
+  white-space: pre-wrap;
+  overflow: auto;
+  background: #151515;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.bubble code {
+  background: #191919;
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+.bubble pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.bubble img {
+  display: block;
+  max-width: 100%;
+  max-height: 420px;
+  border-radius: 10px;
+  margin-top: 10px;
+}
+
+.bubble table {
+  border-collapse: collapse;
+  max-width: 100%;
+}
+
+.bubble th, .bubble td {
+  border: 1px solid #444;
+  padding: 7px;
+}
+
+.typing {
+  color: #aaa;
+  font-size: 13px;
+  padding: 8px;
+}
+
+/* COMPOSER */
+
+.composer-wrap {
+  border-top: 1px solid var(--line);
+  padding: 14px 5vw 18px;
+  background: #000;
+}
+
+.composer {
+  max-width: 900px;
+  margin: auto;
+  border: 1px solid #303030;
+  background: #090909;
+  border-radius: 15px;
+  padding: 10px;
+}
+
+#prompt {
+  display: block;
+  width: 100%;
+  min-height: 54px;
+  max-height: 180px;
+  resize: vertical;
+  border: 0;
+  outline: 0;
+  color: white;
+  background: transparent;
+  padding: 8px;
+}
+
+.composer-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tool-button {
+  border: 1px solid #292929;
+  color: #ddd;
+  background: #111;
+  border-radius: 9px;
+  padding: 9px 11px;
+}
+
+.tool-button:hover {
+  background: #202020;
+}
+
+.send-button {
+  margin-left: auto;
+  background: #eee;
+  color: #000;
+  border: 0;
+  border-radius: 9px;
+  padding: 10px 18px;
+  font-weight: 700;
+}
+
+.send-button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+#fileInput {
+  display: none;
+}
+
+/* REAL IMAGE PREVIEW */
+
+#imagePreview {
+  display: none;
+  margin: 10px 0;
+  padding: 10px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 12px;
+}
+
+.preview-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.preview-container img {
+  width: 85px;
+  height: 85px;
+  object-fit: cover;
+  border-radius: 9px;
+  border: 1px solid #444;
+}
+
+.preview-info {
+  flex: 1;
+  min-width: 0;
+  color: #ccc;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.preview-info p {
+  margin: 5px 0;
+  color: #999;
+}
+
+.remove-image {
+  background: #292929;
+  color: white;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 8px 11px;
+}
+
+.note {
+  color: #777;
+  font-size: 11px;
+  text-align: center;
+  margin: 9px 0 0;
+}
+
+/* MODAL */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: #000c;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 30;
+}
+
+.modal {
+  width: min(600px, 100%);
+  max-height: 85vh;
+  overflow: auto;
+  background: #050505;
+  border: 1px solid #333;
+  border-radius: 15px;
+  padding: 20px;
+}
+
+.modal h2 {
+  margin-top: 0;
+}
+
+.modal input, .modal textarea {
+  width: 100%;
+  background: #111;
+  border: 1px solid #333;
+  color: white;
+  padding: 11px;
+  border-radius: 8px;
+  margin: 7px 0 12px;
+}
+
+.modal textarea {
+  min-height: 100px;
+}
+
+.modal-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.modal-row button {
+  border: 1px solid #333;
+  background: #111;
+  color: #eee;
+  padding: 10px 14px;
+  border-radius: 8px;
+}
+
+.modal-close {
+  float: right;
+}
+
+.result {
+  margin-top: 15px;
+  padding: 12px;
+  background: #101010;
+  border: 1px solid #292929;
+  border-radius: 9px;
+  overflow-wrap: anywhere;
+}
+
+.result img {
+  max-width: 100%;
+  border-radius: 9px;
+}
+
 @media(max-width:720px) {
-  .sidebar { width:220px; padding:10px; }
-  .chat-area { padding:18px 13px 24px; }
-  .composer-wrap { padding:10px 12px 14px; }
+  .sidebar {
+    width: 220px;
+    padding: 10px;
+  }
+
+  .chat-area {
+    padding: 18px 13px 24px;
+  }
+
+  .composer-wrap {
+    padding: 10px 12px 14px;
+  }
 }
+
 @media(max-width:540px) {
-  .sidebar { display:none; }
-  .topbar { padding:0 12px; }
-  .bubble { max-width:96%; }
+  .sidebar {
+    display: none;
+  }
+
+  .topbar {
+    padding: 0 12px;
+  }
+
+  .bubble {
+    max-width: 96%;
+  }
+
+  .preview-container {
+    flex-wrap: wrap;
+  }
 }
 </style>
 </head>
 
 <body>
+
 <div class="app">
+
   <aside class="sidebar">
+
     <div class="brand">MAYNARD <span>AI</span></div>
-    <button class="new-chat" id="newChatBtn">＋ New conversation</button>
+
+    <button class="new-chat" id="newChatBtn">
+      ＋ New conversation
+    </button>
+
     <div class="side-heading">SAVED HISTORY</div>
+
     <div class="history-list" id="historyList"></div>
-    <button class="side-button" id="clearHistoryBtn">Clear all history</button>
-    <button class="side-button" id="calculatorBtn">∑ Mathematical calculator</button>
-    <button class="side-button" id="imageStudioBtn">✦ Image studio</button>
-    <button class="side-button" id="footballBtn">⚽ Live football</button>
+
+    <button class="side-button" id="clearHistoryBtn">
+      Clear all history
+    </button>
+
+    <button class="side-button" id="calculatorBtn">
+      ∑ Mathematical calculator
+    </button>
+
+    <button class="side-button" id="imageStudioBtn">
+      ✦ Image studio
+    </button>
+
+    <button class="side-button" id="footballBtn">
+      ⚽ Live football
+    </button>
+
   </aside>
 
   <main class="main">
+
     <header class="topbar">
+
       <div class="top-title">MAYNARD AI</div>
+
       <div class="top-actions">
-        <button class="small-button" id="mobileNewBtn">＋ New</button>
-        <button class="small-button" id="mobileHistoryBtn">History</button>
+
+        <div class="mode-wrap">
+
+          <button class="small-button" id="modeBtn" aria-label="Choose assistant mode">
+            ⋯ <span id="currentModeLabel">General Assistant</span>
+          </button>
+
+          <div class="mode-menu" id="modeMenu">
+
+            <div class="mode-description">
+              Choose how MAYNARD AI should assist you.
+            </div>
+
+            <button data-mode="general" class="active">
+              ✦ General Assistant
+            </button>
+
+            <button data-mode="coding">
+              </> Coding
+            </button>
+
+            <button data-mode="essay">
+              ✎ Essay Writing
+            </button>
+
+          </div>
+
+        </div>
+
+        <button class="small-button" id="mobileNewBtn">
+          ＋ New
+        </button>
+
+        <button class="small-button" id="mobileHistoryBtn">
+          History
+        </button>
+
       </div>
+
     </header>
 
     <section class="chat-area" id="chatArea">
+
       <div class="welcome" id="welcome">
+
         <h1>Welcome to MAYNARD AI</h1>
-        <p>Your AI assistant for learning, mathematics, creativity, problem-solving and information.</p>
+
+        <p>
+          Your AI assistant for learning, mathematics,
+          creativity, coding, writing and problem-solving.
+        </p>
+
         <div class="quick-actions">
-          <button data-prompt="Explain this topic step by step.">Learn a topic</button>
-          <button data-prompt="Help me solve this mathematical problem step by step.">Mathematics</button>
-          <button data-prompt="Help me write and improve a professional business document.">Business writing</button>
-          <button data-prompt="Explain how artificial intelligence works.">Explore AI</button>
+
+          <button data-prompt="Explain this topic step by step.">
+            Learn a topic
+          </button>
+
+          <button data-prompt="Help me solve this mathematical problem step by step.">
+            Mathematics
+          </button>
+
+          <button data-prompt="Help me write and improve a professional business document.">
+            Business writing
+          </button>
+
+          <button data-prompt="Explain how artificial intelligence works.">
+            Explore AI
+          </button>
+
         </div>
+
       </div>
+
       <div class="messages" id="messages"></div>
+
     </section>
 
     <section class="composer-wrap">
+
       <div class="composer">
-        <textarea id="prompt" placeholder="Message MAYNARD AI..."></textarea>
+
+        <textarea
+          id="prompt"
+          placeholder="Message MAYNARD AI..."
+        ></textarea>
+
         <div id="imagePreview"></div>
+
         <div class="composer-tools">
-          <button class="tool-button" id="attachBtn">＋ Image</button>
-          <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp">
-          <button class="tool-button" id="mathBtn">∑ Math</button>
-          <button class="tool-button" id="studioBtn">✦ Create image</button>
-          <button class="send-button" id="sendBtn">Send ↑</button>
+
+          <button class="tool-button" id="attachBtn">
+            ＋ Image
+          </button>
+
+          <input
+            id="fileInput"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+          >
+
+          <button class="tool-button" id="mathBtn">
+            ∑ Math
+          </button>
+
+          <button class="tool-button" id="studioBtn">
+            ✦ Create image
+          </button>
+
+          <button class="send-button" id="sendBtn">
+            Send ↑
+          </button>
+
         </div>
+
       </div>
-      <div class="note">MAYNARD AI can make mistakes. Verify important information.</div>
+
+      <div class="note">
+        MAYNARD AI can make mistakes. Verify important information.
+      </div>
+
     </section>
+
   </main>
+
 </div>
 
 <div class="modal-backdrop" id="modalBackdrop">
+
   <div class="modal">
-    <button class="modal-row modal-close" id="closeModalBtn">Close ✕</button>
+
+    <button class="modal-row modal-close" id="closeModalBtn">
+      Close ✕
+    </button>
+
     <div id="modalContent"></div>
+
   </div>
+
 </div>
 
 <script>
 "use strict";
 
 const $ = id => document.getElementById(id);
+
 const state = {
   messages: [],
   activeId: null,
   title: "New conversation",
   image: null,
-  busy: false
+  imageName: null,
+  busy: false,
+  mode: "general"
 };
+
+const MODE_SETTINGS = {
+  general: {
+    label: "General Assistant",
+    instruction:
+      "You are MAYNARD AI, a helpful general-purpose assistant. Give clear, accurate, useful answers. Explain difficult subjects step by step when appropriate."
+  },
+
+  coding: {
+    label: "Coding",
+    instruction:
+      "You are MAYNARD AI in Coding mode. Act as a programming tutor and coding assistant. Explain code clearly, identify errors, provide complete working examples when requested, and prioritize safe, maintainable code."
+  },
+
+  essay: {
+    label: "Essay Writing",
+    instruction:
+      "You are MAYNARD AI in Essay Writing mode. Help with essay planning, introductions, thesis statements, paragraphs, grammar, structure, editing, and conclusions. Use clear academic writing and explain improvements."
+  }
+};
+
+// ========================================
+// API REQUEST
+// ========================================
 
 async function api(action, data = {}) {
   const response = await fetch("/api/chat", {
     method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({action, ...data})
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      action,
+      ...data
+    })
   });
+
   const result = await response.json().catch(() => ({}));
-  if (!response.ok || result.error) throw new Error(result.error || "Request failed");
+
+  if (!response.ok || result.error) {
+    throw new Error(
+      result.error || "Request failed."
+    );
+  }
+
   return result;
 }
 
+// ========================================
+// HTML ESCAPING
+// ========================================
+
 function escapeHTML(value) {
   return String(value).replace(/[&<>"']/g, char => ({
-    "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
   })[char]);
 }
 
+// ========================================
+// BASIC MARKDOWN
+// ========================================
+
 function renderMarkdown(text) {
   let safe = escapeHTML(text);
-  safe = safe.replace(/```([\s\S]*?)```/g, (_, code) => "<pre><code>" + code + "</code></pre>");
-  safe = safe.replace(/`([^`]+)`/g, "<code>$1</code>");
-  safe = safe.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-  safe = safe.replace(/\*([^*]+)\*/g, "<em>$1</em>");
-  safe = safe.replace(/^### (.+)$/gm, "<h3>$1</h3>");
-  safe = safe.replace(/^## (.+)$/gm, "<h2>$1</h2>");
-  safe = safe.replace(/^# (.+)$/gm, "<h1>$1</h1>");
-  safe = safe.replace(/^\s*[-*] (.+)$/gm, "<li>$1</li>");
-  safe = safe.replace(/(?:<li>.*<\/li>\s*)+/gs, block => "<ul>" + block + "</ul>");
+
+  safe = safe.replace(
+    /```([\s\S]*?)```/g,
+    (_, code) => "<pre><code>" + code + "</code></pre>"
+  );
+
+  safe = safe.replace(
+    /`([^`]+)`/g,
+    "<code>$1</code>"
+  );
+
+  safe = safe.replace(
+    /\*\*([^*]+)\*\*/g,
+    "<strong>$1</strong>"
+  );
+
+  safe = safe.replace(
+    /\*([^*]+)\*/g,
+    "<em>$1</em>"
+  );
+
+  safe = safe.replace(
+    /^### (.+)$/gm,
+    "<h3>$1</h3>"
+  );
+
+  safe = safe.replace(
+    /^## (.+)$/gm,
+    "<h2>$1</h2>"
+  );
+
+  safe = safe.replace(
+    /^# (.+)$/gm,
+    "<h1>$1</h1>"
+  );
+
+  safe = safe.replace(
+    /^\s*[-*] (.+)$/gm,
+    "<li>$1</li>"
+  );
+
+  safe = safe.replace(
+    /(?:<li>.*<\/li>\s*)+/gs,
+    block => "<ul>" + block + "</ul>"
+  );
+
   safe = safe.replace(/\n/g, "<br>");
+
   return safe;
 }
+
+// ========================================
+// MATHEMATICAL NOTATION
+// ========================================
 
 async function typeset(element) {
   if (window.MathJax?.typesetPromise) {
@@ -247,44 +942,119 @@ async function typeset(element) {
   }
 }
 
+// ========================================
+// ADD CHAT MESSAGE
+// ========================================
+
 function addMessage(role, content, options = {}) {
   $("welcome").style.display = "none";
+
   const row = document.createElement("div");
-  row.className = "message " + (role === "user" ? "user-message" : "assistant-message");
+
+  row.className =
+    "message " +
+    (role === "user"
+      ? "user-message"
+      : "assistant-message");
+
   const bubble = document.createElement("div");
   bubble.className = "bubble";
+
   bubble.innerHTML = renderMarkdown(content);
+
   if (options.imageUrl) {
     const img = document.createElement("img");
+
     img.src = options.imageUrl;
     img.alt = "Uploaded image";
+
     bubble.appendChild(img);
   }
+
   row.appendChild(bubble);
+
   $("messages").appendChild(row);
-  $("chatArea").scrollTop = $("chatArea").scrollHeight;
+
+  $("chatArea").scrollTop =
+    $("chatArea").scrollHeight;
+
   typeset(bubble);
 }
+
+// ========================================
+// MODE MENU
+// ========================================
+
+function setMode(mode) {
+  if (!MODE_SETTINGS[mode]) return;
+
+  state.mode = mode;
+
+  $("currentModeLabel").textContent =
+    MODE_SETTINGS[mode].label;
+
+  document.querySelectorAll("[data-mode]").forEach(button => {
+    button.classList.toggle(
+      "active",
+      button.dataset.mode === mode
+    );
+  });
+
+  $("modeMenu").classList.remove("open");
+}
+
+$("modeBtn").onclick = event => {
+  event.stopPropagation();
+
+  $("modeMenu").classList.toggle("open");
+};
+
+document.querySelectorAll("[data-mode]").forEach(button => {
+  button.onclick = () => {
+    setMode(button.dataset.mode);
+  };
+});
+
+document.addEventListener("click", event => {
+  if (!event.target.closest(".mode-wrap")) {
+    $("modeMenu").classList.remove("open");
+  }
+});
+
+// ========================================
+// MODAL
+// ========================================
 
 function showModal(content) {
   $("modalContent").innerHTML = content;
   $("modalBackdrop").style.display = "flex";
 }
+
 function closeModal() {
   $("modalBackdrop").style.display = "none";
   $("modalContent").innerHTML = "";
 }
+
+// ========================================
+// RESET CHAT
+// ========================================
 
 function resetChat() {
   state.messages = [];
   state.activeId = null;
   state.title = "New conversation";
   state.image = null;
+  state.imageName = null;
+
   $("messages").innerHTML = "";
+
   $("welcome").style.display = "block";
+
   $("prompt").value = "";
+
+  $("imagePreview").innerHTML = "";
   $("imagePreview").style.display = "none";
-  $("imagePreview").textContent = "";
+
   $("fileInput").value = "";
 }
 
@@ -293,301 +1063,695 @@ function newChat() {
   $("prompt").focus();
 }
 
+// ========================================
+// SAVE HISTORY
+// ========================================
+
 async function saveHistory() {
   if (!state.messages.length) return;
+
   try {
-    const first = state.messages.find(item => item.role === "user")?.content || "New conversation";
-    const title = state.title === "New conversation" ? first.slice(0,55) : state.title;
+    const first = state.messages.find(
+      item => item.role === "user"
+    )?.content || "New conversation";
+
+    const title =
+      state.title === "New conversation"
+        ? first.slice(0, 55)
+        : state.title;
+
     const result = await api("history_save", {
       id: state.activeId,
       title,
       messages: state.messages
     });
-    state.activeId = result.id || state.activeId;
+
+    state.activeId =
+      result.id || state.activeId;
+
     state.title = title;
+
     await loadHistory();
+
   } catch (error) {
     console.error("History save failed:", error);
   }
 }
 
+// ========================================
+// LOAD HISTORY
+// ========================================
+
 async function loadHistory() {
   try {
     const result = await api("history_list");
+
     const list = $("historyList");
+
     list.innerHTML = "";
-    (result.items || []).forEach(item => {
+
+    (result.items || result.histories || []).forEach(item => {
       const row = document.createElement("div");
+
       row.className = "history-item";
 
       const open = document.createElement("button");
+
       open.className = "history-open";
       open.textContent = item.title || "Untitled conversation";
       open.title = open.textContent;
+
       open.onclick = () => openHistory(item.id);
 
       const rename = document.createElement("button");
+
       rename.className = "history-action";
       rename.textContent = "✎";
       rename.title = "Rename conversation";
-      rename.onclick = () => renameHistory(item.id, item.title || "");
+
+      rename.onclick = () =>
+        renameHistory(item.id, item.title || "");
 
       const remove = document.createElement("button");
+
       remove.className = "history-action";
       remove.textContent = "×";
       remove.title = "Delete conversation";
-      remove.onclick = () => deleteHistory(item.id);
+
+      remove.onclick = () =>
+        deleteHistory(item.id);
 
       row.append(open, rename, remove);
+
       list.appendChild(row);
     });
+
   } catch (error) {
-    console.warn("Could not load saved history:", error.message);
+    console.warn(
+      "Could not load saved history:",
+      error.message
+    );
   }
 }
 
+// ========================================
+// OPEN HISTORY
+// ========================================
+
 async function openHistory(id) {
   try {
-    const result = await api("history_get", {id});
-    state.activeId = id;
-    state.title = result.title || "Conversation";
-    state.messages = result.messages || [];
+    const result = await api("history_get", { id });
+
+    const history = result.history || result;
+
+    state.activeId = history.id || id;
+    state.title = history.title || "Conversation";
+    state.messages = history.messages || [];
+
     $("messages").innerHTML = "";
+
     $("welcome").style.display = "none";
+
     state.messages.forEach(message => {
-      addMessage(message.role, message.content || "");
+      addMessage(
+        message.role,
+        message.content || ""
+      );
+
       if (message.imageOmitted) {
-        addMessage("assistant", "_An image from this conversation was not saved. Upload it again if you need it._");
+        addMessage(
+          "assistant",
+          "An image from this conversation was not saved. Upload it again if you need it."
+        );
       }
     });
+
   } catch (error) {
     alert("Could not open conversation: " + error.message);
   }
 }
 
+// ========================================
+// RENAME HISTORY
+// ========================================
+
 async function renameHistory(id, oldTitle) {
-  const title = prompt("Enter a new conversation title:", oldTitle);
+  const title = prompt(
+    "Enter a new conversation title:",
+    oldTitle
+  );
+
   if (!title || !title.trim()) return;
+
   try {
-    await api("history_rename", {id, title:title.trim()});
-    if (state.activeId === id) state.title = title.trim();
+    await api("history_rename", {
+      id,
+      title: title.trim()
+    });
+
+    if (state.activeId === id) {
+      state.title = title.trim();
+    }
+
     await loadHistory();
+
   } catch (error) {
     alert("Rename failed: " + error.message);
   }
 }
 
+// ========================================
+// DELETE HISTORY
+// ========================================
+
 async function deleteHistory(id) {
   if (!confirm("Delete this saved conversation?")) return;
+
   try {
-    await api("history_delete", {id});
-    if (state.activeId === id) newChat();
+    await api("history_delete", { id });
+
+    if (state.activeId === id) {
+      newChat();
+    }
+
     await loadHistory();
+
   } catch (error) {
     alert("Delete failed: " + error.message);
   }
 }
 
+// ========================================
+// CLEAR HISTORY
+// ========================================
+
 async function clearHistory() {
-  if (!confirm("Delete all saved conversations from this browser?")) return;
+  if (!confirm("Delete all saved conversations from this browser?")) {
+    return;
+  }
+
   try {
     await api("history_clear");
+
     newChat();
+
     await loadHistory();
+
   } catch (error) {
     alert("Could not clear history: " + error.message);
   }
 }
 
+// ========================================
+// IMAGE PREVIEW BEFORE SENDING
+// ========================================
+
+function attachImage(file) {
+  if (!file) return;
+
+  if (![
+    "image/jpeg",
+    "image/png",
+    "image/webp"
+  ].includes(file.type)) {
+    alert("Choose a JPG, PNG or WEBP image.");
+    $("fileInput").value = "";
+    return;
+  }
+
+  if (file.size > 8 * 1024 * 1024) {
+    alert("Please choose an image smaller than 8 MB.");
+    $("fileInput").value = "";
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = () => {
+    state.image = reader.result;
+    state.imageName = file.name;
+
+    const preview = $("imagePreview");
+
+    preview.innerHTML = "";
+
+    const container = document.createElement("div");
+    container.className = "preview-container";
+
+    const img = document.createElement("img");
+    img.src = reader.result;
+    img.alt = "Image preview";
+
+    const info = document.createElement("div");
+    info.className = "preview-info";
+
+    const title = document.createElement("strong");
+    title.textContent = "Image attached";
+
+    const filename = document.createElement("p");
+    filename.textContent = file.name;
+
+    const status = document.createElement("span");
+    status.textContent = "Ready to send to MAYNARD AI";
+
+    info.append(title, filename, status);
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "remove-image";
+    remove.textContent = "Remove";
+
+    remove.onclick = () => {
+      state.image = null;
+      state.imageName = null;
+
+      preview.innerHTML = "";
+      preview.style.display = "none";
+
+      $("fileInput").value = "";
+    };
+
+    container.append(img, info, remove);
+
+    preview.appendChild(container);
+
+    preview.style.display = "block";
+  };
+
+  reader.onerror = () => {
+    alert("Could not read this image. Please try again.");
+  };
+
+  reader.readAsDataURL(file);
+}
+
+// ========================================
+// SEND MESSAGE
+// ========================================
+
 async function sendMessage() {
   const text = $("prompt").value.trim();
-  if ((!text && !state.image) || state.busy) return;
+
+  if ((!text && !state.image) || state.busy) {
+    return;
+  }
 
   state.busy = true;
+
   $("sendBtn").disabled = true;
+
   const image = state.image;
-  addMessage("user", text || "Please examine this image.", {imageUrl:image || null});
-  state.messages.push({role:"user", content:text || "Please examine this image."});
+
+  const userContent =
+    text || "Please examine this image.";
+
+  addMessage("user", userContent, {
+    imageUrl: image || null
+  });
+
+  state.messages.push({
+    role: "user",
+    content: userContent,
+    ...(image ? { imageOmitted: true } : {})
+  });
+
   $("prompt").value = "";
+
   state.image = null;
+  state.imageName = null;
+
+  $("imagePreview").innerHTML = "";
   $("imagePreview").style.display = "none";
-  $("imagePreview").textContent = "";
+
   $("fileInput").value = "";
 
   const typing = document.createElement("div");
+
   typing.className = "typing";
   typing.textContent = "MAYNARD AI is thinking...";
+
   $("messages").appendChild(typing);
-  $("chatArea").scrollTop = $("chatArea").scrollHeight;
+
+  $("chatArea").scrollTop =
+    $("chatArea").scrollHeight;
 
   try {
+    const systemMessage = {
+      role: "system",
+      content: MODE_SETTINGS[state.mode].instruction
+    };
+
+    const requestMessages = [
+      systemMessage,
+      ...state.messages.slice(-40).map(message => ({
+        role: message.role,
+        content: message.content
+      }))
+    ];
+
     const result = await api("chat", {
-      messages: state.messages.slice(-40),
+      messages: requestMessages,
       image
     });
+
     typing.remove();
-    const answer = result.reply || "I could not generate a response.";
+
+    const answer =
+      result.reply || "I could not generate a response.";
+
     addMessage("assistant", answer);
-    state.messages.push({role:"assistant", content:answer});
+
+    state.messages.push({
+      role: "assistant",
+      content: answer
+    });
+
     await saveHistory();
+
   } catch (error) {
     typing.remove();
-    addMessage("assistant", "I encountered an error: " + error.message);
+
+    addMessage(
+      "assistant",
+      "I encountered an error: " + error.message
+    );
+
   } finally {
     state.busy = false;
+
     $("sendBtn").disabled = false;
+
     $("prompt").focus();
   }
 }
 
-async function attachImage(file) {
-  if (!file) return;
-  if (!["image/jpeg","image/png","image/webp"].includes(file.type)) {
-    alert("Choose a JPG, PNG or WEBP image.");
-    return;
-  }
-  if (file.size > 8 * 1024 * 1024) {
-    alert("Please choose an image smaller than 8 MB.");
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = () => {
-    state.image = reader.result;
-    $("imagePreview").textContent = "Image ready: " + file.name;
-    $("imagePreview").style.display = "block";
-  };
-  reader.readAsDataURL(file);
-}
+// ========================================
+// MATHEMATICAL CALCULATOR
+// ========================================
 
 function openCalculator() {
   showModal(`
     <h2>Mathematical calculator</h2>
-    <p style="color:#999">Enter an expression, for example: (25 * 4) / 2, sqrt(144), sin(pi / 2), or 2^8.</p>
-    <input id="calcInput" placeholder="Enter mathematical expression">
+
+    <p style="color:#999">
+      Enter an expression such as (25 * 4) / 2,
+      sqrt(144), sin(pi / 2), or 2^8.
+    </p>
+
+    <input id="calcInput"
+      placeholder="Enter mathematical expression">
+
     <div class="modal-row">
       <button id="calculateBtn">Calculate</button>
       <button id="clearCalcBtn">Clear</button>
     </div>
-    <div class="result" id="calcResult">Your result will appear here.</div>
-    <p style="color:#888;font-size:12px">This calculator uses Math.js. Do not enter code or unknown expressions.</p>
+
+    <div class="result" id="calcResult">
+      Your result will appear here.
+    </div>
+
+    <p style="color:#888;font-size:12px">
+      This calculator uses Math.js.
+    </p>
   `);
+
   $("calculateBtn").onclick = () => {
     try {
-      const expression = $("calcInput").value.trim();
-      if (!expression) throw new Error("Enter an expression first.");
+      const expression =
+        $("calcInput").value.trim();
+
+      if (!expression) {
+        throw new Error("Enter an expression first.");
+      }
+
       const result = math.evaluate(expression);
-      $("calcResult").textContent = math.format(result, {precision:14});
+
+      $("calcResult").textContent =
+        math.format(result, { precision: 14 });
+
     } catch (error) {
-      $("calcResult").textContent = "Calculation error: " + error.message;
+      $("calcResult").textContent =
+        "Calculation error: " + error.message;
     }
   };
+
   $("clearCalcBtn").onclick = () => {
     $("calcInput").value = "";
-    $("calcResult").textContent = "Your result will appear here.";
+
+    $("calcResult").textContent =
+      "Your result will appear here.";
   };
 }
+
+// ========================================
+// STABILITY AI IMAGE STUDIO
+// ========================================
 
 function openImageStudio() {
   showModal(`
     <h2>AI image studio</h2>
-    <p style="color:#999">Describe the original image you want MAYNARD AI to create.</p>
-    <textarea id="imagePrompt" placeholder="Describe your image..."></textarea>
-    <div class="modal-row"><button id="generateImageBtn">Generate image</button></div>
-    <div id="imageResult" class="result" style="display:none"></div>
-    <p class="note">Image generation requires a configured Stability AI key on the server.</p>
+
+    <p style="color:#999">
+      Describe the original image you want MAYNARD AI to create.
+    </p>
+
+    <textarea id="imagePrompt"
+      placeholder="Describe your image..."></textarea>
+
+    <div class="modal-row">
+      <button id="generateImageBtn">Generate image</button>
+    </div>
+
+    <div id="imageResult" class="result"
+      style="display:none"></div>
+
+    <p class="note">
+      Image generation requires a configured Stability AI key.
+    </p>
   `);
+
   $("generateImageBtn").onclick = async () => {
-    const prompt = $("imagePrompt").value.trim();
-    if (!prompt) return alert("Describe the image first.");
+    const prompt =
+      $("imagePrompt").value.trim();
+
+    if (!prompt) {
+      alert("Describe the image first.");
+      return;
+    }
+
     $("generateImageBtn").disabled = true;
-    $("generateImageBtn").textContent = "Generating...";
+
+    $("generateImageBtn").textContent =
+      "Generating...";
+
     try {
-      const result = await api("image_generate", {prompt});
+      const result = await api(
+        "image_generate",
+        { prompt }
+      );
+
       const box = $("imageResult");
+
       box.style.display = "block";
+
       if (result.image) {
         const img = document.createElement("img");
+
         img.src = result.image;
         img.alt = "Generated image";
+
         box.innerHTML = "";
         box.appendChild(img);
+
       } else {
-        box.textContent = result.message || "Image generation completed.";
+        box.textContent =
+          result.message || "Image generation completed.";
       }
+
     } catch (error) {
       alert("Image generation failed: " + error.message);
+
     } finally {
       $("generateImageBtn").disabled = false;
-      $("generateImageBtn").textContent = "Generate image";
+
+      $("generateImageBtn").textContent =
+        "Generate image";
     }
   };
 }
 
-async function loadFootball() {
+// ========================================
+// LIVE FOOTBALL
+// ========================================
+
+function loadFootball() {
   showModal(`
     <h2>Live football</h2>
-    <p style="color:#999">Retrieve current fixtures and scores from the configured football data provider.</p>
-    <div class="modal-row"><button id="refreshFootballBtn">Refresh scores</button></div>
-    <div class="result" id="footballResult">Press refresh to load fixtures.</div>
+
+    <p style="color:#999">
+      Retrieve current fixtures and scores.
+    </p>
+
+    <div class="modal-row">
+      <button id="refreshFootballBtn">Refresh scores</button>
+    </div>
+
+    <div class="result" id="footballResult">
+      Press refresh to load fixtures.
+    </div>
   `);
+
   $("refreshFootballBtn").onclick = async () => {
-    $("footballResult").textContent = "Loading fixtures...";
+    $("footballResult").textContent =
+      "Loading fixtures...";
+
     try {
       const result = await api("football_live");
+
       const fixtures = result.fixtures || [];
+
       if (!fixtures.length) {
-        $("footballResult").textContent = "No live fixtures were returned by the provider.";
+        $("footballResult").textContent =
+          "No live fixtures were returned by the provider.";
+
         return;
       }
+
       $("footballResult").innerHTML = "";
+
       fixtures.forEach(fixture => {
         const row = document.createElement("p");
+
         row.textContent =
-          (fixture.league || "Competition") + " — " +
-          (fixture.home || "Home") + " " +
-          (fixture.homeGoals ?? "-") + " : " +
-          (fixture.awayGoals ?? "-") + " " +
-          (fixture.away || "Away") +
-          " (" + (fixture.status || "Status unavailable") + ")";
+          fixture.league + " — " +
+          fixture.home + " " +
+          (fixture.homeGoals ?? "-") +
+          " : " +
+          (fixture.awayGoals ?? "-") +
+          " " +
+          fixture.away +
+          " (" +
+          fixture.status +
+          ")";
+
         $("footballResult").appendChild(row);
       });
+
     } catch (error) {
-      $("footballResult").textContent = "Football request failed: " + error.message;
+      $("footballResult").textContent =
+        "Football request failed: " + error.message;
     }
   };
 }
 
-$("sendBtn").addEventListener("click", sendMessage);
-$("prompt").addEventListener("keydown", event => {
-  if (event.key === "Enter" && !event.shiftKey) {
-    event.preventDefault();
-    sendMessage();
+// ========================================
+// EVENT LISTENERS
+// ========================================
+
+$("sendBtn").addEventListener(
+  "click",
+  sendMessage
+);
+
+$("prompt").addEventListener(
+  "keydown",
+  event => {
+    if (
+      event.key === "Enter" &&
+      !event.shiftKey
+    ) {
+      event.preventDefault();
+      sendMessage();
+    }
   }
-});
+);
+
 $("newChatBtn").onclick = newChat;
 $("mobileNewBtn").onclick = newChat;
+
 $("clearHistoryBtn").onclick = clearHistory;
+
 $("calculatorBtn").onclick = openCalculator;
 $("mathBtn").onclick = openCalculator;
+
 $("imageStudioBtn").onclick = openImageStudio;
 $("studioBtn").onclick = openImageStudio;
+
 $("footballBtn").onclick = loadFootball;
-$("attachBtn").onclick = () => $("fileInput").click();
-$("fileInput").onchange = event => attachImage(event.target.files[0]);
+
+$("attachBtn").onclick = () => {
+  $("fileInput").click();
+};
+
+$("fileInput").onchange = event => {
+  attachImage(event.target.files[0]);
+};
+
 $("closeModalBtn").onclick = closeModal;
-$("modalBackdrop").addEventListener("click", event => {
-  if (event.target === $("modalBackdrop")) closeModal();
-});
-$("mobileHistoryBtn").onclick = () => {
-  if (window.innerWidth <= 540) {
-    showModal('<h2>Saved conversations</h2><div id="mobileHistoryItems"></div>');
-    loadHistory();
-    setTimeout(() => {
-      const list = $("historyList").cloneNode(true);
-      $("mobileHistoryItems").appendChild(list);
-    }, 300);
+
+$("modalBackdrop").addEventListener(
+  "click",
+  event => {
+    if (event.target === $("modalBackdrop")) {
+      closeModal();
+    }
+  }
+);
+
+// ========================================
+// MOBILE HISTORY
+// ========================================
+
+$("mobileHistoryBtn").onclick = async () => {
+  showModal(`
+    <h2>Saved conversations</h2>
+    <div id="mobileHistoryItems"></div>
+  `);
+
+  try {
+    const result = await api("history_list");
+
+    const container = $("mobileHistoryItems");
+
+    (result.items || result.histories || []).forEach(item => {
+      const row = document.createElement("div");
+
+      row.style.padding = "10px";
+      row.style.borderBottom = "1px solid #333";
+
+      const open = document.createElement("button");
+
+      open.textContent = item.title || "Untitled conversation";
+      open.style.width = "100%";
+      open.style.background = "transparent";
+      open.style.border = "0";
+      open.style.color = "white";
+      open.style.textAlign = "left";
+      open.style.padding = "8px";
+
+      open.onclick = async () => {
+        closeModal();
+        await openHistory(item.id);
+      };
+
+      row.appendChild(open);
+      container.appendChild(row);
+    });
+
+    if (!container.children.length) {
+      container.textContent = "No saved conversations yet.";
+    }
+
+  } catch (error) {
+    $("mobileHistoryItems").textContent =
+      "Could not load history: " + error.message;
   }
 };
+
+// ========================================
+// QUICK PROMPTS
+// ========================================
+
 document.querySelectorAll("[data-prompt]").forEach(button => {
   button.onclick = () => {
     $("prompt").value = button.dataset.prompt;
@@ -595,7 +1759,14 @@ document.querySelectorAll("[data-prompt]").forEach(button => {
   };
 });
 
+// ========================================
+// START APPLICATION
+// ========================================
+
+setMode("general");
 loadHistory();
+
 </script>
+
 </body>
 </html>
