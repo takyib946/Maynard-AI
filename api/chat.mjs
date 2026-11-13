@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 // MAYNARD AI
 // Groq + Stability AI + Upstash Redis
 // API-Football + Saved Conversation History
+// Vertical Formatting + Diagrams
 // ============================================
 
 export const config = {
@@ -42,61 +43,69 @@ const ALLOWED_ACTIONS = new Set([
 ]);
 
 // ============================================
-// MAYNARD AI RESPONSE INSTRUCTIONS
+// MAYNARD AI SYSTEM INSTRUCTIONS
 // ============================================
 
 const MAYNARD_SYSTEM_PROMPT = `
-You are MAYNARD AI, a helpful, intelligent and clear AI assistant.
+You are MAYNARD AI, created by David Takyi.
 
-Your purpose is to provide accurate, useful, well-organized answers.
+You are a helpful, intelligent, accurate and educational
+AI assistant.
 
-DIAGRAMS AND VISUAL EXPLANATIONS:
+STRICT ANSWER FORMATTING:
 
-1. Include diagrams whenever they genuinely improve understanding.
-2. Use Mermaid diagrams for flowcharts, processes, systems,
-   relationships, sequences and structured explanations.
-3. Use simple text diagrams when they are more suitable.
-4. For mathematics, use clearly arranged equations and
-   step-by-step working. Include a diagram when the problem
-   benefits from geometric or visual explanation.
-5. For science, technology, coding and educational topics,
-   use diagrams where they help explain the subject.
-6. Do not force diagrams into every answer.
-7. Keep diagrams relevant, readable and correctly labelled.
-8. Put Mermaid diagrams inside fenced mermaid code blocks.
+1. Write answers naturally from top to bottom.
+2. Never use Markdown tables.
+3. Never arrange information into columns.
+4. Never use vertical divider lines.
+5. Never use bordered table layouts.
+6. Never use spreadsheet-style formatting.
+7. Never put calculations side by side.
+8. Never use unnecessary horizontal separator lines.
+9. Do not use --- or *** as section separators.
+10. Use headings, paragraphs and numbered steps instead.
+11. Keep answers clean, readable and continuous.
+12. Present information vertically, one item after another.
 
-MATHEMATICAL NOTATION:
+MATHEMATICS:
 
-1. Use LaTeX notation for mathematical expressions.
-2. Use \\( ... \\) for inline mathematics.
-3. Use \\[ ... \\] for displayed mathematical equations.
-4. Show calculations step by step when appropriate.
-5. Explain the meaning of important mathematical symbols.
+1. Explain mathematical problems step by step.
+2. Write every calculation vertically.
+3. Put each equation on its own line.
+4. Use proper LaTeX mathematical notation.
+5. Use \\( ... \\) for inline equations.
+6. Use \\[ ... \\] for displayed equations.
+7. Explain formulas before substituting values.
+8. Show important calculations clearly.
+9. Present final answers clearly.
+10. Include verification when useful.
+11. Use graphs or diagrams when they genuinely help.
+12. Never put mathematical working inside tables.
 
-NO UNNECESSARY SEPARATOR LINES:
+DIAGRAMS AND FLOWCHARTS:
 
-1. Do not use horizontal separator lines between paragraphs
-   or sections.
-2. Do not insert lines made from ---, ***, or ___.
-3. Use headings, paragraphs, numbered lists and spacing
-   to organize answers.
-4. Keep explanations connected and natural.
-5. Only include separator lines if the user explicitly
-   requests them.
+1. Include diagrams when they improve understanding.
+2. Use Mermaid diagrams for flowcharts and processes.
+3. Put Mermaid diagrams inside fenced mermaid code blocks.
+4. Use labelled diagrams where appropriate.
+5. Use simple text diagrams when suitable.
+6. Never use tables as substitutes for diagrams.
+7. Keep diagrams readable and properly labelled.
+8. Do not force diagrams into unrelated answers.
 
 GENERAL RESPONSE STYLE:
 
-- Be accurate and direct.
-- Explain difficult topics clearly.
-- Use headings when useful.
+- Be clear, accurate and educational.
 - Avoid unnecessary repetition.
-- Use examples where they improve understanding.
+- Use examples when helpful.
+- Explain difficult concepts in simple language.
+- Never use tables, columns or vertical borders.
+- Do not sacrifice accuracy for shorter answers.
 - Do not invent facts.
-- Do not claim to have performed actions that were not completed.
 
 IDENTITY:
 
-If asked your name, say:
+If asked your name, respond:
 "I am MAYNARD AI, created by David Takyi."
 `;
 
@@ -115,14 +124,113 @@ function errorMessage(error) {
 }
 
 // ============================================
-// REMOVE UNNECESSARY SEPARATOR LINES
+// TABLE AND SEPARATOR CLEANER
+// Converts Markdown tables into vertical text.
 // ============================================
 
 function cleanAIResponse(text) {
-  if (typeof text !== "string") return "";
+  if (typeof text !== "string") {
+    return "";
+  }
 
-  return text
-    .replace(/^[ \t]*(?:-{3,}|\*{3,}|_{3,})[ \t]*$/gm, "")
+  const lines = text.split("\n");
+  const output = [];
+
+  let insideCode = false;
+
+  function parseCells(line) {
+    return line
+      .trim()
+      .replace(/^\|/, "")
+      .replace(/\|$/, "")
+      .split("|")
+      .map((cell) => cell.trim());
+  }
+
+  function isTableSeparator(line) {
+    return /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(
+      line
+    );
+  }
+
+  function isTableRow(line) {
+    return (
+      line.includes("|") &&
+      line.trim().length > 0
+    );
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Preserve code blocks exactly.
+    if (/^\s*```/.test(line)) {
+      insideCode = !insideCode;
+      output.push(line);
+      continue;
+    }
+
+    if (insideCode) {
+      output.push(line);
+      continue;
+    }
+
+    // Detect a Markdown table separator.
+    if (
+      isTableSeparator(line) &&
+      output.length > 0 &&
+      isTableRow(output[output.length - 1])
+    ) {
+      const headers = parseCells(output.pop());
+
+      // Skip the Markdown separator row.
+      i++;
+
+      while (
+        i < lines.length &&
+        isTableRow(lines[i])
+      ) {
+        const values = parseCells(lines[i]);
+
+        const formattedRow = headers
+          .map((header, index) => {
+            const value = values[index] || "";
+
+            if (!value) return "";
+
+            const label =
+              header || `Item ${index + 1}`;
+
+            return `**${label}:** ${value}`;
+          })
+          .filter(Boolean)
+          .join("\n");
+
+        if (formattedRow) {
+          output.push(formattedRow);
+          output.push("");
+        }
+
+        i++;
+      }
+
+      // Reprocess the first line after the table.
+      i--;
+      continue;
+    }
+
+    // Remove unnecessary horizontal separator lines.
+    if (
+      /^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/.test(line)
+    ) {
+      continue;
+    }
+
+    output.push(line);
+  }
+
+  return output
+    .join("\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
@@ -259,7 +367,8 @@ async function redis(command, ...args) {
 
   if (!response.ok || result.error) {
     throw new Error(
-      result.error || `Redis request failed (${response.status}).`
+      result.error ||
+        `Redis request failed (${response.status}).`
     );
   }
 
@@ -462,7 +571,9 @@ async function getHistory(visitor, id) {
   try {
     return JSON.parse(raw);
   } catch {
-    throw new Error("Saved conversation data is invalid.");
+    throw new Error(
+      "Saved conversation data is invalid."
+    );
   }
 }
 
@@ -479,7 +590,9 @@ async function renameHistory(visitor, id, title) {
     typeof title !== "string" ||
     !title.trim()
   ) {
-    throw new Error("A conversation title is required.");
+    throw new Error(
+      "A conversation title is required."
+    );
   }
 
   record.title = title.trim().slice(0, 100);
@@ -632,7 +745,7 @@ async function groqChat(body) {
     );
   }
 
-  // The server controls the main assistant instructions.
+  // Server-controlled assistant instructions.
   const chatMessages = [
     {
       role: "system",
@@ -641,7 +754,7 @@ async function groqChat(body) {
     ...messages,
   ];
 
-  // Image understanding
+  // Image understanding.
   if (body.image) {
     const image = extractImageData(body.image);
 
@@ -650,7 +763,11 @@ async function groqChat(body) {
 
     let lastUserIndex = -1;
 
-    for (let i = chatMessages.length - 1; i >= 0; i--) {
+    for (
+      let i = chatMessages.length - 1;
+      i >= 0;
+      i--
+    ) {
       if (chatMessages[i].role === "user") {
         lastUserIndex = i;
         break;
@@ -776,9 +893,7 @@ async function generateImage(body) {
     "9:21",
   ];
 
-  if (
-    allowedRatios.includes(body.aspectRatio)
-  ) {
+  if (allowedRatios.includes(body.aspectRatio)) {
     form.append(
       "aspect_ratio",
       body.aspectRatio
@@ -843,7 +958,8 @@ async function liveFootball() {
   if (!response.ok || data.errors?.length) {
     throw new Error(
       JSON.stringify(
-        data.errors || "Football API request failed."
+        data.errors ||
+          "Football API request failed."
       )
     );
   }
@@ -891,6 +1007,10 @@ export default async function handler(req, res) {
 
     switch (action) {
 
+      // ======================================
+      // AI CHAT
+      // ======================================
+
       case "chat": {
         const result = await groqChat(body);
 
@@ -899,6 +1019,10 @@ export default async function handler(req, res) {
           ...result,
         });
       }
+
+      // ======================================
+      // SAVE HISTORY
+      // ======================================
 
       case "history_save": {
         const record = await saveHistory(
@@ -913,6 +1037,10 @@ export default async function handler(req, res) {
         });
       }
 
+      // ======================================
+      // LIST HISTORY
+      // ======================================
+
       case "history_list": {
         const histories = await listHistory(visitor);
 
@@ -922,6 +1050,10 @@ export default async function handler(req, res) {
           histories,
         });
       }
+
+      // ======================================
+      // OPEN HISTORY
+      // ======================================
 
       case "history_get": {
         const history = await getHistory(
@@ -947,6 +1079,10 @@ export default async function handler(req, res) {
         });
       }
 
+      // ======================================
+      // RENAME HISTORY
+      // ======================================
+
       case "history_rename": {
         const history = await renameHistory(
           visitor,
@@ -967,6 +1103,10 @@ export default async function handler(req, res) {
         });
       }
 
+      // ======================================
+      // DELETE HISTORY
+      // ======================================
+
       case "history_delete": {
         await deleteHistory(
           visitor,
@@ -979,6 +1119,10 @@ export default async function handler(req, res) {
         });
       }
 
+      // ======================================
+      // CLEAR HISTORY
+      // ======================================
+
       case "history_clear": {
         await clearHistory(visitor);
 
@@ -988,6 +1132,10 @@ export default async function handler(req, res) {
         });
       }
 
+      // ======================================
+      // IMAGE GENERATION
+      // ======================================
+
       case "image_generate": {
         const result = await generateImage(body);
 
@@ -996,6 +1144,10 @@ export default async function handler(req, res) {
           ...result,
         });
       }
+
+      // ======================================
+      // LIVE FOOTBALL
+      // ======================================
 
       case "football_live": {
         const result = await liveFootball();
