@@ -17,6 +17,12 @@ window.MathJax = {
   options: {
     skipHtmlTags: ['script','noscript','style','textarea','pre','code']
   },
+  chtml: {
+    linebreaks: {
+      automatic: true,
+      width: "container"
+    }
+  },
   startup: { typeset: false }
 };
 </script>
@@ -43,6 +49,7 @@ window.MathJax = {
 
 html, body {
   margin: 0;
+  width: 100%;
   min-height: 100%;
   background: #000;
   color: var(--text);
@@ -62,10 +69,14 @@ button {
 }
 
 .app {
+  width: 100%;
   height: 100dvh;
   display: flex;
+  overflow: hidden;
   background: #000;
 }
+
+/* SIDEBAR */
 
 .sidebar {
   width: 270px;
@@ -154,12 +165,16 @@ button {
   color: white;
 }
 
+/* MAIN */
+
 .main {
   flex: 1;
   min-width: 0;
+  width: 0;
   display: flex;
   flex-direction: column;
   background: #000;
+  overflow: hidden;
 }
 
 .topbar {
@@ -243,12 +258,17 @@ button {
   line-height: 1.5;
 }
 
-/* CHAT */
+/* CHAT AREA */
 
 .chat-area {
   flex: 1;
-  overflow: auto;
+  min-width: 0;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 24px 5vw 30px;
+  background: #000;
+  border: 0;
 }
 
 .welcome {
@@ -284,16 +304,21 @@ button {
 }
 
 .messages {
+  width: 100%;
   max-width: 900px;
+  min-width: 0;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 22px;
 }
 
 .message {
   width: 100%;
+  min-width: 0;
   display: flex;
+  border: 0;
+  background: transparent;
 }
 
 .message.user-message {
@@ -304,34 +329,46 @@ button {
   justify-content: flex-start;
 }
 
+/* CLEAN CHAT BUBBLES */
+
 .bubble {
+  min-width: 0;
   max-width: min(90%, 780px);
   padding: 14px 16px;
-  border: 1px solid #242424;
-  border-radius: 14px;
-  background: #090909;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: #eee;
-  line-height: 1.65;
+  line-height: 1.7;
   overflow-wrap: anywhere;
+  word-break: normal;
   white-space: normal;
+  box-shadow: none;
+  overflow-x: hidden;
 }
 
 .user-message .bubble {
-  background: #171717;
+  max-width: min(85%, 650px);
   margin-left: auto;
   margin-right: 0;
-  border-radius: 15px 15px 3px 15px;
+  padding: 12px 15px;
+  background: #171717;
+  border: 1px solid #292929;
+  border-radius: 15px;
 }
 
 .assistant-message .bubble {
-  background: #050505;
-  margin-left: 0;
-  margin-right: auto;
-  border-radius: 15px 15px 15px 3px;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 8px 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
 }
 
 .bubble p {
-  margin: 0 0 10px;
+  margin: 0 0 12px;
 }
 
 .bubble p:last-child {
@@ -341,8 +378,8 @@ button {
 .bubble h1,
 .bubble h2,
 .bubble h3 {
-  margin: 15px 0 8px;
-  line-height: 1.35;
+  margin: 17px 0 9px;
+  line-height: 1.4;
 }
 
 .bubble ul,
@@ -356,7 +393,8 @@ button {
 
 .bubble pre {
   white-space: pre-wrap;
-  overflow: auto;
+  overflow-x: auto;
+  max-width: 100%;
   background: #151515;
   padding: 12px;
   border-radius: 8px;
@@ -366,6 +404,7 @@ button {
   background: #191919;
   padding: 2px 5px;
   border-radius: 4px;
+  overflow-wrap: anywhere;
 }
 
 .bubble pre code {
@@ -382,13 +421,48 @@ button {
 }
 
 .bubble hr {
-  display: none;
+  display: none !important;
+}
+
+/* MATH DISPLAY */
+
+.mjx-container {
+  max-width: 100% !important;
+}
+
+.mjx-container[display="true"] {
+  display: block !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  text-align: left !important;
+  padding: 8px 0 12px;
+  margin: 8px 0 !important;
+  box-sizing: border-box;
+}
+
+.mjx-container[display="true"] mjx-math {
+  max-width: none;
+}
+
+.bubble .mjx-container {
+  color: white;
 }
 
 /* TABLES */
 
+.table-scroll {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 12px 0;
+}
+
 .bubble table {
   width: 100%;
+  max-width: 100%;
   border-collapse: collapse;
   margin: 10px 0;
 }
@@ -404,33 +478,29 @@ button {
   background: #171717;
 }
 
-.table-scroll {
-  max-width: 100%;
-  overflow-x: auto;
-  margin: 12px 0;
-}
-
 /* DIAGRAMS */
 
 .diagram-container {
   width: 100%;
   max-width: 100%;
   overflow-x: auto;
+  overflow-y: hidden;
   margin: 14px 0;
-  padding: 14px;
-  background: #0b0b0b;
-  border: 1px solid #292929;
-  border-radius: 12px;
+  padding: 10px 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
 }
 
 .diagram-container svg {
-  max-width: 100%;
+  display: block;
+  max-width: 100% !important;
   height: auto;
 }
 
 .mermaid {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   min-width: 280px;
 }
 
@@ -443,18 +513,22 @@ button {
 .typing {
   color: #aaa;
   font-size: 13px;
-  padding: 8px;
+  padding: 8px 0;
 }
 
 /* COMPOSER */
 
 .composer-wrap {
+  flex-shrink: 0;
+  width: 100%;
+  min-width: 0;
   border-top: 1px solid var(--line);
   padding: 14px 5vw 18px;
   background: #000;
 }
 
 .composer {
+  width: 100%;
   max-width: 900px;
   margin: auto;
   border: 1px solid #303030;
@@ -637,36 +711,42 @@ button {
 }
 
 .result img {
+  display: block;
   max-width: 100%;
   border-radius: 9px;
 }
 
-@media(max-width:720px) {
+/* RESPONSIVE LAYOUT */
+
+@media(max-width: 760px) {
   .sidebar {
-    width: 220px;
-    padding: 10px;
+    display: none;
+  }
+
+  .main {
+    width: 100%;
   }
 
   .chat-area {
-    padding: 18px 13px 24px;
+    padding: 18px 14px 24px;
   }
 
   .composer-wrap {
     padding: 10px 12px 14px;
   }
-}
-
-@media(max-width:540px) {
-  .sidebar {
-    display: none;
-  }
-
-  .topbar {
-    padding: 0 12px;
-  }
 
   .bubble {
     max-width: 96%;
+  }
+
+  .assistant-message .bubble {
+    width: 100%;
+    max-width: 100%;
+    padding: 7px 0;
+  }
+
+  .user-message .bubble {
+    max-width: 90%;
   }
 
   .preview-container {
@@ -680,6 +760,38 @@ button {
   .small-button {
     padding: 7px;
     font-size: 12px;
+  }
+
+  .welcome {
+    margin-top: 8vh;
+  }
+}
+
+@media(max-width: 380px) {
+  .topbar {
+    padding: 0 8px;
+  }
+
+  .top-actions {
+    gap: 4px;
+  }
+
+  .small-button {
+    font-size: 11px;
+    padding: 6px;
+  }
+
+  .composer-tools {
+    gap: 5px;
+  }
+
+  .tool-button {
+    font-size: 12px;
+    padding: 8px;
+  }
+
+  .send-button {
+    padding: 9px 12px;
   }
 }
 </style>
@@ -729,7 +841,7 @@ button {
 
         <div class="mode-wrap">
 
-          <button class="small-button" id="modeBtn" aria-label="Choose assistant mode">
+          <button class="small-button" id="modeBtn">
             ⋯ <span id="currentModeLabel">General Assistant</span>
           </button>
 
@@ -886,11 +998,12 @@ const state = {
   mode: "general"
 };
 
+/* VISUAL AND FORMATTING INSTRUCTIONS */
+
 const VISUAL_INSTRUCTIONS = `
 VISUAL PROBLEM SOLVING:
 
-When solving a problem, decide whether a diagram would genuinely
-help the user understand the answer.
+Decide whether a diagram genuinely helps explain the answer.
 
 For mathematics, use relevant graphs, coordinate diagrams,
 geometry illustrations and number-line diagrams.
@@ -904,7 +1017,7 @@ For biology, use labelled biological diagrams.
 
 For engineering, use technical diagrams and flowcharts.
 
-When a diagram is useful, provide a valid Mermaid diagram
+When a diagram is useful, provide valid Mermaid syntax
 inside a fenced mermaid code block.
 
 Example:
@@ -917,10 +1030,12 @@ flowchart TD
     D --> E[Check the result]
 \`\`\`
 
-Use valid Mermaid syntax. Keep diagram labels short and readable.
-Do not invent a diagram when it would not help.
-For mathematical graphs, include the actual graph information,
-axes, labels and important points where possible.
+Use valid Mermaid syntax.
+Keep diagram labels short and readable.
+Do not invent diagrams when they do not help.
+
+For mathematical graphs, include axes, labels,
+important points and relevant graph information.
 
 ANSWER FORMATTING:
 
@@ -928,12 +1043,17 @@ Do not use decorative horizontal separator lines.
 Never use --- or *** as section dividers.
 Let explanations flow naturally.
 Use headings only when useful.
-Use properly formatted Markdown tables only when necessary.
+Use Markdown tables only when genuinely necessary.
 Never print raw Markdown table separator rows.
+
 Use LaTeX for mathematical notation.
 Show calculations step by step when appropriate.
 Connect each explanation naturally to the next.
-Do not sacrifice accuracy just to include a diagram.
+
+Avoid unnecessarily long equations on one line.
+Break long mathematical calculations into readable steps.
+Never create content that requires the user to scroll
+the entire page horizontally.
 
 IDENTITY:
 
@@ -943,9 +1063,7 @@ If asked your name, say MAYNARD AI.
 If asked who created you, say David Takyi.
 `;
 
-// ========================================
-// MODES
-// ========================================
+/* MODES */
 
 const MODE_SETTINGS = {
   general: {
@@ -969,13 +1087,11 @@ const MODE_SETTINGS = {
   mathematics: {
     label: "Mathematics",
     instruction:
-      "You are MAYNARD AI in Mathematics mode. Solve mathematical problems accurately. Show calculations and use LaTeX notation. Include relevant graphs, geometry diagrams or flowcharts where they genuinely help. Explain the reasoning clearly."
+      "You are MAYNARD AI in Mathematics mode. Solve mathematical problems accurately. Show calculations and use LaTeX notation. Include relevant graphs, geometry diagrams or flowcharts where they genuinely help. Explain the reasoning clearly. Break long equations into readable steps."
   }
 };
 
-// ========================================
-// API REQUEST
-// ========================================
+/* API REQUEST */
 
 async function api(action, data = {}) {
   const response = await fetch("/api/chat", {
@@ -998,9 +1114,7 @@ async function api(action, data = {}) {
   return result;
 }
 
-// ========================================
-// HTML ESCAPING
-// ========================================
+/* HTML ESCAPING */
 
 function escapeHTML(value) {
   return String(value).replace(/[&<>"']/g, char => ({
@@ -1012,9 +1126,7 @@ function escapeHTML(value) {
   })[char]);
 }
 
-// ========================================
-// INLINE MARKDOWN
-// ========================================
+/* INLINE MARKDOWN */
 
 function renderInline(value) {
   let safe = escapeHTML(value);
@@ -1042,12 +1154,7 @@ function renderInline(value) {
   return safe;
 }
 
-// ========================================
-// MARKDOWN RENDERER
-// Removes decorative separators.
-// Supports headings, lists, tables,
-// code blocks and Mermaid diagrams.
-// ========================================
+/* MARKDOWN RENDERER */
 
 function renderMarkdown(text) {
   const lines = String(text)
@@ -1126,7 +1233,6 @@ function renderMarkdown(text) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Fenced code blocks and diagrams.
     if (line.trim().startsWith("```")) {
       flushParagraph();
       flushList();
@@ -1167,7 +1273,8 @@ function renderMarkdown(text) {
       continue;
     }
 
-    // Remove unnecessary separator lines.
+    /* Remove decorative horizontal lines */
+
     if (/^\s*(---+|\*\*\*+|___+)\s*$/.test(line)) {
       flushParagraph();
       flushList();
@@ -1175,7 +1282,6 @@ function renderMarkdown(text) {
       continue;
     }
 
-    // Blank lines.
     if (!line.trim()) {
       flushParagraph();
       flushList();
@@ -1183,7 +1289,6 @@ function renderMarkdown(text) {
       continue;
     }
 
-    // Markdown tables.
     if (line.includes("|") && line.trim().startsWith("|")) {
       flushParagraph();
       flushList();
@@ -1196,7 +1301,6 @@ function renderMarkdown(text) {
       flushTable();
     }
 
-    // Headings.
     const heading = line.match(/^(#{1,3})\s+(.+)$/);
 
     if (heading) {
@@ -1212,7 +1316,6 @@ function renderMarkdown(text) {
       continue;
     }
 
-    // Ordered lists.
     const ordered = line.match(/^\s*\d+[.)]\s+(.+)$/);
 
     if (ordered) {
@@ -1227,7 +1330,6 @@ function renderMarkdown(text) {
       continue;
     }
 
-    // Unordered lists.
     const unordered = line.match(/^\s*[-*+]\s+(.+)$/);
 
     if (unordered) {
@@ -1253,9 +1355,7 @@ function renderMarkdown(text) {
   return html;
 }
 
-// ========================================
-// TYPESSETTING: MERMAID + MATHJAX
-// ========================================
+/* DIAGRAMS AND MATHEMATICS */
 
 async function typeset(element) {
   if (window.mermaid) {
@@ -1294,9 +1394,7 @@ async function typeset(element) {
   }
 }
 
-// ========================================
-// ADD CHAT MESSAGE
-// ========================================
+/* ADD CHAT MESSAGE */
 
 function addMessage(role, content, options = {}) {
   $("welcome").style.display = "none";
@@ -1333,9 +1431,7 @@ function addMessage(role, content, options = {}) {
   typeset(bubble);
 }
 
-// ========================================
-// MODE MENU
-// ========================================
+/* MODE MENU */
 
 function setMode(mode) {
   if (!MODE_SETTINGS[mode]) return;
@@ -1370,9 +1466,7 @@ document.addEventListener("click", event => {
   }
 });
 
-// ========================================
-// MODAL
-// ========================================
+/* MODAL */
 
 function showModal(content) {
   $("modalContent").innerHTML = content;
@@ -1384,9 +1478,7 @@ function closeModal() {
   $("modalContent").innerHTML = "";
 }
 
-// ========================================
-// RESET CHAT
-// ========================================
+/* RESET CHAT */
 
 function resetChat() {
   state.messages = [];
@@ -1410,9 +1502,7 @@ function newChat() {
   $("prompt").focus();
 }
 
-// ========================================
-// SAVE HISTORY
-// ========================================
+/* SAVE HISTORY */
 
 async function saveHistory() {
   if (!state.messages.length) return;
@@ -1443,9 +1533,7 @@ async function saveHistory() {
   }
 }
 
-// ========================================
-// LOAD HISTORY
-// ========================================
+/* LOAD HISTORY */
 
 async function loadHistory() {
   try {
@@ -1486,9 +1574,7 @@ async function loadHistory() {
   }
 }
 
-// ========================================
-// OPEN HISTORY
-// ========================================
+/* OPEN HISTORY */
 
 async function openHistory(id) {
   try {
@@ -1514,9 +1600,7 @@ async function openHistory(id) {
   }
 }
 
-// ========================================
-// RENAME HISTORY
-// ========================================
+/* RENAME HISTORY */
 
 async function renameHistory(id, oldTitle) {
   const title = prompt("Enter a new conversation title:", oldTitle);
@@ -1540,9 +1624,7 @@ async function renameHistory(id, oldTitle) {
   }
 }
 
-// ========================================
-// DELETE HISTORY
-// ========================================
+/* DELETE HISTORY */
 
 async function deleteHistory(id) {
   if (!confirm("Delete this saved conversation?")) return;
@@ -1561,12 +1643,10 @@ async function deleteHistory(id) {
   }
 }
 
-// ========================================
-// CLEAR HISTORY
-// ========================================
+/* CLEAR HISTORY */
 
 async function clearHistory() {
-  if (!confirm("Delete all saved conversations from this browser?")) {
+  if (!confirm("Delete all saved conversations?")) {
     return;
   }
 
@@ -1580,9 +1660,7 @@ async function clearHistory() {
   }
 }
 
-// ========================================
-// IMAGE PREVIEW
-// ========================================
+/* IMAGE PREVIEW */
 
 function attachImage(file) {
   if (!file) return;
@@ -1658,9 +1736,7 @@ function attachImage(file) {
   reader.readAsDataURL(file);
 }
 
-// ========================================
-// SEND MESSAGE
-// ========================================
+/* SEND MESSAGE */
 
 async function sendMessage() {
   const text = $("prompt").value.trim();
@@ -1753,9 +1829,7 @@ async function sendMessage() {
   }
 }
 
-// ========================================
-// MATHEMATICAL CALCULATOR
-// ========================================
+/* MATHEMATICAL CALCULATOR */
 
 function openCalculator() {
   showModal(`
@@ -1809,9 +1883,7 @@ function openCalculator() {
   };
 }
 
-// ========================================
-// STABILITY AI IMAGE STUDIO
-// ========================================
+/* STABILITY AI IMAGE STUDIO */
 
 function openImageStudio() {
   showModal(`
@@ -1854,15 +1926,20 @@ function openImageStudio() {
       box.style.display = "block";
       box.innerHTML = "";
 
-      if (result.image) {
+      const imageSource =
+        result.image || result.imageUrl || result.url;
+
+      if (imageSource) {
         const img = document.createElement("img");
-        img.src = result.image;
+        img.src = imageSource;
         img.alt = "Generated image";
         box.appendChild(img);
 
         const download = document.createElement("a");
-        download.href = result.image;
+        download.href = imageSource;
         download.download = "maynard-ai-image.png";
+        download.target = "_blank";
+        download.rel = "noopener noreferrer";
         download.textContent = "Download image";
         download.style.display = "inline-block";
         download.style.marginTop = "12px";
@@ -1875,7 +1952,7 @@ function openImageStudio() {
 
       } else {
         box.textContent =
-          result.message || "Image generation completed.";
+          result.message || "No image was returned.";
       }
 
     } catch (error) {
@@ -1888,9 +1965,7 @@ function openImageStudio() {
   };
 }
 
-// ========================================
-// LIVE FOOTBALL
-// ========================================
+/* LIVE FOOTBALL */
 
 function loadFootball() {
   showModal(`
@@ -1949,9 +2024,7 @@ function loadFootball() {
   };
 }
 
-// ========================================
-// EVENT LISTENERS
-// ========================================
+/* EVENT LISTENERS */
 
 $("sendBtn").addEventListener("click", sendMessage);
 
@@ -1991,9 +2064,7 @@ $("modalBackdrop").addEventListener("click", event => {
   }
 });
 
-// ========================================
-// MOBILE HISTORY
-// ========================================
+/* MOBILE HISTORY */
 
 $("mobileHistoryBtn").onclick = async () => {
   showModal(`
@@ -2040,9 +2111,7 @@ $("mobileHistoryBtn").onclick = async () => {
   }
 };
 
-// ========================================
-// QUICK PROMPTS
-// ========================================
+/* QUICK PROMPTS */
 
 document.querySelectorAll("[data-prompt]").forEach(button => {
   button.onclick = () => {
@@ -2051,9 +2120,7 @@ document.querySelectorAll("[data-prompt]").forEach(button => {
   };
 });
 
-// ========================================
-// START APPLICATION
-// ========================================
+/* START APPLICATION */
 
 setMode("general");
 loadHistory();
