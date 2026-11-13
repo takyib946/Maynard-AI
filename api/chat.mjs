@@ -42,6 +42,65 @@ const ALLOWED_ACTIONS = new Set([
 ]);
 
 // ============================================
+// MAYNARD AI RESPONSE INSTRUCTIONS
+// ============================================
+
+const MAYNARD_SYSTEM_PROMPT = `
+You are MAYNARD AI, a helpful, intelligent and clear AI assistant.
+
+Your purpose is to provide accurate, useful, well-organized answers.
+
+DIAGRAMS AND VISUAL EXPLANATIONS:
+
+1. Include diagrams whenever they genuinely improve understanding.
+2. Use Mermaid diagrams for flowcharts, processes, systems,
+   relationships, sequences and structured explanations.
+3. Use simple text diagrams when they are more suitable.
+4. For mathematics, use clearly arranged equations and
+   step-by-step working. Include a diagram when the problem
+   benefits from geometric or visual explanation.
+5. For science, technology, coding and educational topics,
+   use diagrams where they help explain the subject.
+6. Do not force diagrams into every answer.
+7. Keep diagrams relevant, readable and correctly labelled.
+8. Put Mermaid diagrams inside fenced mermaid code blocks.
+
+MATHEMATICAL NOTATION:
+
+1. Use LaTeX notation for mathematical expressions.
+2. Use \\( ... \\) for inline mathematics.
+3. Use \\[ ... \\] for displayed mathematical equations.
+4. Show calculations step by step when appropriate.
+5. Explain the meaning of important mathematical symbols.
+
+NO UNNECESSARY SEPARATOR LINES:
+
+1. Do not use horizontal separator lines between paragraphs
+   or sections.
+2. Do not insert lines made from ---, ***, or ___.
+3. Use headings, paragraphs, numbered lists and spacing
+   to organize answers.
+4. Keep explanations connected and natural.
+5. Only include separator lines if the user explicitly
+   requests them.
+
+GENERAL RESPONSE STYLE:
+
+- Be accurate and direct.
+- Explain difficult topics clearly.
+- Use headings when useful.
+- Avoid unnecessary repetition.
+- Use examples where they improve understanding.
+- Do not invent facts.
+- Do not claim to have performed actions that were not completed.
+
+IDENTITY:
+
+If asked your name, say:
+"I am MAYNARD AI, created by David Takyi."
+`;
+
+// ============================================
 // RESPONSE HELPERS
 // ============================================
 
@@ -53,6 +112,19 @@ function errorMessage(error) {
   return error instanceof Error
     ? error.message
     : "An unexpected server error occurred.";
+}
+
+// ============================================
+// REMOVE UNNECESSARY SEPARATOR LINES
+// ============================================
+
+function cleanAIResponse(text) {
+  if (typeof text !== "string") return "";
+
+  return text
+    .replace(/^[ \t]*(?:-{3,}|\*{3,}|_{3,})[ \t]*$/gm, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 // ============================================
@@ -532,9 +604,7 @@ async function groqChat(body) {
         .filter(
           (message) =>
             message &&
-            ["system", "user", "assistant"].includes(
-              message.role
-            )
+            ["user", "assistant"].includes(message.role)
         )
         .slice(-MESSAGE_LIMIT)
         .map((message) => ({
@@ -562,6 +632,15 @@ async function groqChat(body) {
     );
   }
 
+  // The server controls the main assistant instructions.
+  const chatMessages = [
+    {
+      role: "system",
+      content: MAYNARD_SYSTEM_PROMPT,
+    },
+    ...messages,
+  ];
+
   // Image understanding
   if (body.image) {
     const image = extractImageData(body.image);
@@ -571,8 +650,8 @@ async function groqChat(body) {
 
     let lastUserIndex = -1;
 
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].role === "user") {
+    for (let i = chatMessages.length - 1; i >= 0; i--) {
+      if (chatMessages[i].role === "user") {
         lastUserIndex = i;
         break;
       }
@@ -585,9 +664,9 @@ async function groqChat(body) {
     }
 
     const previousContent =
-      messages[lastUserIndex].content;
+      chatMessages[lastUserIndex].content;
 
-    messages[lastUserIndex] = {
+    chatMessages[lastUserIndex] = {
       role: "user",
       content: [
         {
@@ -609,14 +688,14 @@ async function groqChat(body) {
     return callGroq(
       apiKey,
       visionModel,
-      messages
+      chatMessages
     );
   }
 
   return callGroq(
     apiKey,
     model,
-    messages
+    chatMessages
   );
 }
 
@@ -648,17 +727,17 @@ async function callGroq(apiKey, model, messages) {
     );
   }
 
-  const reply =
+  const rawReply =
     data.choices?.[0]?.message?.content;
 
-  if (!reply) {
+  if (!rawReply) {
     throw new Error(
       "Groq returned an empty response."
     );
   }
 
   return {
-    reply,
+    reply: cleanAIResponse(rawReply),
     model: data.model || model,
     usage: data.usage || null,
   };
@@ -812,10 +891,6 @@ export default async function handler(req, res) {
 
     switch (action) {
 
-      // ----------------------------------------
-      // AI CHAT
-      // ----------------------------------------
-
       case "chat": {
         const result = await groqChat(body);
 
@@ -824,10 +899,6 @@ export default async function handler(req, res) {
           ...result,
         });
       }
-
-      // ----------------------------------------
-      // SAVE HISTORY
-      // ----------------------------------------
 
       case "history_save": {
         const record = await saveHistory(
@@ -842,11 +913,6 @@ export default async function handler(req, res) {
         });
       }
 
-      // ----------------------------------------
-      // LIST HISTORY
-      // Supports index.html result.items
-      // ----------------------------------------
-
       case "history_list": {
         const histories = await listHistory(visitor);
 
@@ -856,12 +922,6 @@ export default async function handler(req, res) {
           histories,
         });
       }
-
-      // ----------------------------------------
-      // OPEN HISTORY
-      // Supports index.html result.title
-      // and result.messages
-      // ----------------------------------------
 
       case "history_get": {
         const history = await getHistory(
@@ -887,10 +947,6 @@ export default async function handler(req, res) {
         });
       }
 
-      // ----------------------------------------
-      // RENAME HISTORY
-      // ----------------------------------------
-
       case "history_rename": {
         const history = await renameHistory(
           visitor,
@@ -911,10 +967,6 @@ export default async function handler(req, res) {
         });
       }
 
-      // ----------------------------------------
-      // DELETE HISTORY
-      // ----------------------------------------
-
       case "history_delete": {
         await deleteHistory(
           visitor,
@@ -927,10 +979,6 @@ export default async function handler(req, res) {
         });
       }
 
-      // ----------------------------------------
-      // CLEAR HISTORY
-      // ----------------------------------------
-
       case "history_clear": {
         await clearHistory(visitor);
 
@@ -940,10 +988,6 @@ export default async function handler(req, res) {
         });
       }
 
-      // ----------------------------------------
-      // IMAGE GENERATION
-      // ----------------------------------------
-
       case "image_generate": {
         const result = await generateImage(body);
 
@@ -952,10 +996,6 @@ export default async function handler(req, res) {
           ...result,
         });
       }
-
-      // ----------------------------------------
-      // LIVE FOOTBALL
-      // ----------------------------------------
 
       case "football_live": {
         const result = await liveFootball();
