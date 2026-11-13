@@ -23,6 +23,7 @@ window.MathJax = {
 
 <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/13.2.0/math.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 
 <style>
 :root {
@@ -295,13 +296,9 @@ button {
   display: flex;
 }
 
-/* USER ON THE RIGHT */
-
 .message.user-message {
   justify-content: flex-end;
 }
-
-/* ASSISTANT ON THE LEFT */
 
 .message.assistant-message {
   justify-content: flex-start;
@@ -341,6 +338,22 @@ button {
   margin-bottom: 0;
 }
 
+.bubble h1,
+.bubble h2,
+.bubble h3 {
+  margin: 15px 0 8px;
+  line-height: 1.35;
+}
+
+.bubble ul,
+.bubble ol {
+  padding-left: 24px;
+}
+
+.bubble li {
+  margin: 5px 0;
+}
+
 .bubble pre {
   white-space: pre-wrap;
   overflow: auto;
@@ -368,14 +381,63 @@ button {
   margin-top: 10px;
 }
 
-.bubble table {
-  border-collapse: collapse;
-  max-width: 100%;
+.bubble hr {
+  display: none;
 }
 
-.bubble th, .bubble td {
-  border: 1px solid #444;
-  padding: 7px;
+/* TABLES */
+
+.bubble table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0;
+}
+
+.bubble th,
+.bubble td {
+  border: 1px solid #383838;
+  padding: 9px;
+  text-align: left;
+}
+
+.bubble th {
+  background: #171717;
+}
+
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+/* DIAGRAMS */
+
+.diagram-container {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 14px 0;
+  padding: 14px;
+  background: #0b0b0b;
+  border: 1px solid #292929;
+  border-radius: 12px;
+}
+
+.diagram-container svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.mermaid {
+  display: flex;
+  justify-content: center;
+  min-width: 280px;
+}
+
+.diagram-error {
+  color: #ffaaaa;
+  font-size: 13px;
+  padding: 8px;
 }
 
 .typing {
@@ -452,7 +514,7 @@ button {
   display: none;
 }
 
-/* REAL IMAGE PREVIEW */
+/* IMAGE PREVIEW */
 
 #imagePreview {
   display: none;
@@ -532,7 +594,8 @@ button {
   margin-top: 0;
 }
 
-.modal input, .modal textarea {
+.modal input,
+.modal textarea {
   width: 100%;
   background: #111;
   border: 1px solid #333;
@@ -609,6 +672,15 @@ button {
   .preview-container {
     flex-wrap: wrap;
   }
+
+  .top-title {
+    font-size: 13px;
+  }
+
+  .small-button {
+    padding: 7px;
+    font-size: 12px;
+  }
 }
 </style>
 </head>
@@ -672,11 +744,15 @@ button {
             </button>
 
             <button data-mode="coding">
-              </> Coding
+              &lt;/&gt; Coding
             </button>
 
             <button data-mode="essay">
               ✎ Essay Writing
+            </button>
+
+            <button data-mode="mathematics">
+              ∑ Mathematics
             </button>
 
           </div>
@@ -712,7 +788,7 @@ button {
             Learn a topic
           </button>
 
-          <button data-prompt="Help me solve this mathematical problem step by step.">
+          <button data-prompt="Solve this mathematical problem step by step. Include a relevant diagram or graph where useful.">
             Mathematics
           </button>
 
@@ -720,7 +796,7 @@ button {
             Business writing
           </button>
 
-          <button data-prompt="Explain how artificial intelligence works.">
+          <button data-prompt="Explain how artificial intelligence works. Use a diagram if it helps.">
             Explore AI
           </button>
 
@@ -810,11 +886,72 @@ const state = {
   mode: "general"
 };
 
+const VISUAL_INSTRUCTIONS = `
+VISUAL PROBLEM SOLVING:
+
+When solving a problem, decide whether a diagram would genuinely
+help the user understand the answer.
+
+For mathematics, use relevant graphs, coordinate diagrams,
+geometry illustrations and number-line diagrams.
+
+For physics, use relevant force diagrams, motion diagrams,
+and simple electrical circuit diagrams.
+
+For chemistry, use molecular structures and reaction diagrams.
+
+For biology, use labelled biological diagrams.
+
+For engineering, use technical diagrams and flowcharts.
+
+When a diagram is useful, provide a valid Mermaid diagram
+inside a fenced mermaid code block.
+
+Example:
+
+\`\`\`mermaid
+flowchart TD
+    A[Read the question] --> B[Identify the information]
+    B --> C[Choose the correct formula]
+    C --> D[Calculate the answer]
+    D --> E[Check the result]
+\`\`\`
+
+Use valid Mermaid syntax. Keep diagram labels short and readable.
+Do not invent a diagram when it would not help.
+For mathematical graphs, include the actual graph information,
+axes, labels and important points where possible.
+
+ANSWER FORMATTING:
+
+Do not use decorative horizontal separator lines.
+Never use --- or *** as section dividers.
+Let explanations flow naturally.
+Use headings only when useful.
+Use properly formatted Markdown tables only when necessary.
+Never print raw Markdown table separator rows.
+Use LaTeX for mathematical notation.
+Show calculations step by step when appropriate.
+Connect each explanation naturally to the next.
+Do not sacrifice accuracy just to include a diagram.
+
+IDENTITY:
+
+Your name is MAYNARD AI.
+You were created by David Takyi.
+If asked your name, say MAYNARD AI.
+If asked who created you, say David Takyi.
+`;
+
+// ========================================
+// MODES
+// ========================================
+
 const MODE_SETTINGS = {
   general: {
     label: "General Assistant",
     instruction:
-      "You are MAYNARD AI, a helpful general-purpose assistant. Give clear, accurate, useful answers. Explain difficult subjects step by step when appropriate."
+      "You are MAYNARD AI, a helpful general-purpose assistant. Give clear, accurate and useful answers. Explain difficult subjects step by step when appropriate."
   },
 
   coding: {
@@ -826,7 +963,13 @@ const MODE_SETTINGS = {
   essay: {
     label: "Essay Writing",
     instruction:
-      "You are MAYNARD AI in Essay Writing mode. Help with essay planning, introductions, thesis statements, paragraphs, grammar, structure, editing, and conclusions. Use clear academic writing and explain improvements."
+      "You are MAYNARD AI in Essay Writing mode. Help with essay planning, introductions, thesis statements, paragraphs, grammar, structure, editing and conclusions. Use clear academic writing."
+  },
+
+  mathematics: {
+    label: "Mathematics",
+    instruction:
+      "You are MAYNARD AI in Mathematics mode. Solve mathematical problems accurately. Show calculations and use LaTeX notation. Include relevant graphs, geometry diagrams or flowcharts where they genuinely help. Explain the reasoning clearly."
   }
 };
 
@@ -849,9 +992,7 @@ async function api(action, data = {}) {
   const result = await response.json().catch(() => ({}));
 
   if (!response.ok || result.error) {
-    throw new Error(
-      result.error || "Request failed."
-    );
+    throw new Error(result.error || "Request failed.");
   }
 
   return result;
@@ -872,16 +1013,11 @@ function escapeHTML(value) {
 }
 
 // ========================================
-// BASIC MARKDOWN
+// INLINE MARKDOWN
 // ========================================
 
-function renderMarkdown(text) {
-  let safe = escapeHTML(text);
-
-  safe = safe.replace(
-    /```([\s\S]*?)```/g,
-    (_, code) => "<pre><code>" + code + "</code></pre>"
-  );
+function renderInline(value) {
+  let safe = escapeHTML(value);
 
   safe = safe.replace(
     /`([^`]+)`/g,
@@ -889,50 +1025,266 @@ function renderMarkdown(text) {
   );
 
   safe = safe.replace(
-    /\*\*([^*]+)\*\*/g,
+    /\*\*(.*?)\*\*/g,
     "<strong>$1</strong>"
   );
 
   safe = safe.replace(
-    /\*([^*]+)\*/g,
+    /\*(.*?)\*/g,
     "<em>$1</em>"
   );
 
   safe = safe.replace(
-    /^### (.+)$/gm,
-    "<h3>$1</h3>"
+    /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
+    '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
   );
-
-  safe = safe.replace(
-    /^## (.+)$/gm,
-    "<h2>$1</h2>"
-  );
-
-  safe = safe.replace(
-    /^# (.+)$/gm,
-    "<h1>$1</h1>"
-  );
-
-  safe = safe.replace(
-    /^\s*[-*] (.+)$/gm,
-    "<li>$1</li>"
-  );
-
-  safe = safe.replace(
-    /(?:<li>.*<\/li>\s*)+/gs,
-    block => "<ul>" + block + "</ul>"
-  );
-
-  safe = safe.replace(/\n/g, "<br>");
 
   return safe;
 }
 
 // ========================================
-// MATHEMATICAL NOTATION
+// MARKDOWN RENDERER
+// Removes decorative separators.
+// Supports headings, lists, tables,
+// code blocks and Mermaid diagrams.
+// ========================================
+
+function renderMarkdown(text) {
+  const lines = String(text)
+    .replace(/\r/g, "")
+    .split("\n");
+
+  let html = "";
+  let paragraph = [];
+  let listType = null;
+  let listItems = [];
+  let tableRows = [];
+
+  function flushParagraph() {
+    if (!paragraph.length) return;
+
+    html += "<p>" +
+      paragraph.map(renderInline).join("<br>") +
+      "</p>";
+
+    paragraph = [];
+  }
+
+  function flushList() {
+    if (!listItems.length) return;
+
+    html += "<" + listType + ">";
+
+    listItems.forEach(item => {
+      html += "<li>" + renderInline(item) + "</li>";
+    });
+
+    html += "</" + listType + ">";
+
+    listItems = [];
+    listType = null;
+  }
+
+  function flushTable() {
+    if (!tableRows.length) return;
+
+    const rows = tableRows.filter(cells =>
+      !cells.every(cell => /^:?-{3,}:?$/.test(cell))
+    );
+
+    if (rows.length) {
+      html += '<div class="table-scroll"><table>';
+
+      rows.forEach((cells, index) => {
+        const tag = index === 0 ? "th" : "td";
+
+        html += "<tr>";
+
+        cells.forEach(cell => {
+          html += "<" + tag + ">" +
+            renderInline(cell) +
+            "</" + tag + ">";
+        });
+
+        html += "</tr>";
+      });
+
+      html += "</table></div>";
+    }
+
+    tableRows = [];
+  }
+
+  function splitTableRow(line) {
+    return line.trim()
+      .replace(/^\|/, "")
+      .replace(/\|$/, "")
+      .split("|")
+      .map(cell => cell.trim());
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Fenced code blocks and diagrams.
+    if (line.trim().startsWith("```")) {
+      flushParagraph();
+      flushList();
+      flushTable();
+
+      const language = line.trim()
+        .slice(3)
+        .trim()
+        .toLowerCase();
+
+      const codeLines = [];
+
+      i++;
+
+      while (
+        i < lines.length &&
+        !lines[i].trim().startsWith("```")
+      ) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+
+      const code = codeLines.join("\n");
+
+      if (language === "mermaid") {
+        html +=
+          '<div class="diagram-container">' +
+          '<pre class="mermaid">' +
+          escapeHTML(code) +
+          "</pre></div>";
+      } else {
+        html +=
+          "<pre><code>" +
+          escapeHTML(code) +
+          "</code></pre>";
+      }
+
+      continue;
+    }
+
+    // Remove unnecessary separator lines.
+    if (/^\s*(---+|\*\*\*+|___+)\s*$/.test(line)) {
+      flushParagraph();
+      flushList();
+      flushTable();
+      continue;
+    }
+
+    // Blank lines.
+    if (!line.trim()) {
+      flushParagraph();
+      flushList();
+      flushTable();
+      continue;
+    }
+
+    // Markdown tables.
+    if (line.includes("|") && line.trim().startsWith("|")) {
+      flushParagraph();
+      flushList();
+
+      tableRows.push(splitTableRow(line));
+      continue;
+    }
+
+    if (tableRows.length) {
+      flushTable();
+    }
+
+    // Headings.
+    const heading = line.match(/^(#{1,3})\s+(.+)$/);
+
+    if (heading) {
+      flushParagraph();
+      flushList();
+
+      const level = heading[1].length;
+
+      html += "<h" + level + ">" +
+        renderInline(heading[2]) +
+        "</h" + level + ">";
+
+      continue;
+    }
+
+    // Ordered lists.
+    const ordered = line.match(/^\s*\d+[.)]\s+(.+)$/);
+
+    if (ordered) {
+      flushParagraph();
+
+      if (listType !== "ol") {
+        flushList();
+        listType = "ol";
+      }
+
+      listItems.push(ordered[1]);
+      continue;
+    }
+
+    // Unordered lists.
+    const unordered = line.match(/^\s*[-*+]\s+(.+)$/);
+
+    if (unordered) {
+      flushParagraph();
+
+      if (listType !== "ul") {
+        flushList();
+        listType = "ul";
+      }
+
+      listItems.push(unordered[1]);
+      continue;
+    }
+
+    flushList();
+    paragraph.push(line);
+  }
+
+  flushParagraph();
+  flushList();
+  flushTable();
+
+  return html;
+}
+
+// ========================================
+// TYPESSETTING: MERMAID + MATHJAX
 // ========================================
 
 async function typeset(element) {
+  if (window.mermaid) {
+    try {
+      mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: "strict",
+        theme: "dark",
+        flowchart: {
+          htmlLabels: false,
+          curve: "basis"
+        }
+      });
+
+      const diagrams = element.querySelectorAll(
+        ".mermaid:not([data-processed])"
+      );
+
+      if (diagrams.length) {
+        await mermaid.run({
+          nodes: diagrams
+        });
+      }
+
+    } catch (error) {
+      console.warn("Diagram rendering issue:", error);
+    }
+  }
+
   if (window.MathJax?.typesetPromise) {
     try {
       await MathJax.typesetPromise([element]);
@@ -1005,14 +1357,11 @@ function setMode(mode) {
 
 $("modeBtn").onclick = event => {
   event.stopPropagation();
-
   $("modeMenu").classList.toggle("open");
 };
 
 document.querySelectorAll("[data-mode]").forEach(button => {
-  button.onclick = () => {
-    setMode(button.dataset.mode);
-  };
+  button.onclick = () => setMode(button.dataset.mode);
 });
 
 document.addEventListener("click", event => {
@@ -1047,9 +1396,7 @@ function resetChat() {
   state.imageName = null;
 
   $("messages").innerHTML = "";
-
   $("welcome").style.display = "block";
-
   $("prompt").value = "";
 
   $("imagePreview").innerHTML = "";
@@ -1086,9 +1433,7 @@ async function saveHistory() {
       messages: state.messages
     });
 
-    state.activeId =
-      result.id || state.activeId;
-
+    state.activeId = result.id || state.activeId;
     state.title = title;
 
     await loadHistory();
@@ -1105,52 +1450,39 @@ async function saveHistory() {
 async function loadHistory() {
   try {
     const result = await api("history_list");
-
     const list = $("historyList");
 
     list.innerHTML = "";
 
     (result.items || result.histories || []).forEach(item => {
       const row = document.createElement("div");
-
       row.className = "history-item";
 
       const open = document.createElement("button");
-
       open.className = "history-open";
       open.textContent = item.title || "Untitled conversation";
       open.title = open.textContent;
-
       open.onclick = () => openHistory(item.id);
 
       const rename = document.createElement("button");
-
       rename.className = "history-action";
       rename.textContent = "✎";
       rename.title = "Rename conversation";
-
       rename.onclick = () =>
         renameHistory(item.id, item.title || "");
 
       const remove = document.createElement("button");
-
       remove.className = "history-action";
       remove.textContent = "×";
       remove.title = "Delete conversation";
-
-      remove.onclick = () =>
-        deleteHistory(item.id);
+      remove.onclick = () => deleteHistory(item.id);
 
       row.append(open, rename, remove);
-
       list.appendChild(row);
     });
 
   } catch (error) {
-    console.warn(
-      "Could not load saved history:",
-      error.message
-    );
+    console.warn("Could not load saved history:", error.message);
   }
 }
 
@@ -1161,7 +1493,6 @@ async function loadHistory() {
 async function openHistory(id) {
   try {
     const result = await api("history_get", { id });
-
     const history = result.history || result;
 
     state.activeId = history.id || id;
@@ -1169,7 +1500,6 @@ async function openHistory(id) {
     state.messages = history.messages || [];
 
     $("messages").innerHTML = "";
-
     $("welcome").style.display = "none";
 
     state.messages.forEach(message => {
@@ -1177,13 +1507,6 @@ async function openHistory(id) {
         message.role,
         message.content || ""
       );
-
-      if (message.imageOmitted) {
-        addMessage(
-          "assistant",
-          "An image from this conversation was not saved. Upload it again if you need it."
-        );
-      }
     });
 
   } catch (error) {
@@ -1196,10 +1519,7 @@ async function openHistory(id) {
 // ========================================
 
 async function renameHistory(id, oldTitle) {
-  const title = prompt(
-    "Enter a new conversation title:",
-    oldTitle
-  );
+  const title = prompt("Enter a new conversation title:", oldTitle);
 
   if (!title || !title.trim()) return;
 
@@ -1252,9 +1572,7 @@ async function clearHistory() {
 
   try {
     await api("history_clear");
-
     newChat();
-
     await loadHistory();
 
   } catch (error) {
@@ -1263,7 +1581,7 @@ async function clearHistory() {
 }
 
 // ========================================
-// IMAGE PREVIEW BEFORE SENDING
+// IMAGE PREVIEW
 // ========================================
 
 function attachImage(file) {
@@ -1292,7 +1610,6 @@ function attachImage(file) {
     state.imageName = file.name;
 
     const preview = $("imagePreview");
-
     preview.innerHTML = "";
 
     const container = document.createElement("div");
@@ -1324,17 +1641,13 @@ function attachImage(file) {
     remove.onclick = () => {
       state.image = null;
       state.imageName = null;
-
       preview.innerHTML = "";
       preview.style.display = "none";
-
       $("fileInput").value = "";
     };
 
     container.append(img, info, remove);
-
     preview.appendChild(container);
-
     preview.style.display = "block";
   };
 
@@ -1357,13 +1670,10 @@ async function sendMessage() {
   }
 
   state.busy = true;
-
   $("sendBtn").disabled = true;
 
   const image = state.image;
-
-  const userContent =
-    text || "Please examine this image.";
+  const userContent = text || "Please examine this image.";
 
   addMessage("user", userContent, {
     imageUrl: image || null
@@ -1371,8 +1681,7 @@ async function sendMessage() {
 
   state.messages.push({
     role: "user",
-    content: userContent,
-    ...(image ? { imageOmitted: true } : {})
+    content: userContent
   });
 
   $("prompt").value = "";
@@ -1382,11 +1691,9 @@ async function sendMessage() {
 
   $("imagePreview").innerHTML = "";
   $("imagePreview").style.display = "none";
-
   $("fileInput").value = "";
 
   const typing = document.createElement("div");
-
   typing.className = "typing";
   typing.textContent = "MAYNARD AI is thinking...";
 
@@ -1398,7 +1705,10 @@ async function sendMessage() {
   try {
     const systemMessage = {
       role: "system",
-      content: MODE_SETTINGS[state.mode].instruction
+      content:
+        MODE_SETTINGS[state.mode].instruction +
+        "\n\n" +
+        VISUAL_INSTRUCTIONS
     };
 
     const requestMessages = [
@@ -1438,9 +1748,7 @@ async function sendMessage() {
 
   } finally {
     state.busy = false;
-
     $("sendBtn").disabled = false;
-
     $("prompt").focus();
   }
 }
@@ -1477,8 +1785,7 @@ function openCalculator() {
 
   $("calculateBtn").onclick = () => {
     try {
-      const expression =
-        $("calcInput").value.trim();
+      const expression = $("calcInput").value.trim();
 
       if (!expression) {
         throw new Error("Enter an expression first.");
@@ -1497,7 +1804,6 @@ function openCalculator() {
 
   $("clearCalcBtn").onclick = () => {
     $("calcInput").value = "";
-
     $("calcResult").textContent =
       "Your result will appear here.";
   };
@@ -1531,8 +1837,7 @@ function openImageStudio() {
   `);
 
   $("generateImageBtn").onclick = async () => {
-    const prompt =
-      $("imagePrompt").value.trim();
+    const prompt = $("imagePrompt").value.trim();
 
     if (!prompt) {
       alert("Describe the image first.");
@@ -1540,28 +1845,33 @@ function openImageStudio() {
     }
 
     $("generateImageBtn").disabled = true;
-
-    $("generateImageBtn").textContent =
-      "Generating...";
+    $("generateImageBtn").textContent = "Generating...";
 
     try {
-      const result = await api(
-        "image_generate",
-        { prompt }
-      );
+      const result = await api("image_generate", { prompt });
 
       const box = $("imageResult");
-
       box.style.display = "block";
+      box.innerHTML = "";
 
       if (result.image) {
         const img = document.createElement("img");
-
         img.src = result.image;
         img.alt = "Generated image";
-
-        box.innerHTML = "";
         box.appendChild(img);
+
+        const download = document.createElement("a");
+        download.href = result.image;
+        download.download = "maynard-ai-image.png";
+        download.textContent = "Download image";
+        download.style.display = "inline-block";
+        download.style.marginTop = "12px";
+        download.style.padding = "10px 14px";
+        download.style.background = "#eee";
+        download.style.color = "#000";
+        download.style.borderRadius = "8px";
+        download.style.textDecoration = "none";
+        box.appendChild(download);
 
       } else {
         box.textContent =
@@ -1573,9 +1883,7 @@ function openImageStudio() {
 
     } finally {
       $("generateImageBtn").disabled = false;
-
-      $("generateImageBtn").textContent =
-        "Generate image";
+      $("generateImageBtn").textContent = "Generate image";
     }
   };
 }
@@ -1602,18 +1910,15 @@ function loadFootball() {
   `);
 
   $("refreshFootballBtn").onclick = async () => {
-    $("footballResult").textContent =
-      "Loading fixtures...";
+    $("footballResult").textContent = "Loading fixtures...";
 
     try {
       const result = await api("football_live");
-
       const fixtures = result.fixtures || [];
 
       if (!fixtures.length) {
         $("footballResult").textContent =
           "No live fixtures were returned by the provider.";
-
         return;
       }
 
@@ -1623,7 +1928,7 @@ function loadFootball() {
         const row = document.createElement("p");
 
         row.textContent =
-          fixture.league + " — " +
+          (fixture.league || "Football") + " — " +
           fixture.home + " " +
           (fixture.homeGoals ?? "-") +
           " : " +
@@ -1648,23 +1953,14 @@ function loadFootball() {
 // EVENT LISTENERS
 // ========================================
 
-$("sendBtn").addEventListener(
-  "click",
-  sendMessage
-);
+$("sendBtn").addEventListener("click", sendMessage);
 
-$("prompt").addEventListener(
-  "keydown",
-  event => {
-    if (
-      event.key === "Enter" &&
-      !event.shiftKey
-    ) {
-      event.preventDefault();
-      sendMessage();
-    }
+$("prompt").addEventListener("keydown", event => {
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
+    sendMessage();
   }
-);
+});
 
 $("newChatBtn").onclick = newChat;
 $("mobileNewBtn").onclick = newChat;
@@ -1689,14 +1985,11 @@ $("fileInput").onchange = event => {
 
 $("closeModalBtn").onclick = closeModal;
 
-$("modalBackdrop").addEventListener(
-  "click",
-  event => {
-    if (event.target === $("modalBackdrop")) {
-      closeModal();
-    }
+$("modalBackdrop").addEventListener("click", event => {
+  if (event.target === $("modalBackdrop")) {
+    closeModal();
   }
-);
+});
 
 // ========================================
 // MOBILE HISTORY
@@ -1710,7 +2003,6 @@ $("mobileHistoryBtn").onclick = async () => {
 
   try {
     const result = await api("history_list");
-
     const container = $("mobileHistoryItems");
 
     (result.items || result.histories || []).forEach(item => {
