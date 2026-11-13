@@ -4,2093 +4,598 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#090d1b">
-<title>Maynard AI</title>
+<meta name="theme-color" content="#000000">
+<title>MAYNARD AI</title>
 
 <script>
 window.MathJax = {
   tex: {
-    inlineMath: [['\\(', '\\)'], ['$','$']],
+    inlineMath: [['\\(', '\\)'], ['$', '$']],
     displayMath: [['\\[', '\\]'], ['$$', '$$']],
-    processEscapes: true,
-    processEnvironments: true,
-    packages: {'[+]':['ams']}
+    packages: {'[+]': ['ams']}
   },
-  options: {
-    skipHtmlTags: ['script','noscript','style','textarea','pre','code']
-  },
-  chtml: {scale:1.05,matchFontHeight:false},
-  startup: {typeset:false}
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+  startup: { typeset: false }
 };
 </script>
-
-<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/13.2.0/math.min.js"></script>
 
 <style>
 :root {
-  --bg:#080c19;
-  --panel:rgba(17,25,48,.88);
-  --line:rgba(160,180,255,.15);
-  --text:#f4f6ff;
-  --muted:#a5afca;
-  --accent:#8b7cff;
-  --accent2:#35d6cf;
+  color-scheme: dark;
+  --black:#000;
+  --panel:#080808;
+  --panel2:#101010;
+  --line:#242424;
+  --text:#f5f5f5;
+  --muted:#999;
+  --accent:#a78bfa;
+  --danger:#ff6262;
 }
-*{box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{
-  margin:0;min-height:100vh;color:var(--text);
-  font-family:Inter,system-ui,Arial,sans-serif;
-  background:
-    radial-gradient(ellipse at 15% 15%,rgba(103,80,255,.22),transparent 38%),
-    radial-gradient(ellipse at 85% 80%,rgba(20,205,194,.13),transparent 36%),
-    linear-gradient(135deg,#080c19,#10162b 55%,#090e1d);
-  background-attachment:fixed;
+* { box-sizing:border-box; }
+html,body { margin:0; min-height:100%; background:#000; color:var(--text); font-family:Arial,Helvetica,sans-serif; }
+body { overflow:hidden; }
+button,input,textarea { font:inherit; }
+button { cursor:pointer; }
+.app { height:100dvh; display:flex; background:#000; }
+.sidebar {
+  width:270px; flex-shrink:0; background:#000; border-right:1px solid var(--line);
+  display:flex; flex-direction:column; padding:16px; gap:14px;
 }
-button,input,textarea,select{font:inherit}
-button{cursor:pointer}
-.app{display:flex;min-height:100vh}
-
-/* SIDEBAR */
-.sidebar{
-  width:265px;flex-shrink:0;padding:20px 15px;
-  background:rgba(7,11,25,.92);
-  border-right:1px solid var(--line);
-  backdrop-filter:blur(22px);
-  display:flex;flex-direction:column;gap:17px;z-index:10;
+.brand { font-size:21px; font-weight:800; letter-spacing:2px; padding:8px 4px 16px; }
+.brand span { color:var(--accent); }
+.new-chat,.side-button {
+  width:100%; background:#090909; color:#eee; border:1px solid #292929;
+  border-radius:10px; padding:12px; text-align:left;
 }
-.brand{display:flex;align-items:center;gap:11px;padding:8px 7px 17px}
-.logo,.welcome-logo{
-  display:grid;place-items:center;font-weight:900;color:white;
-  background:linear-gradient(135deg,#8b7cff,#30d7cc);
-  box-shadow:0 8px 28px #7564ff55;
+.new-chat:hover,.side-button:hover { background:#171717; }
+.side-heading { color:#888; font-size:11px; letter-spacing:1.5px; margin:12px 4px 4px; }
+.history-list { overflow:auto; flex:1; }
+.history-item {
+  display:flex; align-items:center; gap:5px; margin:5px 0;
+  border:1px solid transparent; border-radius:9px; padding:5px;
 }
-.logo{width:42px;height:42px;border-radius:14px}
-.brand strong{font-size:19px}
-.brand small{display:block;color:var(--muted);font-size:11px;margin-top:3px}
-.newchat,.mode,.sidebtn{
-  width:100%;border:1px solid var(--line);border-radius:13px;
-  background:rgba(255,255,255,.045);color:var(--text);
-  padding:12px;text-align:left;transition:.2s;
+.history-item:hover { background:#111; border-color:#292929; }
+.history-open {
+  flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  border:0; background:transparent; color:#ddd; text-align:left; padding:7px 4px;
 }
-.newchat{
-  background:linear-gradient(120deg,#6e5de4,#397cce);
-  border:0;text-align:center;font-weight:700;
+.history-action { border:0; background:transparent; color:#888; padding:7px; }
+.history-action:hover { color:white; }
+.main { flex:1; min-width:0; display:flex; flex-direction:column; background:#000; }
+.topbar {
+  height:60px; flex-shrink:0; display:flex; align-items:center; justify-content:space-between;
+  border-bottom:1px solid var(--line); padding:0 18px; background:#000;
 }
-.section{
-  color:#7f8ba9;font-size:10px;font-weight:800;
-  letter-spacing:1.4px;padding:3px 10px;
+.top-title { font-weight:700; letter-spacing:.5px; }
+.top-actions { display:flex; gap:8px; }
+.small-button {
+  border:1px solid #292929; background:#0b0b0b; color:#ddd; padding:8px 11px; border-radius:8px;
 }
-.modes{display:grid;gap:3px}
-.mode{border-color:transparent;color:#c1c9df;padding:10px 12px}
-.mode:hover,.mode.active,.sidebtn:hover{
-  background:rgba(135,123,255,.16);
-  border-color:#8b7cff55;color:white;
+.small-button:hover { background:#1a1a1a; }
+.chat-area { flex:1; overflow:auto; padding:24px 5vw 30px; }
+.welcome { max-width:780px; margin:12vh auto 0; text-align:center; }
+.welcome h1 { font-size:clamp(28px,5vw,44px); margin-bottom:10px; }
+.welcome p { color:var(--muted); line-height:1.6; }
+.quick-actions { display:flex; flex-wrap:wrap; justify-content:center; gap:9px; margin-top:25px; }
+.quick-actions button { background:#090909; border:1px solid #292929; color:#ddd; border-radius:20px; padding:10px 14px; }
+.messages { max-width:900px; margin:0 auto; display:flex; flex-direction:column; gap:18px; }
+.message { width:100%; display:flex; justify-content:flex-start; }
+.message.user-message,.message.assistant-message { justify-content:flex-start; }
+.bubble {
+  max-width:min(90%,780px); padding:14px 16px; border:1px solid #242424;
+  border-radius:14px; background:#090909; color:#eee; line-height:1.65;
+  overflow-wrap:anywhere; white-space:normal;
 }
-.history-section{display:flex;flex-direction:column;min-height:0;max-height:36vh}
-.history-list{display:grid;gap:6px;overflow-y:auto;padding:3px}
-.history-empty{color:var(--muted);font-size:12px;padding:8px}
-.history-item{
-  display:flex;align-items:center;gap:4px;
-  border:1px solid transparent;border-radius:10px;
-  padding:6px;background:#ffffff08;
+.user-message .bubble { background:#111; margin-left:0; margin-right:auto; }
+.assistant-message .bubble { background:#050505; margin-left:0; margin-right:auto; }
+.bubble p { margin:0 0 10px; }
+.bubble p:last-child { margin-bottom:0; }
+.bubble pre { white-space:pre-wrap; overflow:auto; background:#151515; padding:12px; border-radius:8px; }
+.bubble code { background:#191919; padding:2px 5px; border-radius:4px; }
+.bubble pre code { background:transparent; padding:0; }
+.bubble img { max-width:100%; border-radius:10px; }
+.bubble table { border-collapse:collapse; max-width:100%; }
+.bubble th,.bubble td { border:1px solid #444; padding:7px; }
+.typing { color:#aaa; font-size:13px; }
+.composer-wrap { border-top:1px solid var(--line); padding:14px 5vw 18px; background:#000; }
+.composer { max-width:900px; margin:auto; border:1px solid #303030; background:#090909; border-radius:15px; padding:10px; }
+#prompt { display:block; width:100%; min-height:54px; max-height:180px; resize:vertical; border:0; outline:0; color:white; background:transparent; padding:8px; }
+.composer-tools { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.tool-button { border:1px solid #292929; color:#ddd; background:#111; border-radius:9px; padding:9px 11px; }
+.tool-button:hover { background:#202020; }
+.send-button { margin-left:auto; background:#eee; color:#000; border:0; border-radius:9px; padding:10px 18px; font-weight:700; }
+.send-button:disabled { opacity:.5; cursor:not-allowed; }
+#fileInput { display:none; }
+#imagePreview { display:none; margin:6px 0; color:#aaa; font-size:13px; }
+.note { color:#777; font-size:11px; text-align:center; margin:9px 0 0; }
+.modal-backdrop { position:fixed; inset:0; background:#000c; display:none; align-items:center; justify-content:center; padding:16px; z-index:10; }
+.modal { width:min(600px,100%); max-height:85vh; overflow:auto; background:#050505; border:1px solid #333; border-radius:15px; padding:20px; }
+.modal h2 { margin-top:0; }
+.modal input,.modal textarea { width:100%; background:#111; border:1px solid #333; color:white; padding:11px; border-radius:8px; margin:7px 0 12px; }
+.modal textarea { min-height:100px; }
+.modal-row { display:flex; gap:8px; flex-wrap:wrap; }
+.modal-row button { border:1px solid #333; background:#111; color:#eee; padding:10px 14px; border-radius:8px; }
+.modal-close { float:right; }
+.result { margin-top:15px; padding:12px; background:#101010; border:1px solid #292929; border-radius:9px; overflow-wrap:anywhere; }
+.result img { max-width:100%; border-radius:9px; }
+@media(max-width:720px) {
+  .sidebar { width:220px; padding:10px; }
+  .chat-area { padding:18px 13px 24px; }
+  .composer-wrap { padding:10px 12px 14px; }
 }
-.history-item.active{background:rgba(139,124,255,.17);border-color:#8b7cff55}
-.history-open{
-  flex:1;min-width:0;border:0;background:transparent;color:#dce3fa;
-  text-align:left;font-size:12px;overflow:hidden;text-overflow:ellipsis;
-  white-space:nowrap;padding:7px 4px;
-}
-.history-action{border:0;background:transparent;color:#aeb9d8;padding:5px;font-size:12px}
-.history-action:hover{color:white}
-.sidebottom{margin-top:auto;display:grid;gap:8px}
-.sidebtn{font-size:13px}
-
-/* MAIN */
-.main{flex:1;min-width:0;display:flex;flex-direction:column;min-height:100vh}
-.topbar{
-  height:68px;display:flex;align-items:center;justify-content:space-between;
-  padding:0 25px;border-bottom:1px solid var(--line);
-  background:rgba(8,12,25,.55);backdrop-filter:blur(18px);
-  position:sticky;top:0;z-index:5;
-}
-.top-left{display:flex;align-items:center;gap:12px}
-.topbar h2{font-size:15px;margin:0}
-.top-actions{display:flex;gap:8px}
-.iconbtn{
-  border:1px solid var(--line);background:#ffffff08;color:#e8ebff;
-  border-radius:10px;min-width:38px;height:38px;padding:0 10px;
-}
-.menu-button{display:none}
-
-/* CHAT */
-.chat{width:min(900px,100%);margin:0 auto;padding:28px 22px 220px;flex:1}
-.welcome{text-align:center;padding:clamp(40px,10vh,105px) 12px 45px}
-.welcome-logo{
-  width:68px;height:68px;border-radius:23px;margin:0 auto 20px;font-size:26px;
-}
-.welcome h1{font-size:clamp(27px,5vw,42px);margin:0 0 12px;letter-spacing:-1px}
-.gradient{
-  background:linear-gradient(90deg,#b3aaff,#53e5d8);
-  background-clip:text;color:transparent;
-}
-.welcome p{color:var(--muted);max-width:520px;margin:0 auto;line-height:1.7;font-size:14px}
-.suggestions{
-  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:11px;max-width:650px;margin:28px auto 0;
-}
-.suggestion{
-  border:1px solid var(--line);border-radius:15px;
-  background:rgba(255,255,255,.045);color:#e5e9ff;
-  text-align:left;padding:15px;line-height:1.5;font-size:13px;
-}
-.suggestion:hover{border-color:#8b7cff88;background:#8174ff16}
-
-/* MESSAGES */
-.message{display:flex;margin:22px 0;gap:10px;align-items:flex-start;animation:appear .25s ease}
-@keyframes appear{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.message.user{justify-content:flex-end}
-.avatar{
-  width:32px;height:32px;border-radius:11px;flex:0 0 32px;
-  display:grid;place-items:center;font-size:11px;font-weight:800;
-  background:linear-gradient(135deg,#8b7cff,#35d6cf);color:white;
-}
-.message.user .avatar{order:2;background:linear-gradient(135deg,#397cce,#7564e8)}
-.message-body{min-width:0;max-width:min(82%,720px)}
-.bubble{
-  padding:13px 16px;border:1px solid var(--line);
-  border-radius:17px;background:rgba(24,34,59,.96);
-  line-height:1.72;font-size:14px;min-width:0;max-width:100%;
-  overflow-wrap:break-word;word-break:normal;hyphens:manual;
-  box-shadow:0 8px 25px #00000018;
-}
-.message.user .bubble{
-  background:linear-gradient(135deg,#6658dc,#397fdb);
-  border-color:#ffffff20;border-radius:17px 5px 17px 17px;
-}
-.message.assistant .bubble{border-radius:5px 17px 17px 17px}
-.bubble p{margin:0 0 11px}
-.bubble p:last-child{margin-bottom:0}
-.bubble h1,.bubble h2,.bubble h3{line-height:1.3;margin:17px 0 8px}
-.bubble ul,.bubble ol{padding-left:23px}
-.bubble li{margin:5px 0}
-.bubble pre{
-  white-space:pre-wrap;overflow:auto;overflow-wrap:anywhere;
-  background:#080d1c;padding:13px;border-radius:10px;
-  border:1px solid var(--line);max-width:100%;
-}
-.bubble code{background:#ffffff12;padding:2px 5px;border-radius:5px;overflow-wrap:anywhere}
-.bubble pre code{background:none;padding:0}
-.bubble blockquote{border-left:3px solid var(--accent);margin:10px 0;padding:5px 12px;color:#c6cce2}
-.bubble table{border-collapse:collapse;width:100%;display:block;overflow-x:auto;margin:12px 0;max-width:100%}
-.bubble th,.bubble td{border:1px solid var(--line);padding:9px;text-align:left}
-.bubble th{background:#ffffff12}
-
-/* MATHEMATICS */
-.bubble mjx-container{color:#f0efff!important;max-width:100%;overflow-x:auto;overflow-y:hidden}
-.bubble mjx-container[display="true"]{
-  display:block;margin:17px 0!important;padding:15px 10px;
-  background:linear-gradient(120deg,rgba(139,124,255,.09),rgba(53,214,207,.05));
-  border:1px solid rgba(160,180,255,.15);border-radius:13px;text-align:center;
-}
-.bubble mjx-math{font-size:1.04em}
-.message.user .bubble mjx-container{color:white!important}
-
-/* IMAGE GALLERY */
-.image-gallery{
-  display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));
-  gap:9px;margin-top:12px;max-width:100%;
-}
-.image-card{min-width:0}
-.uploaded-image{
-  display:block;width:100%;height:150px;max-width:100%;
-  object-fit:cover;border-radius:12px;
-  border:1px solid #ffffff25;background:#080d1c;
-}
-.image-caption{font-size:11px;color:#cbd4ef;margin-top:4px;overflow-wrap:anywhere}
-.image-download{
-  display:inline-block;margin-top:6px;padding:6px 10px;
-  border:1px solid var(--line);border-radius:8px;
-  color:#dcd8ff;text-decoration:none;font-size:11px;
-  background:#ffffff0b;
-}
-.image-download:hover{background:#ffffff18}
-.message-tools{display:flex;gap:7px;margin-top:8px;opacity:.85}
-.tool{border:0;background:transparent;color:#aeb9d8;font-size:11px;padding:4px}
-.tool:hover{color:white}
-
-/* IMAGE VIEWER */
-.image-viewer{
-  position:fixed;inset:0;z-index:9999;display:flex;
-  align-items:center;justify-content:center;
-  background:rgba(0,0,0,.96);padding:65px 15px 75px;
-  overflow:auto;touch-action:pan-x pan-y;
-}
-.image-viewer.hidden{display:none!important}
-.image-viewer img{
-  display:block;max-width:100%;max-height:100%;
-  width:auto;height:auto;object-fit:contain;
-  transform:scale(1);transform-origin:center;transition:transform .2s ease;
-}
-.image-viewer-close,.image-viewer-zoom{
-  position:fixed;z-index:10000;border:1px solid #ffffff35;
-  background:#222b45;color:white;border-radius:50%;
-  width:44px;height:44px;font-size:25px;display:grid;place-items:center;
-}
-.image-viewer-close{top:15px;right:15px}
-.image-viewer-zoom{bottom:20px}
-#zoomOutImage{right:75px}
-#zoomInImage{right:20px}
-
-/* TYPING */
-.typing{display:flex;gap:5px;padding:6px}
-.typing i{width:6px;height:6px;border-radius:50%;background:#aaa2ff;animation:bounce .8s infinite alternate}
-.typing i:nth-child(2){animation-delay:.15s}
-.typing i:nth-child(3){animation-delay:.3s}
-.hidden{display:none!important}
-@keyframes bounce{to{transform:translateY(-5px);opacity:.4}}
-
-/* COMPOSER */
-.composer-wrap{
-  position:fixed;bottom:0;left:265px;right:0;
-  padding:18px 22px 17px;
-  background:linear-gradient(transparent,rgba(8,12,25,.96) 25%);
-  backdrop-filter:blur(10px);z-index:4;
-}
-.composer{
-  width:min(1100px,100%);margin:auto;
-  border:1px solid #9d9aff55;
-  background:rgba(20,28,52,.96);
-  border-radius:19px;padding:13px;
-  box-shadow:0 12px 45px #0006,0 0 25px #7564ff16;
-}
-
-/* ATTACHMENTS */
-.attachments{
-  display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));
-  gap:10px;padding:4px 2px 10px;max-height:220px;overflow-y:auto;
-}
-.attachment-item{
-  position:relative;min-width:0;display:flex;flex-direction:column;gap:4px;
-  background:#ffffff0b;border:1px solid var(--line);border-radius:12px;overflow:hidden;
-}
-.attachment-thumb{width:100%;height:88px;object-fit:cover;display:block;background:#080d1c}
-.attachment-name{
-  font-size:10px;color:#d4dcf7;padding:2px 7px 7px;
-  overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
-}
-.attachment-remove{
-  position:absolute;top:5px;right:5px;width:25px;height:25px;
-  border:0;border-radius:50%;background:#171a2bdc;color:#ffaaaa;
-  font-size:17px;display:grid;place-items:center;
-}
-.attachment-remove:hover{background:#a52c45;color:white}
-.attachment-document{padding:14px 8px;font-size:11px;color:#d4dcf7;overflow-wrap:anywhere;min-height:65px}
-
-/* IMAGE GENERATION */
-.image-gen-controls{
-  display:flex;align-items:center;gap:9px;flex-wrap:wrap;
-  padding:5px 3px 10px;color:var(--muted);font-size:11px;
-}
-.image-gen-controls select{
-  background:#10182e;color:#edf0ff;border:1px solid var(--line);
-  border-radius:9px;padding:7px 9px;outline:none;
-}
-.image-gen-btn{
-  border:1px solid #8b7cff66;
-  background:linear-gradient(135deg,#6959dc,#287f9b);
-  color:white;font-size:12px;font-weight:700;white-space:nowrap;
-}
-.image-gen-btn:disabled{opacity:.5;cursor:not-allowed}
-.image-gen-status{font-size:11px;color:var(--muted)}
-
-/* INPUT */
-.compose-row{display:flex;flex-direction:column;align-items:stretch;gap:10px;width:100%}
-.compose-row textarea{
-  display:block;width:100%;min-width:0;min-height:72px;max-height:200px;
-  resize:none;background:rgba(255,255,255,.025);
-  border:1px solid var(--line);border-radius:12px;
-  outline:none;color:white;padding:14px;font-size:15px;
-  line-height:1.6;overflow-y:auto;
-}
-.compose-row textarea:focus{border-color:#8b7cff99;box-shadow:0 0 0 2px #8b7cff18}
-.compose-row textarea::placeholder{color:#8793b2}
-.compose-actions{display:flex;align-items:center;gap:9px;width:100%;flex-wrap:wrap}
-.compose-actions .actionbtn{flex-shrink:0}
-.compose-actions .sendbtn{margin-left:auto;flex-shrink:0}
-.actionbtn{
-  min-width:38px;height:38px;border-radius:11px;
-  border:1px solid var(--line);background:#ffffff0b;color:#e9edff;padding:0 10px;
-}
-.sendbtn{
-  background:linear-gradient(135deg,#8b7cff,#397cce);border:0;
-  font-weight:700;border-radius:11px;padding:0 16px;height:38px;color:white;
-}
-.sendbtn:disabled{opacity:.5;cursor:not-allowed}
-.status{text-align:center;font-size:11px;color:var(--muted);margin-top:10px}
-
-/* MOBILE */
-@media(max-width:760px){
-  .sidebar{
-    position:fixed;top:0;bottom:0;left:-280px;transition:left .25s;
-    box-shadow:10px 0 30px #0006;overflow-y:auto;
-  }
-  .sidebar.open{left:0}
-  .menu-button{display:inline-block}
-  .topbar{padding:0 12px}
-  .chat{padding:18px 12px 245px}
-  .bubble{padding:12px}
-  .message-body{max-width:88%}
-  .composer-wrap{left:0;right:0;padding:10px}
-  .suggestions{grid-template-columns:1fr}
-  .bubble mjx-container[display="true"]{padding:10px 5px;margin:12px 0!important}
-  .bubble mjx-math{font-size:1em}
-  .sendbtn{padding:0 11px;font-size:12px}
-  .history-section{max-height:30vh}
-  .attachments{grid-template-columns:repeat(auto-fill,minmax(85px,1fr));max-height:180px}
-  .attachment-thumb{height:75px}
-  .compose-row{gap:9px}
-  .compose-row textarea{width:100%;min-height:72px;font-size:15px}
-  .compose-actions{gap:7px}
-  .image-gen-btn{padding:0 7px}
+@media(max-width:540px) {
+  .sidebar { display:none; }
+  .topbar { padding:0 12px; }
+  .bubble { max-width:96%; }
 }
 </style>
 </head>
 
 <body>
 <div class="app">
+  <aside class="sidebar">
+    <div class="brand">MAYNARD <span>AI</span></div>
+    <button class="new-chat" id="newChatBtn">＋ New conversation</button>
+    <div class="side-heading">SAVED HISTORY</div>
+    <div class="history-list" id="historyList"></div>
+    <button class="side-button" id="clearHistoryBtn">Clear all history</button>
+    <button class="side-button" id="calculatorBtn">∑ Mathematical calculator</button>
+    <button class="side-button" id="imageStudioBtn">✦ Image studio</button>
+    <button class="side-button" id="footballBtn">⚽ Live football</button>
+  </aside>
 
-<aside class="sidebar" id="sidebar">
-  <div class="brand">
-    <div class="logo">M</div>
-    <div><strong>Maynard AI</strong><small>Your intelligent assistant</small></div>
-  </div>
-
-  <button class="newchat" id="newChat">＋ New conversation</button>
-
-  <div>
-    <div class="section">ASSISTANT MODES</div>
-    <div class="modes" id="modes">
-      <button class="mode active" data-mode="general">🌐 General</button>
-      <button class="mode" data-mode="education">🎓 Education</button>
-      <button class="mode" data-mode="writing">✍️ Writing</button>
-      <button class="mode" data-mode="coding">💻 Coding</button>
-      <button class="mode" data-mode="research">🔎 Research</button>
-      <button class="mode" data-mode="business">💼 Business</button>
-      <button class="mode" data-mode="creative">🎨 Creative</button>
-      <button class="mode" data-mode="translator">🌍 Translator</button>
-      <button class="mode" data-mode="summarizer">📄 Summarizer</button>
-    </div>
-  </div>
-
-  <div class="history-section">
-    <div class="section">CHAT HISTORY</div>
-    <div id="historyList" class="history-list">
-      <p class="history-empty">No conversations yet.</p>
-    </div>
-  </div>
-
-  <div class="sidebottom">
-    <button class="sidebtn" id="exportBtn">⬇ Export conversation</button>
-    <button class="sidebtn" id="clearBtn">🗑 Clear conversation</button>
-  </div>
-</aside>
-
-<main class="main">
-  <header class="topbar">
-    <div class="top-left">
-      <button class="iconbtn menu-button" id="menuBtn" aria-label="Open menu">☰</button>
-      <h2 id="modeTitle">General Assistant</h2>
-    </div>
-    <div class="top-actions">
-      <button class="iconbtn" id="voiceToggle">🔊 Voice</button>
-    </div>
-  </header>
-
-  <section class="chat" id="chat">
-    <div class="welcome" id="welcome">
-      <div class="welcome-logo">M</div>
-      <h1>Welcome to <span class="gradient">Maynard AI</span></h1>
-      <p>Your intelligent multipurpose assistant. Ask questions, learn, write, code, translate and explore ideas.</p>
-      <div class="suggestions">
-        <button class="suggestion" data-prompt="Explain quadratic equations step by step with examples.">🎓 <strong>Learn something</strong><br>Understand a difficult topic.</button>
-        <button class="suggestion" data-prompt="Help me write a professional letter.">✍️ <strong>Write something</strong><br>Create polished writing.</button>
-        <button class="suggestion" data-prompt="Help me build a simple website using HTML, CSS and JavaScript.">💻 <strong>Build something</strong><br>Get help with coding.</button>
-        <button class="suggestion" data-prompt="Give me five creative ideas for a new project.">💡 <strong>Explore ideas</strong><br>Discover creative possibilities.</button>
+  <main class="main">
+    <header class="topbar">
+      <div class="top-title">MAYNARD AI</div>
+      <div class="top-actions">
+        <button class="small-button" id="mobileNewBtn">＋ New</button>
+        <button class="small-button" id="mobileHistoryBtn">History</button>
       </div>
-    </div>
-    <div id="messages"></div>
-  </section>
+    </header>
 
-  <div class="composer-wrap">
-    <div class="composer">
-      <div class="attachments" id="attachmentList"></div>
-
-      <div class="image-gen-controls">
-        <label for="imageAspectRatio">Image size:</label>
-        <select id="imageAspectRatio">
-          <option value="1:1">Square 1:1</option>
-          <option value="16:9">Landscape 16:9</option>
-          <option value="9:16">Portrait 9:16</option>
-          <option value="4:5">Portrait 4:5</option>
-          <option value="3:2">Landscape 3:2</option>
-          <option value="2:3">Portrait 2:3</option>
-          <option value="5:4">Landscape 5:4</option>
-          <option value="21:9">Wide 21:9</option>
-          <option value="9:21">Tall 9:21</option>
-        </select>
-        <span id="imageGenStatus" class="image-gen-status" aria-live="polite"></span>
-      </div>
-
-      <div class="compose-row">
-        <textarea id="messageInput" rows="2" placeholder="Write your prompt..." aria-label="Write your message"></textarea>
-
-        <div class="compose-actions">
-          <button class="actionbtn" id="attachBtn" title="Choose images">🖼</button>
-          <button class="actionbtn" id="docBtn" title="Attach document">📄</button>
-          <button class="actionbtn" id="micBtn" title="Voice input">🎙</button>
-          <button class="actionbtn image-gen-btn" id="imageGenBtn" type="button" title="Generate an image">🎨 Create</button>
-          <button class="sendbtn" id="sendBtn">Send ➤</button>
-
-          <input type="file" id="imageInput" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden>
-          <input type="file" id="documentInput" accept=".txt,.md,.csv,.tsv" multiple hidden>
+    <section class="chat-area" id="chatArea">
+      <div class="welcome" id="welcome">
+        <h1>Welcome to MAYNARD AI</h1>
+        <p>Your AI assistant for learning, mathematics, creativity, problem-solving and information.</p>
+        <div class="quick-actions">
+          <button data-prompt="Explain this topic step by step.">Learn a topic</button>
+          <button data-prompt="Help me solve this mathematical problem step by step.">Mathematics</button>
+          <button data-prompt="Help me write and improve a professional business document.">Business writing</button>
+          <button data-prompt="Explain how artificial intelligence works.">Explore AI</button>
         </div>
       </div>
-    </div>
-    <div class="status">Maynard AI can make mistakes. Check important answers.</div>
-  </div>
-</main>
+      <div class="messages" id="messages"></div>
+    </section>
+
+    <section class="composer-wrap">
+      <div class="composer">
+        <textarea id="prompt" placeholder="Message MAYNARD AI..."></textarea>
+        <div id="imagePreview"></div>
+        <div class="composer-tools">
+          <button class="tool-button" id="attachBtn">＋ Image</button>
+          <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp">
+          <button class="tool-button" id="mathBtn">∑ Math</button>
+          <button class="tool-button" id="studioBtn">✦ Create image</button>
+          <button class="send-button" id="sendBtn">Send ↑</button>
+        </div>
+      </div>
+      <div class="note">MAYNARD AI can make mistakes. Verify important information.</div>
+    </section>
+  </main>
 </div>
 
-<div id="imageViewer" class="image-viewer hidden">
-  <button id="closeImageViewer" class="image-viewer-close" aria-label="Close image">×</button>
-  <button id="zoomOutImage" class="image-viewer-zoom" aria-label="Zoom out">−</button>
-  <button id="zoomInImage" class="image-viewer-zoom" aria-label="Zoom in">+</button>
-  <img id="fullScreenImage" alt="Picture">
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal">
+    <button class="modal-row modal-close" id="closeModalBtn">Close ✕</button>
+    <div id="modalContent"></div>
+  </div>
 </div>
 
 <script>
 "use strict";
 
 const $ = id => document.getElementById(id);
-const chat = $("messages");
-const messageInput = $("messageInput");
-const sendBtn = $("sendBtn");
-const attachmentList = $("attachmentList");
-const imageInput = $("imageInput");
-const documentInput = $("documentInput");
-const imageGenBtn = $("imageGenBtn");
-const imageAspectRatio = $("imageAspectRatio");
-const imageGenStatus = $("imageGenStatus");
-
-const MAX_IMAGES_PER_MESSAGE = 15;
-const MAX_DOCUMENTS_PER_MESSAGE = 5;
-const MAX_FILE_SIZE = 12 * 1024 * 1024;
-const MAX_DOCUMENT_CHARS = 20000;
-
-const modeNames = {
-  general:"General Assistant",
-  education:"Education Assistant",
-  writing:"Writing Assistant",
-  coding:"Coding Assistant",
-  research:"Research Assistant",
-  business:"Business Assistant",
-  creative:"Creative Assistant",
-  translator:"Translator",
-  summarizer:"Summarizer"
+const state = {
+  messages: [],
+  activeId: null,
+  title: "New conversation",
+  image: null,
+  busy: false
 };
 
-let currentMode = "general";
-let conversation = [];
-let attachments = [];
-let savedChats = [];
-let currentChatId = null;
-let busy = false;
-let imageGenBusy = false;
-let voiceEnabled = false;
-let mathReady = false;
-let mathQueue = Promise.resolve();
-
-/* IMAGE VIEWER */
-
-let imageZoom = 1;
-
-function openImageViewer(src) {
-  if (!src) return;
-  const viewer = $("imageViewer");
-  const fullImage = $("fullScreenImage");
-  imageZoom = 1;
-  fullImage.src = src;
-  fullImage.style.transform = "scale(1)";
-  viewer.classList.remove("hidden");
-  document.body.style.overflow = "hidden";
-}
-
-function closeImageViewer() {
-  $("imageViewer").classList.add("hidden");
-  $("fullScreenImage").src = "";
-  document.body.style.overflow = "";
-  imageZoom = 1;
-}
-
-$("closeImageViewer").onclick = closeImageViewer;
-
-$("imageViewer").onclick = event => {
-  if (event.target === $("imageViewer")) closeImageViewer();
-};
-
-$("zoomInImage").onclick = () => {
-  imageZoom = Math.min(imageZoom + .25,3);
-  $("fullScreenImage").style.transform = `scale(${imageZoom})`;
-};
-
-$("zoomOutImage").onclick = () => {
-  imageZoom = Math.max(imageZoom - .25,.5);
-  $("fullScreenImage").style.transform = `scale(${imageZoom})`;
-};
-
-document.addEventListener("keydown",event => {
-  if (event.key === "Escape") closeImageViewer();
-});
-
-/* INDEXEDDB IMAGE STORAGE */
-
-const IMAGE_DB_NAME = "MaynardAI_ImageDatabase";
-const IMAGE_STORE_NAME = "chatImages";
-let imageDatabasePromise = null;
-
-function openImageDatabase() {
-  if (imageDatabasePromise) return imageDatabasePromise;
-
-  imageDatabasePromise = new Promise((resolve,reject) => {
-    if (!("indexedDB" in window)) {
-      reject(new Error("This browser does not support image storage."));
-      return;
-    }
-
-    const request = indexedDB.open(IMAGE_DB_NAME,1);
-
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains(IMAGE_STORE_NAME)) {
-        db.createObjectStore(IMAGE_STORE_NAME,{keyPath:"id"});
-      }
-    };
-
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => {
-      imageDatabasePromise = null;
-      reject(request.error);
-    };
+async function api(action, data = {}) {
+  const response = await fetch("/api/chat", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({action, ...data})
   });
-
-  return imageDatabasePromise;
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || result.error) throw new Error(result.error || "Request failed");
+  return result;
 }
-
-async function saveChatImage(image) {
-  const db = await openImageDatabase();
-  return new Promise((resolve,reject) => {
-    const transaction = db.transaction(IMAGE_STORE_NAME,"readwrite");
-    transaction.objectStore(IMAGE_STORE_NAME).put(image);
-    transaction.oncomplete = resolve;
-    transaction.onerror = () => reject(transaction.error);
-  });
-}
-
-async function getChatImage(id) {
-  const db = await openImageDatabase();
-  return new Promise((resolve,reject) => {
-    const transaction = db.transaction(IMAGE_STORE_NAME,"readonly");
-    const request = transaction.objectStore(IMAGE_STORE_NAME).get(id);
-    request.onsuccess = () => resolve(request.result || null);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-async function deleteChatImage(id) {
-  const db = await openImageDatabase();
-  return new Promise((resolve,reject) => {
-    const transaction = db.transaction(IMAGE_STORE_NAME,"readwrite");
-    transaction.objectStore(IMAGE_STORE_NAME).delete(id);
-    transaction.oncomplete = resolve;
-    transaction.onerror = () => reject(transaction.error);
-  });
-}
-
-async function deleteImagesForMessages(messages) {
-  const ids = (messages || []).flatMap(message =>
-    (message.images || []).map(image => image.id).filter(Boolean)
-  );
-  await Promise.allSettled(ids.map(deleteChatImage));
-}
-
-function createImageId() {
-  return "image_" + Date.now() + "_" + Math.random().toString(36).slice(2,10);
-}
-
-/* ASSISTANT MODES */
-
-const formattingRules = `
-IMPORTANT RESPONSE FORMATTING RULES:
-1. Write answers using normal paragraphs, headings and bullet points.
-2. For step-by-step explanations, use numbered steps.
-3. NEVER put an entire explanation or solution inside a table.
-4. NEVER use tables as the default response format.
-5. Use tables ONLY when comparing items or presenting structured data where a table genuinely improves readability.
-6. Keep each explanation directly under its relevant heading or numbered step.
-7. Do not split words unnecessarily.
-8. Use clear spacing between paragraphs and steps.
-9. For mathematics, show equations on separate lines using proper mathematical notation.
-10. Make answers readable on mobile phone screens.
-11. Prefer a clear explanation over unnecessary formatting.
-12. Do not place long paragraphs inside table cells.
-13. Do not create a table just to organise ordinary instructions.
-`;
-
-function getModeInstructions(mode) {
-  const instructions = {
-    general:"You are Maynard AI, a helpful and intelligent assistant. Give clear, accurate and well-organised answers.",
-    education:"You are an experienced teacher. Explain concepts step by step using simple examples. Help students understand their subjects.",
-    writing:"You are a professional writing assistant. Produce clear, polished and grammatically correct writing.",
-    coding:"You are an expert programming assistant. Explain code clearly, identify errors and provide working solutions.",
-    research:"You are a research assistant. Give balanced, evidence-aware explanations and distinguish facts from uncertainty.",
-    business:"You are a business assistant. Provide practical, organised and professional business guidance.",
-    creative:"You are a creative assistant. Generate original, thoughtful and imaginative ideas.",
-    translator:"You are a professional translator. Translate accurately while preserving the original meaning and tone.",
-    summarizer:"You are a summarisation assistant. Identify the main points and present them clearly without unnecessary repetition."
-  };
-
-  return (instructions[mode] || instructions.general) + "\n\n" + formattingRules;
-}
-
-/* MATHEMATICS INSTRUCTIONS */
-
-const mathInstructions = `
-IMPORTANT MATHEMATICS RESPONSE RULES:
-
-When solving a mathematical problem, provide a complete,
-accurate, well-organised educational solution.
-
-Use this structure whenever appropriate:
-
-### Problem
-Rewrite the given question clearly.
-
-### Step 1: Identify the given information
-State the equation, values or conditions.
-
-### Step 2: Choose the method
-Explain which mathematical method will be used and why.
-
-### Step 3: Solve step by step
-Show every important calculation.
-Write equations on separate lines.
-Explain what happens at each step.
-Do not skip important algebraic operations.
-
-### Step 4: Verify the answer
-Substitute the result into the original equation when possible.
-
-### Final Answer
-State the answer clearly in bold ordinary text
-or in a clean, unboxed mathematical equation.
-
-MATHEMATICAL FORMATTING RULES:
-1. Use MathJax-compatible LaTeX.
-2. Use \\( ... \\) for inline equations.
-3. Use \\[ ... \\] for display equations.
-4. Use \\dfrac for readable fractions.
-5. Use \\sqrt for square roots.
-6. Use proper superscripts and subscripts.
-7. Use aligned environments only inside display delimiters.
-8. Never output raw LaTeX environments without delimiters.
-9. NEVER use \\boxed{} or \\fbox{}.
-10. Do not put the final answer inside a box.
-11. Do not use programming-style slash notation for ordinary fractions.
-12. Keep explanations detailed and readable.
-13. Check calculations before presenting the final answer.
-14. NEVER present mathematical solutions inside tables.
-15. Use numbered steps with explanations underneath.
-16. Put calculations on separate lines.
-17. Keep long explanations in normal paragraphs.
-18. Use tables only when the user specifically requests one or when genuinely necessary.
-`;
-
-/* CHAT HISTORY */
-
-function createChatId() {
-  return "chat_" + Date.now() + "_" + Math.random().toString(36).slice(2,8);
-}
-
-function getChatTitle(messages) {
-  const first = messages.find(item => item.role === "user");
-  if (!first) return "New conversation";
-
-  const titleText = first.displayContent || first.content || "";
-  return titleText.length > 38
-    ? titleText.slice(0,38) + "..."
-    : titleText;
-}
-
-function saveHistory() {
-  try {
-    if (conversation.length) {
-      let existing = savedChats.find(item => item.id === currentChatId);
-
-      if (!existing) {
-        existing = {
-          id:currentChatId || createChatId(),
-          title:"",
-          mode:currentMode,
-          updatedAt:Date.now(),
-          messages:[]
-        };
-
-        currentChatId = existing.id;
-        savedChats.unshift(existing);
-      }
-
-      existing.messages = conversation.map(item => ({
-        role:item.role,
-        content:item.content,
-        displayContent:item.displayContent || item.content,
-        images:(item.images || []).map(image => ({
-          id:image.id,
-          name:image.name
-        }))
-      }));
-
-      existing.title = getChatTitle(conversation);
-      existing.mode = currentMode;
-      existing.updatedAt = Date.now();
-      savedChats.sort((a,b) => b.updatedAt - a.updatedAt);
-    }
-
-    localStorage.setItem("maynard_chats",JSON.stringify(savedChats));
-    renderHistoryList();
-
-  } catch(error) {
-    console.warn("Could not save conversation:",error);
-    alert("Chat history could not be saved. Your browser storage may be full.");
-  }
-}
-
-function renderHistoryList() {
-  const list = $("historyList");
-  list.innerHTML = "";
-
-  if (!savedChats.length) {
-    list.innerHTML = '<p class="history-empty">No conversations yet.</p>';
-    return;
-  }
-
-  savedChats.forEach(item => {
-    const row = document.createElement("div");
-    row.className = "history-item";
-
-    if (item.id === currentChatId) row.classList.add("active");
-
-    const open = document.createElement("button");
-    open.className = "history-open";
-    open.textContent = item.title || "New conversation";
-    open.title = item.title || "New conversation";
-    open.onclick = () => openSavedChat(item.id);
-
-    const rename = document.createElement("button");
-    rename.className = "history-action";
-    rename.textContent = "✏️";
-    rename.title = "Rename conversation";
-    rename.onclick = () => renameSavedChat(item.id);
-
-    const remove = document.createElement("button");
-    remove.className = "history-action";
-    remove.textContent = "🗑";
-    remove.title = "Delete conversation";
-    remove.onclick = () => deleteSavedChat(item.id);
-
-    row.append(open,rename,remove);
-    list.appendChild(row);
-  });
-}
-
-function openSavedChat(id) {
-  if (busy || imageGenBusy) return;
-
-  const selected = savedChats.find(item => item.id === id);
-  if (!selected) return;
-
-  currentChatId = selected.id;
-
-  conversation = selected.messages.map(item => ({
-    role:item.role,
-    content:item.content,
-    displayContent:item.displayContent || item.content,
-    images:Array.isArray(item.images) ? item.images : []
-  }));
-
-  currentMode = selected.mode || "general";
-
-  document.querySelectorAll(".mode").forEach(button => {
-    button.classList.toggle("active",button.dataset.mode === currentMode);
-  });
-
-  $("modeTitle").textContent = modeNames[currentMode] || modeNames.general;
-  renderConversation();
-  renderHistoryList();
-  $("sidebar").classList.remove("open");
-}
-
-function renameSavedChat(id) {
-  const selected = savedChats.find(item => item.id === id);
-  if (!selected) return;
-
-  const newName = prompt("Enter a new conversation name:",selected.title);
-  if (!newName || !newName.trim()) return;
-
-  selected.title = newName.trim().slice(0,80);
-  localStorage.setItem("maynard_chats",JSON.stringify(savedChats));
-  renderHistoryList();
-}
-
-async function deleteSavedChat(id) {
-  const selected = savedChats.find(item => item.id === id);
-  if (!selected) return;
-
-  if (!confirm("Delete this conversation and its saved pictures?")) return;
-
-  await deleteImagesForMessages(selected.messages);
-  savedChats = savedChats.filter(item => item.id !== id);
-
-  if (currentChatId === id) {
-    conversation = [];
-    currentChatId = createChatId();
-    chat.innerHTML = "";
-    $("welcome").classList.remove("hidden");
-  }
-
-  localStorage.setItem("maynard_chats",JSON.stringify(savedChats));
-  renderHistoryList();
-}
-
-/* MARKDOWN AND MATHEMATICS */
 
 function escapeHTML(value) {
-  return String(value).replace(/[&<>"']/g,c => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
-  })[c]);
+  return String(value).replace(/[&<>"']/g, char => ({
+    "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+  })[char]);
 }
 
-function removeBoxedLatex(source) {
-  let text = String(source);
-  let searchFrom = 0;
-
-  while (true) {
-    const start = text.indexOf("\\boxed",searchFrom);
-    if (start === -1) break;
-
-    const open = text.indexOf("{",start + 6);
-    if (open === -1) break;
-
-    let depth = 1;
-    let end = open + 1;
-
-    while (end < text.length && depth > 0) {
-      if (text[end] === "{") depth++;
-      if (text[end] === "}") depth--;
-      end++;
-    }
-
-    if (depth !== 0) {
-      searchFrom = open + 1;
-      continue;
-    }
-
-    const inside = text.slice(open + 1,end - 1);
-    text = text.slice(0,start) + inside + text.slice(end);
-    searchFrom = start + inside.length;
-  }
-
-  return text.replace(/\\fbox\s*\{([^{}]*)\}/g,"$1");
+function renderMarkdown(text) {
+  let safe = escapeHTML(text);
+  safe = safe.replace(/```([\s\S]*?)```/g, (_, code) => "<pre><code>" + code + "</code></pre>");
+  safe = safe.replace(/`([^`]+)`/g, "<code>$1</code>");
+  safe = safe.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  safe = safe.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+  safe = safe.replace(/^### (.+)$/gm, "<h3>$1</h3>");
+  safe = safe.replace(/^## (.+)$/gm, "<h2>$1</h2>");
+  safe = safe.replace(/^# (.+)$/gm, "<h1>$1</h1>");
+  safe = safe.replace(/^\s*[-*] (.+)$/gm, "<li>$1</li>");
+  safe = safe.replace(/(?:<li>.*<\/li>\s*)+/gs, block => "<ul>" + block + "</ul>");
+  safe = safe.replace(/\n/g, "<br>");
+  return safe;
 }
 
-function normalizeMathSource(source) {
-  let text = removeBoxedLatex(source);
-
-  const environments = [
-    "aligned","alignedat","gathered","cases","array","matrix",
-    "pmatrix","bmatrix","Bmatrix","vmatrix","Vmatrix",
-    "equation","equation*","align","align*","gather","gather*"
-  ];
-
-  const hasMathDelimiters = text.includes("\\[") || text.includes("$$");
-
-  if (!hasMathDelimiters) {
-    const names = environments.join("|");
-    const pattern = new RegExp(
-      "\\\\begin\\{(" + names + ")\\}[\\s\\S]*?\\\\end\\{\\1\\}","g"
-    );
-
-    text = text.replace(pattern,match => "\\[\n" + match + "\n\\]");
-  }
-
-  return text;
-}
-
-function protectMath(source) {
-  const saved = [];
-  let text = normalizeMathSource(source);
-
-  const patterns = [
-    /\$\$[\s\S]+?\$\$/g,
-    /\\\[[\s\S]+?\\\]/g,
-    /\\\([\s\S]+?\\\)/g,
-    /(?<!\\)\$(?!\$)[^\n$]+(?<!\\)\$(?!\$)/g
-  ];
-
-  for (const pattern of patterns) {
-    text = text.replace(pattern,match => {
-      const token = `MATHPROTECTEDTOKEN${saved.length}END`;
-      saved.push(match);
-      return token;
-    });
-  }
-
-  return {text,saved};
-}
-
-function restoreMathTokens(root,saved) {
-  const walker = document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
-  const nodes = [];
-
-  while (walker.nextNode()) nodes.push(walker.currentNode);
-
-  for (const node of nodes) {
-    let value = node.nodeValue;
-    let changed = false;
-
-    saved.forEach((math,index) => {
-      const token = `MATHPROTECTEDTOKEN${index}END`;
-
-      if (value.includes(token)) {
-        value = value.split(token).join(math);
-        changed = true;
-      }
-    });
-
-    if (changed) node.nodeValue = value;
-  }
-}
-
-function formatMarkdown(source) {
-  const protectedContent = protectMath(source);
-  let html;
-
-  if (window.marked && window.DOMPurify) {
-    html = window.marked.parse(protectedContent.text,{breaks:true,gfm:true});
-    html = window.DOMPurify.sanitize(html);
-  } else {
-    html = escapeHTML(protectedContent.text).replace(/\n/g,"<br>");
-  }
-
-  const container = document.createElement("div");
-  container.innerHTML = html;
-  restoreMathTokens(container,protectedContent.saved);
-
-  return container.innerHTML;
-}
-
-function renderMath(element) {
-  if (!mathReady || !window.MathJax || !MathJax.typesetPromise) return;
-
-  mathQueue = mathQueue.then(async () => {
+async function typeset(element) {
+  if (window.MathJax?.typesetPromise) {
     try {
-      MathJax.typesetClear([element]);
       await MathJax.typesetPromise([element]);
-    } catch(error) {
-      console.warn("Math rendering error:",error);
+    } catch (error) {
+      console.warn("MathJax rendering issue:", error);
     }
-  });
+  }
 }
 
-/* DISPLAY MESSAGES AND SAVED IMAGES */
-
-function addMessage(role,content,options = {}) {
+function addMessage(role, content, options = {}) {
+  $("welcome").style.display = "none";
   const row = document.createElement("div");
-  row.className = "message " + (role === "user" ? "user" : "assistant");
-
-  const avatar = document.createElement("div");
-  avatar.className = "avatar";
-  avatar.textContent = role === "user" ? "You" : "M";
-
-  const body = document.createElement("div");
-  body.className = "message-body";
-
+  row.className = "message " + (role === "user" ? "user-message" : "assistant-message");
   const bubble = document.createElement("div");
   bubble.className = "bubble";
-  bubble.innerHTML = formatMarkdown(content);
-  body.appendChild(bubble);
-
-  if (options.images && options.images.length) {
-    const gallery = document.createElement("div");
-    gallery.className = "image-gallery";
-
-    options.images.forEach(file => {
-      const wrapper = document.createElement("div");
-      wrapper.className = "image-card";
-
-      const image = document.createElement("img");
-      image.className = "uploaded-image";
-      image.alt = file.name || "Picture";
-
-      const download = document.createElement("a");
-      download.className = "image-download";
-      download.textContent = "⬇ Download";
-      download.download = file.name || "Maynard-AI-image.png";
-      download.hidden = true;
-
-      wrapper.append(image,download);
-
-      const caption = document.createElement("div");
-      caption.className = "image-caption";
-      caption.textContent = file.name || "Picture";
-      wrapper.appendChild(caption);
-      gallery.appendChild(wrapper);
-
-      if (file.data) {
-        image.src = file.data;
-        download.href = file.data;
-        download.hidden = false;
-
-      } else if (file.id) {
-        image.classList.add("image-loading");
-
-        getChatImage(file.id).then(savedImage => {
-          if (savedImage && savedImage.data) {
-            image.src = savedImage.data;
-            download.href = savedImage.data;
-            download.download = savedImage.name || file.name || "Maynard-AI-image.png";
-            download.hidden = false;
-            image.classList.remove("image-loading");
-          } else {
-            image.alt = "Saved image unavailable";
-            caption.textContent = (file.name || "Picture") + " — image unavailable";
-          }
-        }).catch(error => {
-          console.warn("Could not retrieve saved image:",error);
-          caption.textContent = (file.name || "Picture") + " — could not load";
-        });
-      }
-
-      image.onclick = () => {
-        if (image.src) openImageViewer(image.src);
-      };
-
-      image.style.cursor = "zoom-in";
-    });
-
-    bubble.appendChild(gallery);
+  bubble.innerHTML = renderMarkdown(content);
+  if (options.imageUrl) {
+    const img = document.createElement("img");
+    img.src = options.imageUrl;
+    img.alt = "Uploaded image";
+    bubble.appendChild(img);
   }
-
-  if (role === "assistant") {
-    const tools = document.createElement("div");
-    tools.className = "message-tools";
-
-    const copy = document.createElement("button");
-    copy.className = "tool";
-    copy.textContent = "Copy";
-    copy.onclick = () => copyText(content,copy);
-
-    const speak = document.createElement("button");
-    speak.className = "tool";
-    speak.textContent = "Read aloud";
-    speak.onclick = () => speakText(content);
-
-    tools.append(copy,speak);
-    body.appendChild(tools);
-  }
-
-  row.append(avatar,body);
-  chat.appendChild(row);
-
-  renderMath(bubble);
-
-  $("welcome").classList.add("hidden");
-  window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"});
-
-  return row;
+  row.appendChild(bubble);
+  $("messages").appendChild(row);
+  $("chatArea").scrollTop = $("chatArea").scrollHeight;
+  typeset(bubble);
 }
 
-function renderConversation() {
-  chat.innerHTML = "";
-
-  if (!conversation.length) {
-    $("welcome").classList.remove("hidden");
-    return;
-  }
-
-  $("welcome").classList.add("hidden");
-
-  conversation.forEach(item => {
-    addMessage(
-      item.role,
-      item.displayContent || item.content,
-      {images:item.images || []}
-    );
-  });
+function showModal(content) {
+  $("modalContent").innerHTML = content;
+  $("modalBackdrop").style.display = "flex";
+}
+function closeModal() {
+  $("modalBackdrop").style.display = "none";
+  $("modalContent").innerHTML = "";
 }
 
-/* COPY AND VOICE */
+function resetChat() {
+  state.messages = [];
+  state.activeId = null;
+  state.title = "New conversation";
+  state.image = null;
+  $("messages").innerHTML = "";
+  $("welcome").style.display = "block";
+  $("prompt").value = "";
+  $("imagePreview").style.display = "none";
+  $("imagePreview").textContent = "";
+  $("fileInput").value = "";
+}
 
-async function copyText(value,button) {
+function newChat() {
+  resetChat();
+  $("prompt").focus();
+}
+
+async function saveHistory() {
+  if (!state.messages.length) return;
   try {
-    await navigator.clipboard.writeText(value);
-    button.textContent = "Copied!";
-    setTimeout(() => button.textContent = "Copy",1400);
-  } catch {
-    alert("Copy is not available in this browser.");
+    const first = state.messages.find(item => item.role === "user")?.content || "New conversation";
+    const title = state.title === "New conversation" ? first.slice(0,55) : state.title;
+    const result = await api("history_save", {
+      id: state.activeId,
+      title,
+      messages: state.messages
+    });
+    state.activeId = result.id || state.activeId;
+    state.title = title;
+    await loadHistory();
+  } catch (error) {
+    console.error("History save failed:", error);
   }
 }
 
-function speakText(value) {
-  if (!("speechSynthesis" in window)) {
-    alert("Speech output is not supported in this browser.");
-    return;
-  }
-
-  speechSynthesis.cancel();
-
-  const clean = String(value)
-    .replace(/```[\s\S]*?```/g," code omitted ")
-    .replace(/\\\[([\s\S]*?)\\\]|\\\(([\s\S]*?)\\\)|\$\$([\s\S]*?)\$\$|\$([^$]+)\$/g," mathematical expression ")
-    .replace(/[#*`_\\{}$]/g," ")
-    .replace(/\s+/g," ");
-
-  const utterance = new SpeechSynthesisUtterance(clean);
-  utterance.lang = "en-US";
-  utterance.rate = 1;
-  speechSynthesis.speak(utterance);
-}
-
-/* TYPING INDICATOR */
-
-function showTyping() {
-  const row = document.createElement("div");
-  row.className = "message assistant";
-  row.id = "typingIndicator";
-
-  const avatar = document.createElement("div");
-  avatar.className = "avatar";
-  avatar.textContent = "M";
-
-  const body = document.createElement("div");
-  body.className = "message-body";
-
-  const bubble = document.createElement("div");
-  bubble.className = "bubble";
-  bubble.innerHTML = '<div class="typing"><i></i><i></i><i></i></div><small>Maynard AI is thinking...</small>';
-
-  body.appendChild(bubble);
-  row.append(avatar,body);
-  chat.appendChild(row);
-
-  window.scrollTo(0,document.body.scrollHeight);
-}
-
-function removeTyping() {
-  $("typingIndicator")?.remove();
-}
-
-/* IMAGE RESIZING */
-
-function resizeImage(file) {
-  return new Promise((resolve,reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("Could not read the picture."));
-
-    reader.onload = () => {
-      const img = new Image();
-      img.onerror = () => reject(new Error("This picture could not be opened."));
-
-      img.onload = () => {
-        const max = 1280;
-        const scale = Math.min(1,max / Math.max(img.width,img.height));
-
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.round(img.width * scale);
-        canvas.height = Math.round(img.height * scale);
-
-        const context = canvas.getContext("2d");
-
-        if (!context) {
-          reject(new Error("Image processing is unavailable."));
-          return;
-        }
-
-        context.drawImage(img,0,0,canvas.width,canvas.height);
-        resolve(canvas.toDataURL("image/jpeg",.75));
-      };
-
-      img.src = reader.result;
-    };
-
-    reader.readAsDataURL(file);
-  });
-}
-
-/* ATTACHMENTS */
-
-function updateAttachmentList() {
-  attachmentList.innerHTML = "";
-
-  attachments.forEach((file,index) => {
-    const item = document.createElement("div");
-    item.className = "attachment-item";
-
-    if (file.type.startsWith("image/")) {
-      const preview = document.createElement("img");
-      preview.className = "attachment-thumb";
-      preview.src = file.data;
-      preview.alt = file.name;
-      preview.loading = "lazy";
-      item.appendChild(preview);
-
-      const name = document.createElement("div");
-      name.className = "attachment-name";
-      name.textContent = file.name;
-      item.appendChild(name);
-
-    } else {
-      const documentPreview = document.createElement("div");
-      documentPreview.className = "attachment-document";
-      documentPreview.textContent = "📄 " + file.name;
-      item.appendChild(documentPreview);
-    }
-
-    const remove = document.createElement("button");
-    remove.type = "button";
-    remove.className = "attachment-remove";
-    remove.textContent = "×";
-    remove.title = "Remove attachment";
-    remove.setAttribute("aria-label","Remove " + file.name);
-
-    remove.onclick = () => {
-      attachments.splice(index,1);
-      updateAttachmentList();
-    };
-
-    item.appendChild(remove);
-    attachmentList.appendChild(item);
-  });
-}
-
-$("attachBtn").onclick = () => imageInput.click();
-$("docBtn").onclick = () => documentInput.click();
-
-async function processAttachments(files,imageOnly) {
-  for (const file of Array.from(files || [])) {
-    const isImage = file.type.startsWith("image/");
-    const isDocument = /\.(txt|md|csv|tsv)$/i.test(file.name);
-
-    if (imageOnly && !isImage) continue;
-
-    if (!imageOnly && !isDocument) {
-      alert("Please choose a TXT, MD, CSV or TSV file.");
-      continue;
-    }
-
-    if (isImage) {
-      const imageCount = attachments.filter(item => item.type.startsWith("image/")).length;
-
-      if (imageCount >= MAX_IMAGES_PER_MESSAGE) {
-        alert("You can attach up to 15 pictures in one message.");
-        break;
-      }
-
-    } else {
-      const documentCount = attachments.filter(item => !item.type.startsWith("image/")).length;
-
-      if (documentCount >= MAX_DOCUMENTS_PER_MESSAGE) {
-        alert("You can attach up to five documents.");
-        break;
-      }
-    }
-
-    if (file.size > MAX_FILE_SIZE) {
-      alert("Each file must be smaller than 12 MB.");
-      continue;
-    }
-
-    try {
-      const data = isImage
-        ? await resizeImage(file)
-        : (await file.text()).slice(0,MAX_DOCUMENT_CHARS);
-
-      attachments.push({
-        name:file.name,
-        type:isImage ? "image/jpeg" : "text/plain",
-        data
-      });
-
-      updateAttachmentList();
-
-    } catch(error) {
-      console.error(error);
-      alert("Could not read " + file.name);
-    }
-  }
-}
-
-imageInput.onchange = async () => {
-  await processAttachments(imageInput.files,true);
-  imageInput.value = "";
-};
-
-documentInput.onchange = async () => {
-  await processAttachments(documentInput.files,false);
-  documentInput.value = "";
-};
-
-/* MATHEMATICS DETECTION */
-
-function isMathQuestion(message) {
-  return /solve|calculate|simplify|factoris|factoriz|quadratic|equation|simultaneous|differentiat|integrat|find the value|find x|evaluate|expand|algebra|geometry|trigonometry|probability|matrix|matrices|fraction|percentage|indices|logarithm|theorem/i.test(message)
-    || /[=±√∫∑≤≥]/.test(message)
-    || /[a-z]\s*[\^²³]\s*\d*/i.test(message);
-}
-
-/* STREAMING RESPONSE */
-
-function readStreamEvent(data,state) {
-  if (!data || data === "[DONE]") return;
-
-  let event;
-
+async function loadHistory() {
   try {
-    event = JSON.parse(data);
-  } catch {
-    return;
+    const result = await api("history_list");
+    const list = $("historyList");
+    list.innerHTML = "";
+    (result.items || []).forEach(item => {
+      const row = document.createElement("div");
+      row.className = "history-item";
+
+      const open = document.createElement("button");
+      open.className = "history-open";
+      open.textContent = item.title || "Untitled conversation";
+      open.title = open.textContent;
+      open.onclick = () => openHistory(item.id);
+
+      const rename = document.createElement("button");
+      rename.className = "history-action";
+      rename.textContent = "✎";
+      rename.title = "Rename conversation";
+      rename.onclick = () => renameHistory(item.id, item.title || "");
+
+      const remove = document.createElement("button");
+      remove.className = "history-action";
+      remove.textContent = "×";
+      remove.title = "Delete conversation";
+      remove.onclick = () => deleteHistory(item.id);
+
+      row.append(open, rename, remove);
+      list.appendChild(row);
+    });
+  } catch (error) {
+    console.warn("Could not load saved history:", error.message);
   }
-
-  if (event.type === "error" || event.error) {
-    state.error = event.error?.message || event.message ||
-      "An error occurred while generating your answer.";
-    return;
-  }
-
-  const text =
-    event.delta?.text ||
-    event.choices?.[0]?.delta?.content ||
-    "";
-
-  if (!text) return;
-
-  state.reply += text;
-  removeTyping();
-
-  if (!state.row) {
-    state.row = addMessage("assistant","");
-  }
-
-  const bubble = state.row.querySelector(".bubble");
-  bubble.innerHTML = formatMarkdown(state.reply);
-  window.scrollTo(0,document.body.scrollHeight);
 }
 
-/* IMAGE GENERATION */
-
-async function generateImage() {
-  if (busy || imageGenBusy) return;
-
-  const prompt = messageInput.value.trim();
-
-  if (prompt.length < 3) {
-    alert("Please describe the image you want to create.");
-    messageInput.focus();
-    return;
-  }
-
-  if (prompt.length > 2000) {
-    alert("Your image description is too long. Keep it under 2,000 characters.");
-    return;
-  }
-
-  imageGenBusy = true;
-  imageGenBtn.disabled = true;
-  sendBtn.disabled = true;
-  imageGenBtn.textContent = "Creating...";
-  imageGenStatus.textContent = "Generating your image...";
-
-  const loadingRow = addMessage(
-    "assistant",
-    "Creating your image with Stability AI. Please wait..."
-  );
-
-  // Save the user's image prompt as part of the conversation.
-  conversation.push({
-    role:"user",
-    content:prompt,
-    displayContent:prompt,
-    images:[]
-  });
-
-  addMessage("user",prompt);
-  messageInput.value = "";
-  messageInput.style.height = "72px";
-  saveHistory();
-
+async function openHistory(id) {
   try {
-    const response = await fetch("/api/chat",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        action:"generate_image",
-        prompt,
-        aspect_ratio:imageAspectRatio.value || "1:1"
-      })
-    });
-
-    const result = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      let message = result.message || result.error || "Image generation failed.";
-
-      if (response.status === 401) {
-        message = "The Stability AI API key was rejected. Check STABILITY_API_KEY in Vercel.";
-      } else if (response.status === 402) {
-        message = "Your Stability AI account may not have enough credits.";
-      } else if (response.status === 403) {
-        message = "The image request was not allowed by the image service.";
-      } else if (response.status === 429) {
-        message = "The image service is receiving too many requests. Please wait and try again.";
+    const result = await api("history_get", {id});
+    state.activeId = id;
+    state.title = result.title || "Conversation";
+    state.messages = result.messages || [];
+    $("messages").innerHTML = "";
+    $("welcome").style.display = "none";
+    state.messages.forEach(message => {
+      addMessage(message.role, message.content || "");
+      if (message.imageOmitted) {
+        addMessage("assistant", "_An image from this conversation was not saved. Upload it again if you need it._");
       }
-
-      throw new Error(message);
-    }
-
-    if (
-      typeof result.imageData !== "string" ||
-      !result.imageData.startsWith("data:image/")
-    ) {
-      throw new Error("The image service returned an invalid image.");
-    }
-
-    const imageId = createImageId();
-    const mimeType = result.mimeType || "image/png";
-
-    const extension = mimeType.includes("jpeg")
-      ? "jpg"
-      : mimeType.includes("webp")
-        ? "webp"
-        : "png";
-
-    const imageName = "Maynard-AI-generated-image." + extension;
-
-    await saveChatImage({
-      id:imageId,
-      name:imageName,
-      type:mimeType,
-      data:result.imageData,
-      createdAt:Date.now()
     });
-
-    loadingRow.remove();
-
-    const imageInfo = {id:imageId,name:imageName};
-
-    conversation.push({
-      role:"assistant",
-      content:"Your image has been generated successfully.",
-      displayContent:"Your image has been generated successfully.",
-      images:[imageInfo]
-    });
-
-    addMessage(
-      "assistant",
-      "Your image has been generated successfully.",
-      {images:[imageInfo]}
-    );
-
-    saveHistory();
-    imageGenStatus.textContent = "Image created successfully.";
-
-  } catch(error) {
-    console.error("Stability AI generation error:",error);
-    loadingRow.remove();
-
-    const errorMessage =
-      "**Image generation failed.**\n\n" +
-      (error?.message || "An unexpected error occurred.");
-
-    conversation.push({
-      role:"assistant",
-      content:errorMessage,
-      displayContent:errorMessage,
-      images:[]
-    });
-
-    addMessage("assistant",errorMessage);
-    saveHistory();
-
-    imageGenStatus.textContent = "Generation failed.";
-
-  } finally {
-    imageGenBusy = false;
-    imageGenBtn.disabled = false;
-    sendBtn.disabled = false;
-    imageGenBtn.textContent = "🎨 Create";
+  } catch (error) {
+    alert("Could not open conversation: " + error.message);
   }
 }
 
-imageGenBtn.onclick = generateImage;
+async function renameHistory(id, oldTitle) {
+  const title = prompt("Enter a new conversation title:", oldTitle);
+  if (!title || !title.trim()) return;
+  try {
+    await api("history_rename", {id, title:title.trim()});
+    if (state.activeId === id) state.title = title.trim();
+    await loadHistory();
+  } catch (error) {
+    alert("Rename failed: " + error.message);
+  }
+}
 
-/* SEND MESSAGE */
+async function deleteHistory(id) {
+  if (!confirm("Delete this saved conversation?")) return;
+  try {
+    await api("history_delete", {id});
+    if (state.activeId === id) newChat();
+    await loadHistory();
+  } catch (error) {
+    alert("Delete failed: " + error.message);
+  }
+}
+
+async function clearHistory() {
+  if (!confirm("Delete all saved conversations from this browser?")) return;
+  try {
+    await api("history_clear");
+    newChat();
+    await loadHistory();
+  } catch (error) {
+    alert("Could not clear history: " + error.message);
+  }
+}
 
 async function sendMessage() {
-  if (busy || imageGenBusy) return;
+  const text = $("prompt").value.trim();
+  if ((!text && !state.image) || state.busy) return;
 
-  const message = messageInput.value.trim();
+  state.busy = true;
+  $("sendBtn").disabled = true;
+  const image = state.image;
+  addMessage("user", text || "Please examine this image.", {imageUrl:image || null});
+  state.messages.push({role:"user", content:text || "Please examine this image."});
+  $("prompt").value = "";
+  state.image = null;
+  $("imagePreview").style.display = "none";
+  $("imagePreview").textContent = "";
+  $("fileInput").value = "";
 
-  if (!message && !attachments.length) return;
-
-  const currentAttachments = attachments.slice();
-  attachments = [];
-  updateAttachmentList();
-
-  const displayText = message || "Please examine my attachment.";
-  const messageImages = [];
-
-  try {
-    for (const file of currentAttachments) {
-      if (!file.type.startsWith("image/")) continue;
-
-      const imageId = createImageId();
-
-      await saveChatImage({
-        id:imageId,
-        name:file.name,
-        type:file.type,
-        data:file.data,
-        createdAt:Date.now()
-      });
-
-      messageImages.push({id:imageId,name:file.name});
-    }
-
-  } catch(error) {
-    console.error("Image storage error:",error);
-    alert("Maynard AI could not save the picture in your browser. Please try again.");
-    attachments = currentAttachments;
-    updateAttachmentList();
-    return;
-  }
-
-  // Keep document contents in the conversation history.
-  const textAttachments = currentAttachments.filter(
-    file => !file.type.startsWith("image/")
-  );
-
-  let savedUserContent = displayText;
-
-  for (const file of textAttachments) {
-    savedUserContent +=
-      "\n\nAttached document: " + file.name + "\n" + file.data;
-  }
-
-  conversation.push({
-    role:"user",
-    content:savedUserContent,
-    displayContent:displayText,
-    images:messageImages
-  });
-
-  addMessage("user",displayText,{
-    images:currentAttachments.filter(file => file.type.startsWith("image/"))
-  });
-
-  messageInput.value = "";
-  messageInput.style.height = "72px";
-  saveHistory();
-
-  busy = true;
-  sendBtn.disabled = true;
-  imageGenBtn.disabled = true;
-  showTyping();
-
-  const state = {reply:"",error:"",row:null};
+  const typing = document.createElement("div");
+  typing.className = "typing";
+  typing.textContent = "MAYNARD AI is thinking...";
+  $("messages").appendChild(typing);
+  $("chatArea").scrollTop = $("chatArea").scrollHeight;
 
   try {
-    // Previous conversation now includes saved document contents.
-    const history = conversation.slice(-13,-1).map(item => ({
-      role:item.role,
-      content:item.content
-    }));
-
-    let apiMessage = message || "Please examine my attachment.";
-
-    for (const file of textAttachments) {
-      apiMessage += "\n\nAttached file: " + file.name + "\n" + file.data;
-    }
-
-    const content = [];
-
-    if (apiMessage) {
-      content.push({type:"text",text:apiMessage});
-    }
-
-    for (const file of currentAttachments) {
-      if (!file.type.startsWith("image/")) continue;
-
-      const match = file.data.match(
-        /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/
-      );
-
-      if (!match) continue;
-
-      content.push({
-        type:"image",
-        source:{
-          type:"base64",
-          media_type:match[1],
-          data:match[2]
-        }
-      });
-    }
-
-    const messages = [...history,{role:"user",content}];
-
-    const systemPrompt =
-      getModeInstructions(currentMode) +
-      (
-        currentMode === "education" || isMathQuestion(message)
-          ? "\n\n" + mathInstructions
-          : ""
-      );
-
-    const response = await fetch("/api/chat",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        messages,
-        system:systemPrompt
-      })
+    const result = await api("chat", {
+      messages: state.messages.slice(-40),
+      image
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      let errorMessage = errorText;
-
-      try {
-        const errorData = JSON.parse(errorText);
-
-        errorMessage =
-          errorData?.error?.message ||
-          errorData?.message ||
-          errorData?.error ||
-          errorText;
-
-      } catch {}
-
-      if (typeof errorMessage !== "string") {
-        errorMessage = JSON.stringify(errorMessage);
-      }
-
-      throw new Error(errorMessage || "The server returned an error.");
-    }
-
-    if (!response.body) {
-      throw new Error("The server returned an empty response stream.");
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-
-    while (true) {
-      const {value,done} = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value,{stream:true});
-      buffer = buffer.replace(/\r\n/g,"\n");
-
-      const events = buffer.split("\n\n");
-      buffer = events.pop() || "";
-
-      for (const eventBlock of events) {
-        for (const line of eventBlock.split("\n")) {
-          if (line.startsWith("data:")) {
-            readStreamEvent(line.slice(5).trim(),state);
-          }
-        }
-      }
-    }
-
-    buffer += decoder.decode();
-    buffer = buffer.replace(/\r\n/g,"\n");
-
-    if (buffer.trim()) {
-      for (const line of buffer.split("\n")) {
-        if (line.startsWith("data:")) {
-          readStreamEvent(line.slice(5).trim(),state);
-        }
-      }
-    }
-
-    removeTyping();
-
-    if (state.error) {
-      throw new Error(state.error);
-    }
-
-    if (!state.reply.trim()) {
-      throw new Error("The AI service returned an empty response. Please try again.");
-    }
-
-    const cleanReply = removeBoxedLatex(state.reply);
-
-    conversation.push({
-      role:"assistant",
-      content:cleanReply,
-      displayContent:cleanReply,
-      images:[]
-    });
-
-    if (state.row) {
-      const bubble = state.row.querySelector(".bubble");
-      bubble.innerHTML = formatMarkdown(cleanReply);
-      renderMath(bubble);
-    } else {
-      addMessage("assistant",cleanReply);
-    }
-
-    saveHistory();
-
-    if (voiceEnabled) {
-      speakText(cleanReply);
-    }
-
-  } catch(error) {
-    removeTyping();
-    console.error("Maynard AI request error:",error);
-
-    const errorMessage =
-      "I couldn't complete that request.\n\n**Error:** " +
-      (error?.message || "An unexpected error occurred.");
-
-    conversation.push({
-      role:"assistant",
-      content:errorMessage,
-      displayContent:errorMessage,
-      images:[]
-    });
-
-    addMessage("assistant",errorMessage);
-    saveHistory();
-
+    typing.remove();
+    const answer = result.reply || "I could not generate a response.";
+    addMessage("assistant", answer);
+    state.messages.push({role:"assistant", content:answer});
+    await saveHistory();
+  } catch (error) {
+    typing.remove();
+    addMessage("assistant", "I encountered an error: " + error.message);
   } finally {
-    busy = false;
-    sendBtn.disabled = false;
-    imageGenBtn.disabled = false;
-    messageInput.focus();
+    state.busy = false;
+    $("sendBtn").disabled = false;
+    $("prompt").focus();
   }
 }
 
-/* INPUT EVENTS */
+async function attachImage(file) {
+  if (!file) return;
+  if (!["image/jpeg","image/png","image/webp"].includes(file.type)) {
+    alert("Choose a JPG, PNG or WEBP image.");
+    return;
+  }
+  if (file.size > 8 * 1024 * 1024) {
+    alert("Please choose an image smaller than 8 MB.");
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    state.image = reader.result;
+    $("imagePreview").textContent = "Image ready: " + file.name;
+    $("imagePreview").style.display = "block";
+  };
+  reader.readAsDataURL(file);
+}
 
-sendBtn.onclick = sendMessage;
+function openCalculator() {
+  showModal(`
+    <h2>Mathematical calculator</h2>
+    <p style="color:#999">Enter an expression, for example: (25 * 4) / 2, sqrt(144), sin(pi / 2), or 2^8.</p>
+    <input id="calcInput" placeholder="Enter mathematical expression">
+    <div class="modal-row">
+      <button id="calculateBtn">Calculate</button>
+      <button id="clearCalcBtn">Clear</button>
+    </div>
+    <div class="result" id="calcResult">Your result will appear here.</div>
+    <p style="color:#888;font-size:12px">This calculator uses Math.js. Do not enter code or unknown expressions.</p>
+  `);
+  $("calculateBtn").onclick = () => {
+    try {
+      const expression = $("calcInput").value.trim();
+      if (!expression) throw new Error("Enter an expression first.");
+      const result = math.evaluate(expression);
+      $("calcResult").textContent = math.format(result, {precision:14});
+    } catch (error) {
+      $("calcResult").textContent = "Calculation error: " + error.message;
+    }
+  };
+  $("clearCalcBtn").onclick = () => {
+    $("calcInput").value = "";
+    $("calcResult").textContent = "Your result will appear here.";
+  };
+}
 
-messageInput.addEventListener("keydown",event => {
+function openImageStudio() {
+  showModal(`
+    <h2>AI image studio</h2>
+    <p style="color:#999">Describe the original image you want MAYNARD AI to create.</p>
+    <textarea id="imagePrompt" placeholder="Describe your image..."></textarea>
+    <div class="modal-row"><button id="generateImageBtn">Generate image</button></div>
+    <div id="imageResult" class="result" style="display:none"></div>
+    <p class="note">Image generation requires a configured Stability AI key on the server.</p>
+  `);
+  $("generateImageBtn").onclick = async () => {
+    const prompt = $("imagePrompt").value.trim();
+    if (!prompt) return alert("Describe the image first.");
+    $("generateImageBtn").disabled = true;
+    $("generateImageBtn").textContent = "Generating...";
+    try {
+      const result = await api("image_generate", {prompt});
+      const box = $("imageResult");
+      box.style.display = "block";
+      if (result.image) {
+        const img = document.createElement("img");
+        img.src = result.image;
+        img.alt = "Generated image";
+        box.innerHTML = "";
+        box.appendChild(img);
+      } else {
+        box.textContent = result.message || "Image generation completed.";
+      }
+    } catch (error) {
+      alert("Image generation failed: " + error.message);
+    } finally {
+      $("generateImageBtn").disabled = false;
+      $("generateImageBtn").textContent = "Generate image";
+    }
+  };
+}
+
+async function loadFootball() {
+  showModal(`
+    <h2>Live football</h2>
+    <p style="color:#999">Retrieve current fixtures and scores from the configured football data provider.</p>
+    <div class="modal-row"><button id="refreshFootballBtn">Refresh scores</button></div>
+    <div class="result" id="footballResult">Press refresh to load fixtures.</div>
+  `);
+  $("refreshFootballBtn").onclick = async () => {
+    $("footballResult").textContent = "Loading fixtures...";
+    try {
+      const result = await api("football_live");
+      const fixtures = result.fixtures || [];
+      if (!fixtures.length) {
+        $("footballResult").textContent = "No live fixtures were returned by the provider.";
+        return;
+      }
+      $("footballResult").innerHTML = "";
+      fixtures.forEach(fixture => {
+        const row = document.createElement("p");
+        row.textContent =
+          (fixture.league || "Competition") + " — " +
+          (fixture.home || "Home") + " " +
+          (fixture.homeGoals ?? "-") + " : " +
+          (fixture.awayGoals ?? "-") + " " +
+          (fixture.away || "Away") +
+          " (" + (fixture.status || "Status unavailable") + ")";
+        $("footballResult").appendChild(row);
+      });
+    } catch (error) {
+      $("footballResult").textContent = "Football request failed: " + error.message;
+    }
+  };
+}
+
+$("sendBtn").addEventListener("click", sendMessage);
+$("prompt").addEventListener("keydown", event => {
   if (event.key === "Enter" && !event.shiftKey) {
     event.preventDefault();
     sendMessage();
   }
 });
-
-messageInput.addEventListener("input",() => {
-  messageInput.style.height = "auto";
-  messageInput.style.height =
-    Math.min(messageInput.scrollHeight,200) + "px";
+$("newChatBtn").onclick = newChat;
+$("mobileNewBtn").onclick = newChat;
+$("clearHistoryBtn").onclick = clearHistory;
+$("calculatorBtn").onclick = openCalculator;
+$("mathBtn").onclick = openCalculator;
+$("imageStudioBtn").onclick = openImageStudio;
+$("studioBtn").onclick = openImageStudio;
+$("footballBtn").onclick = loadFootball;
+$("attachBtn").onclick = () => $("fileInput").click();
+$("fileInput").onchange = event => attachImage(event.target.files[0]);
+$("closeModalBtn").onclick = closeModal;
+$("modalBackdrop").addEventListener("click", event => {
+  if (event.target === $("modalBackdrop")) closeModal();
 });
-
-/* MODE SELECTION */
-
-$("modes").addEventListener("click",event => {
-  const button = event.target.closest(".mode");
-  if (!button) return;
-
-  currentMode = button.dataset.mode;
-
-  document.querySelectorAll(".mode").forEach(item => {
-    item.classList.toggle("active",item === button);
-  });
-
-  $("modeTitle").textContent = modeNames[currentMode];
-  saveHistory();
-  $("sidebar").classList.remove("open");
-});
-
-/* WELCOME SUGGESTIONS */
-
-$("welcome").addEventListener("click",event => {
-  const button = event.target.closest(".suggestion");
-  if (!button) return;
-
-  messageInput.value = button.dataset.prompt;
-  sendMessage();
-});
-
-/* NEW CHAT */
-
-$("newChat").onclick = () => {
-  if (busy || imageGenBusy) return;
-
-  conversation = [];
-  attachments = [];
-  currentChatId = createChatId();
-  currentMode = "general";
-
-  updateAttachmentList();
-
-  document.querySelectorAll(".mode").forEach(button => {
-    button.classList.toggle("active",button.dataset.mode === "general");
-  });
-
-  $("modeTitle").textContent = "General Assistant";
-  chat.innerHTML = "";
-  $("welcome").classList.remove("hidden");
-
-  renderHistoryList();
-  $("sidebar").classList.remove("open");
-};
-
-/* CLEAR CURRENT CONVERSATION */
-
-$("clearBtn").onclick = async () => {
-  if (
-    busy ||
-    imageGenBusy ||
-    !confirm("Clear this conversation and its saved pictures?")
-  ) return;
-
-  await deleteImagesForMessages(conversation);
-
-  conversation = [];
-  attachments = [];
-  updateAttachmentList();
-
-  savedChats = savedChats.filter(item => item.id !== currentChatId);
-  currentChatId = createChatId();
-
-  localStorage.setItem("maynard_chats",JSON.stringify(savedChats));
-
-  chat.innerHTML = "";
-  $("welcome").classList.remove("hidden");
-  renderHistoryList();
-};
-
-/* EXPORT CONVERSATION */
-
-$("exportBtn").onclick = () => {
-  if (!conversation.length) {
-    alert("There is no conversation to export.");
-    return;
-  }
-
-  const output = conversation.map(item =>
-    (item.role === "user" ? "YOU" : "MAYNARD AI") +
-    "\n" + (item.displayContent || item.content) +
-    (item.images?.length
-      ? "\nPictures: " + item.images.map(image => image.name).join(", ")
-      : "")
-  ).join("\n\n-------------------------\n\n");
-
-  const blob = new Blob([output],{type:"text/plain;charset=utf-8"});
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-
-  link.href = url;
-  link.download = "Maynard-AI-conversation.txt";
-
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-
-  setTimeout(() => URL.revokeObjectURL(url),1000);
-};
-
-/* MOBILE MENU */
-
-$("menuBtn").onclick = () => {
-  $("sidebar").classList.toggle("open");
-};
-
-/* VOICE OUTPUT */
-
-$("voiceToggle").onclick = () => {
-  voiceEnabled = !voiceEnabled;
-
-  $("voiceToggle").textContent = voiceEnabled
-    ? "🔊 Voice On"
-    : "🔊 Voice";
-
-  if (!voiceEnabled && "speechSynthesis" in window) {
-    speechSynthesis.cancel();
+$("mobileHistoryBtn").onclick = () => {
+  if (window.innerWidth <= 540) {
+    showModal('<h2>Saved conversations</h2><div id="mobileHistoryItems"></div>');
+    loadHistory();
+    setTimeout(() => {
+      const list = $("historyList").cloneNode(true);
+      $("mobileHistoryItems").appendChild(list);
+    }, 300);
   }
 };
-
-/* VOICE INPUT */
-
-$("micBtn").onclick = () => {
-  const SpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
-
-  if (!SpeechRecognition) {
-    alert("Voice input is not supported in this browser.");
-    return;
-  }
-
-  const recognition = new SpeechRecognition();
-  recognition.lang = "en-US";
-  recognition.interimResults = false;
-  recognition.continuous = false;
-
-  recognition.onresult = event => {
-    messageInput.value +=
-      (messageInput.value ? " " : "") +
-      event.results[0][0].transcript;
-
-    messageInput.focus();
-    messageInput.dispatchEvent(new Event("input"));
+document.querySelectorAll("[data-prompt]").forEach(button => {
+  button.onclick = () => {
+    $("prompt").value = button.dataset.prompt;
+    $("prompt").focus();
   };
-
-  recognition.onerror = () => {
-    alert("Voice input could not be completed.");
-  };
-
-  recognition.start();
-};
-
-/* LOAD CHAT HISTORY */
-
-function loadHistory() {
-  try {
-    const saved = JSON.parse(
-      localStorage.getItem("maynard_chats") || "null"
-    );
-
-    if (Array.isArray(saved)) {
-      savedChats = saved.filter(item =>
-        item &&
-        typeof item.id === "string" &&
-        Array.isArray(item.messages)
-      ).map(item => ({
-        ...item,
-        messages:item.messages.filter(message =>
-          message &&
-          ["user","assistant"].includes(message.role) &&
-          typeof message.content === "string"
-        ).map(message => ({
-          role:message.role,
-          content:message.content,
-          displayContent:
-            typeof message.displayContent === "string"
-              ? message.displayContent
-              : message.content,
-          images:Array.isArray(message.images)
-            ? message.images.filter(image =>
-                image && typeof image.id === "string"
-              )
-            : []
-        }))
-      }));
-
-    } else {
-      const old = JSON.parse(
-        localStorage.getItem("maynard_history") || "[]"
-      );
-
-      if (Array.isArray(old) && old.length) {
-        const validOld = old.filter(item =>
-          item &&
-          ["user","assistant"].includes(item.role) &&
-          typeof item.content === "string"
-        );
-
-        if (validOld.length) {
-          savedChats = [{
-            id:createChatId(),
-            title:getChatTitle(validOld),
-            mode:"general",
-            updatedAt:Date.now(),
-            messages:validOld.map(item => ({
-              role:item.role,
-              content:item.content,
-              displayContent:item.content,
-              images:[]
-            }))
-          }];
-
-          localStorage.setItem(
-            "maynard_chats",
-            JSON.stringify(savedChats)
-          );
-        }
-      }
-    }
-
-    savedChats.sort(
-      (a,b) => (b.updatedAt || 0) - (a.updatedAt || 0)
-    );
-
-    if (savedChats.length) {
-      openSavedChat(savedChats[0].id);
-    } else {
-      currentChatId = createChatId();
-      conversation = [];
-      renderConversation();
-    }
-
-    renderHistoryList();
-
-  } catch(error) {
-    console.warn("Could not load chat history:",error);
-
-    savedChats = [];
-    conversation = [];
-    currentChatId = createChatId();
-
-    renderConversation();
-    renderHistoryList();
-  }
-}
-
-/* INITIALISE MAYNARD AI */
-
-window.addEventListener("load",async () => {
-  try {
-    if (window.MathJax?.startup?.promise) {
-      await MathJax.startup.promise;
-      mathReady = true;
-    } else {
-      console.warn("MathJax did not load. Check your internet connection.");
-    }
-  } catch(error) {
-    console.warn("MathJax could not start:",error);
-  }
-
-  try {
-    await openImageDatabase();
-  } catch(error) {
-    console.error("Image storage is unavailable:",error);
-  }
-
-  loadHistory();
-
-  document.querySelectorAll(".bubble").forEach(element => {
-    renderMath(element);
-  });
 });
+
+loadHistory();
 </script>
 </body>
 </html>
