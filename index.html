@@ -66,8 +66,6 @@ button { cursor: pointer; }
   background: #000;
 }
 
-/* SIDEBAR */
-
 .sidebar {
   width: 270px;
   flex-shrink: 0;
@@ -146,8 +144,6 @@ button { cursor: pointer; }
 
 .history-action:hover { color: white; }
 
-/* MAIN */
-
 .main {
   flex: 1;
   min-width: 0;
@@ -186,8 +182,6 @@ button { cursor: pointer; }
 }
 
 .small-button:hover { background: #1a1a1a; }
-
-/* MODE MENU */
 
 .mode-wrap { position: relative; }
 
@@ -228,8 +222,6 @@ button { cursor: pointer; }
   line-height: 1.5;
 }
 
-/* CHAT AREA */
-
 .chat-area {
   flex: 1;
   min-width: 0;
@@ -238,7 +230,6 @@ button { cursor: pointer; }
   overflow-x: hidden;
   padding: 24px 5vw 30px;
   background: #000;
-  border: 0;
 }
 
 .welcome {
@@ -291,13 +282,10 @@ button { cursor: pointer; }
 .message.user-message { justify-content: flex-end; }
 .message.assistant-message { justify-content: flex-start; }
 
-/* CHAT BUBBLES */
-
 .bubble {
   min-width: 0;
   max-width: min(90%, 780px);
   padding: 14px 16px;
-  border: 0;
   border-radius: 0;
   background: transparent;
   color: #eee;
@@ -305,14 +293,12 @@ button { cursor: pointer; }
   overflow-wrap: anywhere;
   word-break: normal;
   white-space: normal;
-  box-shadow: none;
   overflow-x: hidden;
 }
 
 .user-message .bubble {
   max-width: min(85%, 650px);
   margin-left: auto;
-  margin-right: 0;
   padding: 12px 15px;
   background: #171717;
   border: 1px solid #292929;
@@ -325,8 +311,6 @@ button { cursor: pointer; }
   margin: 0;
   padding: 8px 0;
   background: transparent;
-  border: 0;
-  border-radius: 0;
 }
 
 .bubble p { margin: 0 0 12px; }
@@ -374,8 +358,6 @@ button { cursor: pointer; }
 
 .bubble hr { display: none !important; }
 
-/* MATH */
-
 .mjx-container { max-width: 100% !important; }
 
 .mjx-container[display="true"] {
@@ -391,8 +373,6 @@ button { cursor: pointer; }
 
 .mjx-container[display="true"] mjx-math { max-width: none; }
 .bubble .mjx-container { color: white; }
-
-/* TABLES */
 
 .table-scroll {
   display: block;
@@ -418,18 +398,16 @@ button { cursor: pointer; }
 
 .bubble th { background: #171717; }
 
-/* DIAGRAMS */
-
 .diagram-container {
   width: 100%;
   max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
   margin: 14px 0;
-  padding: 10px 0;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
+  padding: 12px;
+  background: #101010;
+  border: 1px solid #292929;
+  border-radius: 10px;
 }
 
 .diagram-container svg {
@@ -438,16 +416,19 @@ button { cursor: pointer; }
   height: auto;
 }
 
-.mermaid {
-  display: flex;
-  justify-content: flex-start;
-  min-width: 280px;
+.diagram-source {
+  color: #aaa;
+  font-size: 12px;
+  margin-top: 10px;
 }
 
-.diagram-error { color: #ffaaaa; font-size: 13px; padding: 8px; }
-.typing { color: #aaa; font-size: 13px; padding: 8px 0; }
+.diagram-error {
+  color: #ffaaaa;
+  font-size: 13px;
+  padding: 8px;
+}
 
-/* COMPOSER */
+.typing { color: #aaa; font-size: 13px; padding: 8px 0; }
 
 .composer-wrap {
   flex-shrink: 0;
@@ -508,11 +489,12 @@ button { cursor: pointer; }
   font-weight: 700;
 }
 
-.send-button:disabled { opacity: .5; cursor: not-allowed; }
+.send-button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
 
 #fileInput, #cameraInput { display: none; }
-
-/* IMAGE PREVIEW */
 
 #imagePreview {
   display: none;
@@ -555,14 +537,19 @@ button { cursor: pointer; }
   padding: 8px 11px;
 }
 
+.context-note {
+  display: none;
+  color: #a78bfa;
+  font-size: 11px;
+  margin: 8px 4px 0;
+}
+
 .note {
   color: #777;
   font-size: 11px;
   text-align: center;
   margin: 9px 0 0;
 }
-
-/* MODAL */
 
 .modal-backdrop {
   position: fixed;
@@ -638,27 +625,20 @@ button { cursor: pointer; }
   font-weight: 700;
 }
 
-/* RESPONSIVE */
-
 @media(max-width: 760px) {
   .sidebar { display: none; }
   .main { width: 100%; }
-
   .chat-area { padding: 18px 14px 24px; }
   .composer-wrap { padding: 10px 12px 14px; }
-
   .bubble { max-width: 96%; }
-
   .assistant-message .bubble {
     width: 100%;
     max-width: 100%;
     padding: 7px 0;
   }
-
   .user-message .bubble { max-width: 90%; }
   .preview-container { flex-wrap: wrap; }
   .top-title { font-size: 13px; }
-
   .small-button { padding: 7px; font-size: 12px; }
   .welcome { margin-top: 8vh; }
 }
@@ -666,7 +646,6 @@ button { cursor: pointer; }
 @media(max-width: 380px) {
   .topbar { padding: 0 8px; }
   .top-actions { gap: 4px; }
-
   .small-button { font-size: 11px; padding: 6px; }
   .composer-tools { gap: 5px; }
   .tool-button { font-size: 12px; padding: 8px; }
@@ -747,19 +726,21 @@ button { cursor: pointer; }
         <textarea id="prompt" placeholder="Message MAYNARD AI..."></textarea>
 
         <div id="imagePreview"></div>
+        <div class="context-note" id="contextNote">
+          Image context is available in this conversation.
+          <button class="remove-image" id="clearImageContextBtn" type="button">
+            Clear image context
+          </button>
+        </div>
 
         <div class="composer-tools">
           <button class="tool-button" id="attachBtn">＋ Image</button>
 
-          <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+          <input id="fileInput" type="file"
+            accept="image/png,image/jpeg,image/webp" hidden>
 
-          <input
-            id="cameraInput"
-            type="file"
-            accept="image/*"
-            capture="environment"
-            hidden
-          >
+          <input id="cameraInput" type="file"
+            accept="image/*" capture="environment" hidden>
 
           <button class="tool-button" id="cameraBtn">📷 Camera</button>
           <button class="tool-button" id="mathBtn">∑ Math</button>
@@ -795,79 +776,26 @@ const state = {
   title: "New conversation",
   image: null,
   imageName: null,
+  imageContext: null,
   busy: false,
   mode: "general"
 };
 
-/* VISUAL INSTRUCTIONS */
-
-const VISUAL_INSTRUCTIONS = `
-VISUAL PROBLEM SOLVING:
-
-Decide whether a diagram genuinely helps explain the answer.
-
-For mathematics, use relevant graphs, coordinate diagrams,
-geometry illustrations and number-line diagrams.
-
-For physics, use relevant force diagrams, motion diagrams,
-and simple electrical circuit diagrams.
-
-For chemistry, use molecular structures and reaction diagrams.
-
-For biology, use labelled biological diagrams.
-
-For engineering, use technical diagrams and flowcharts.
-
-When a diagram is useful, provide valid Mermaid syntax
-inside a fenced mermaid code block.
-
-Use valid Mermaid syntax.
-Keep diagram labels short and readable.
-Do not invent diagrams when they do not help.
-
-For mathematical graphs, include axes, labels,
-important points and relevant graph information.
-
-ANSWER FORMATTING:
-
-Do not use decorative horizontal separator lines.
-Let explanations flow naturally.
-Use headings only when useful.
-Use LaTeX for mathematical notation.
-Show calculations step by step when appropriate.
-Avoid unnecessarily long equations on one line.
-Break long mathematical calculations into readable steps.
-
-IDENTITY:
-
-Your name is MAYNARD AI.
-You were created by David Takyi.
-If asked your name, say MAYNARD AI.
-If asked who created you, say David Takyi.
-`;
-
-/* MODES */
-
 const MODE_SETTINGS = {
-  general: {
-    label: "General Assistant"
-  },
-  coding: {
-    label: "Coding"
-  },
-  essay: {
-    label: "Essay Writing"
-  },
-  mathematics: {
-    label: "Mathematics"
-  }
+  general: { label: "General Assistant" },
+  coding: { label: "Coding" },
+  essay: { label: "Essay Writing" },
+  mathematics: { label: "Mathematics" }
 };
+
+let diagramCounter = 0;
 
 /* API REQUEST */
 
 async function api(action, data = {}) {
   const response = await fetch("/api/chat", {
     method: "POST",
+    credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action, ...data })
   });
@@ -875,7 +803,12 @@ async function api(action, data = {}) {
   const result = await response.json().catch(() => ({}));
 
   if (!response.ok || result.error) {
-    throw new Error(result.error || `Request failed (${response.status}).`);
+    const error = new Error(
+      result.error || `Request failed (${response.status}).`
+    );
+
+    error.status = response.status;
+    throw error;
   }
 
   return result;
@@ -999,8 +932,15 @@ function renderMarkdown(text) {
       const code = codeLines.join("\n");
 
       if (language === "mermaid") {
-        html += '<div class="diagram-container"><pre class="mermaid">' +
-          escapeHTML(code) + "</pre></div>";
+        const container = document.createElement("div");
+        container.className = "diagram-container";
+
+        const diagram = document.createElement("div");
+        diagram.className = "mermaid-source";
+        diagram.textContent = code;
+
+        container.appendChild(diagram);
+        html += container.outerHTML;
       } else {
         html += "<pre><code>" + escapeHTML(code) + "</code></pre>";
       }
@@ -1038,7 +978,10 @@ function renderMarkdown(text) {
       flushList();
 
       const level = heading[1].length;
-      html += "<h" + level + ">" + renderInline(heading[2]) + "</h" + level + ">";
+      html += "<h" + level + ">" +
+        renderInline(heading[2]) +
+        "</h" + level + ">";
+
       continue;
     }
 
@@ -1081,31 +1024,71 @@ function renderMarkdown(text) {
   return html;
 }
 
-/* DIAGRAMS AND MATHEMATICS */
+/* MERMAID RENDERING */
 
-async function typeset(element) {
-  if (window.mermaid) {
+async function renderDiagrams(element) {
+  if (!window.mermaid) return;
+
+  mermaid.initialize({
+    startOnLoad: false,
+    securityLevel: "strict",
+    theme: "dark",
+    flowchart: {
+      htmlLabels: false,
+      curve: "basis"
+    }
+  });
+
+  const diagrams = element.querySelectorAll(".mermaid-source");
+
+  for (const diagram of diagrams) {
+    const source = diagram.textContent.trim();
+
+    if (!source) continue;
+
+    const container = diagram.closest(".diagram-container");
+    const id = "maynard-diagram-" + (++diagramCounter);
+
     try {
-      mermaid.initialize({
-        startOnLoad: false,
-        securityLevel: "strict",
-        theme: "dark",
-        flowchart: {
-          htmlLabels: false,
-          curve: "basis"
-        }
-      });
+      const rendered = await mermaid.render(id, source);
 
-      const diagrams = element.querySelectorAll(
-        ".mermaid:not([data-processed])"
-      );
+      container.innerHTML = rendered.svg;
 
-      if (diagrams.length) {
-        await mermaid.run({ nodes: diagrams });
+      const svg = container.querySelector("svg");
+
+      if (svg) {
+        svg.style.maxWidth = "100%";
+        svg.style.height = "auto";
+      }
+
+      if (typeof rendered.bindFunctions === "function") {
+        rendered.bindFunctions(container);
       }
     } catch (error) {
-      console.warn("Diagram rendering issue:", error);
+      console.warn("Mermaid diagram could not be rendered:", error);
+
+      container.innerHTML = "";
+
+      const message = document.createElement("div");
+      message.className = "diagram-error";
+      message.textContent =
+        "This diagram could not be rendered. The explanation is still available below.";
+
+      const code = document.createElement("pre");
+      code.textContent = source;
+
+      container.append(message, code);
     }
+  }
+}
+
+/* MATHEMATICS AND DIAGRAMS */
+
+async function typeset(element) {
+  try {
+    await renderDiagrams(element);
+  } catch (error) {
+    console.warn("Diagram rendering issue:", error);
   }
 
   if (window.MathJax?.typesetPromise) {
@@ -1187,6 +1170,18 @@ function closeModal() {
   $("modalContent").innerHTML = "";
 }
 
+/* IMAGE CONTEXT */
+
+function updateImageContextNote() {
+  $("contextNote").style.display =
+    state.imageContext ? "block" : "none";
+}
+
+$("clearImageContextBtn").onclick = () => {
+  state.imageContext = null;
+  updateImageContextNote();
+};
+
 /* RESET CHAT */
 
 function resetChat() {
@@ -1195,6 +1190,7 @@ function resetChat() {
   state.title = "New conversation";
   state.image = null;
   state.imageName = null;
+  state.imageContext = null;
 
   $("messages").innerHTML = "";
   $("welcome").style.display = "block";
@@ -1205,9 +1201,12 @@ function resetChat() {
 
   $("fileInput").value = "";
   $("cameraInput").value = "";
+
+  updateImageContextNote();
 }
 
 function newChat() {
+  if (state.busy) return;
   resetChat();
   $("prompt").focus();
 }
@@ -1282,6 +1281,8 @@ async function loadHistory() {
 /* OPEN HISTORY */
 
 async function openHistory(id) {
+  if (state.busy) return;
+
   try {
     const result = await api("history_get", { id });
     const history = result.history || result;
@@ -1289,9 +1290,13 @@ async function openHistory(id) {
     state.activeId = history.id || id;
     state.title = history.title || "Conversation";
     state.messages = history.messages || [];
+    state.image = null;
+    state.imageContext = null;
 
     $("messages").innerHTML = "";
     $("welcome").style.display = "none";
+
+    updateImageContextNote();
 
     state.messages.forEach(message => {
       addMessage(message.role, message.content || "");
@@ -1424,7 +1429,7 @@ function attachImage(file) {
   reader.readAsDataURL(file);
 }
 
-/* CAMERA ACCESS */
+/* CAMERA */
 
 $("cameraBtn").onclick = () => {
   $("cameraInput").click();
@@ -1485,19 +1490,20 @@ async function sendMessage() {
   $("sendBtn").disabled = true;
   $("sendBtn").textContent = "Sending...";
 
-  const image = state.image;
+  const newImage = state.image;
+  const imageForRequest = newImage || state.imageContext;
   const userContent = text || "Please examine this image.";
 
   addMessage("user", userContent, {
-    imageUrl: image || null
-  });
-
-  state.messages.push({
-    role: "user",
-    content: userContent
+    imageUrl: newImage || null
   });
 
   $("prompt").value = "";
+
+  if (newImage) {
+    state.imageContext = newImage;
+    updateImageContextNote();
+  }
 
   state.image = null;
   state.imageName = null;
@@ -1514,38 +1520,58 @@ async function sendMessage() {
   $("messages").appendChild(typing);
   $("chatArea").scrollTop = $("chatArea").scrollHeight;
 
+  const userMessage = {
+    role: "user",
+    content: userContent
+  };
+
   try {
+    const conversation = [
+      ...state.messages,
+      userMessage
+    ].slice(-12);
+
     const result = await api("chat", {
       mode: state.mode,
-      visualInstructions: VISUAL_INSTRUCTIONS,
-      messages: state.messages.slice(-40).map(message => ({
-        role: message.role,
-        content: message.content
-      })),
-      image
+      messages: conversation,
+      image: imageForRequest
     });
 
     typing.remove();
 
     const answer = result.reply || "I could not generate a response.";
 
-    addMessage("assistant", answer);
-
+    state.messages.push(userMessage);
     state.messages.push({
       role: "assistant",
       content: answer
     });
 
+    addMessage("assistant", answer);
+
     await saveHistory();
   } catch (error) {
     typing.remove();
 
-    addMessage("assistant", "I encountered an error: " + error.message);
+    const message = error.status === 429
+      ? error.message
+      : "I encountered an error: " + error.message;
+
+    addMessage("assistant", message);
+
+    // Restore the text so the user can retry.
+    $("prompt").value = text;
+
+    // Keep the image available for another attempt.
+    if (newImage) {
+      state.image = newImage;
+      state.imageName = state.imageName || "Attached image";
+      updateImageContextNote();
+    }
   } finally {
     state.busy = false;
     $("sendBtn").disabled = false;
     $("sendBtn").textContent = "Send ↑";
-    $("prompt").focus();
   }
 }
 
@@ -1590,7 +1616,8 @@ function openCalculator() {
         precision: 14
       });
     } catch (error) {
-      $("calcResult").textContent = "Calculation error: " + error.message;
+      $("calcResult").textContent =
+        "Calculation error: " + error.message;
     }
   };
 
