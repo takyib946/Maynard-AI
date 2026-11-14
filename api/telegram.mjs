@@ -52,7 +52,7 @@ export default async function handler(req, res) {
     );
 
     const appResponse = await fetch(
-      `${new URL(req.url).origin}/api/chat`,
+  "https://maynard-ai-favor.vercel.app/api/chat",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
