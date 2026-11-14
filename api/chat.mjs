@@ -9,22 +9,36 @@ const FOOTBALL_API_URL = "https://v3.football.api-sports.io/fixtures";
 
 const COOKIE_NAME = "maynard_browser_v2";
 const HISTORY_LIMIT = 50;
-const MESSAGE_LIMIT = 100;
+const MESSAGE_LIMIT = 12;
 const HISTORY_TTL = 60 * 60 * 24 * 365;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const MAX_BODY_BYTES = 15 * 1024 * 1024;
+const MAX_OUTPUT_TOKENS = 512;
 
 const ALLOWED_ACTIONS = new Set([
-  "chat", "history_save", "history_list", "history_get",
-  "history_rename", "history_delete", "history_clear",
-  "image_generate", "football_live"
+  "chat",
+  "history_save",
+  "history_list",
+  "history_get",
+  "history_rename",
+  "history_delete",
+  "history_clear",
+  "image_generate",
+  "football_live"
 ]);
 
 const MODE_INSTRUCTIONS = {
-  general: "You are MAYNARD AI, a helpful general-purpose assistant. Give clear, accurate and useful answers.",
-  coding: "You are MAYNARD AI in Coding mode. Act as a programming tutor and coding assistant. Explain code clearly, identify errors, provide complete working examples when requested, and prioritize safe, maintainable code.",
-  essay: "You are MAYNARD AI in Essay Writing mode. Help with essay planning, introductions, thesis statements, paragraphs, grammar, structure, editing and conclusions. Use clear academic writing.",
-  mathematics: "You are MAYNARD AI in Mathematics mode. Solve mathematical problems accurately. Show calculations step by step using LaTeX. Include relevant graphs and diagrams where useful."
+  general:
+    "You are MAYNARD AI, a helpful general-purpose assistant. Give clear, accurate and useful answers.",
+
+  coding:
+    "You are MAYNARD AI in Coding mode. Act as a programming tutor and coding assistant. Explain code clearly, identify errors, provide complete working examples when requested, and prioritize safe, maintainable code.",
+
+  essay:
+    "You are MAYNARD AI in Essay Writing mode. Help with essay planning, introductions, thesis statements, paragraphs, grammar, structure, editing and conclusions. Use clear academic writing.",
+
+  mathematics:
+    "You are MAYNARD AI in Mathematics mode. Solve mathematical problems accurately. Show calculations step by step using LaTeX. Include relevant graphs and diagrams where useful."
 };
 
 const MAYNARD_SYSTEM_PROMPT = `
@@ -39,6 +53,7 @@ FORMATTING:
 - Do not use decorative horizontal separator lines.
 - Keep answers readable on mobile screens.
 - Do not invent facts.
+- Be clear when information is uncertain.
 
 MATHEMATICS:
 - Explain problems step by step.
@@ -50,17 +65,69 @@ MATHEMATICS:
 
 DIAGRAMS:
 - Use Mermaid diagrams when they genuinely help.
-- Put Mermaid diagrams inside fenced mermaid code blocks.
-- Keep diagram labels short and readable.
-- Use valid Mermaid syntax.
+- Put diagrams inside fenced mermaid code blocks.
+- Prefer simple flowcharts using:
+  flowchart TD
+  A[First step] --> B[Second step]
+- Use short labels.
+- Use quoted labels if they contain special punctuation.
+- Do not put HTML inside diagram labels.
+- Avoid unsupported Mermaid syntax.
+- Never put explanatory paragraphs inside Mermaid code blocks.
+- If a diagram is not necessary, do not create one.
 
 IDENTITY:
 If asked your name, say:
 "I am MAYNARD AI, created by David Takyi."
 `;
 
+const VISUAL_INSTRUCTIONS = `
+VISUAL PROBLEM SOLVING:
+
+Use diagrams only when they genuinely help explain an answer.
+
+For mathematics, use relevant graphs, coordinate diagrams,
+geometry illustrations and number-line diagrams.
+
+For physics, use relevant force diagrams, motion diagrams,
+and simple electrical circuit diagrams.
+
+For chemistry, use molecular structures and reaction diagrams.
+
+For biology, use labelled biological diagrams.
+
+For engineering, use technical diagrams and flowcharts.
+
+When using Mermaid, produce simple, valid Mermaid syntax.
+Prefer flowchart TD or flowchart LR.
+Keep labels short.
+Do not use HTML in labels.
+Use quotation marks around labels containing special punctuation.
+
+For mathematical graphs that require accurate plotting,
+explain the coordinates and equations rather than pretending
+that a flowchart is a mathematical graph.
+
+ANSWER FORMATTING:
+- Use readable headings.
+- Use LaTeX for mathematical notation.
+- Show calculations step by step.
+- Avoid unnecessarily long equations on one line.
+- Do not use decorative horizontal separator lines.
+
+IDENTITY:
+Your name is MAYNARD AI.
+You were created by David Takyi.
+`;
+
 function send(res, status, data) {
   return res.status(status).json(data);
+}
+
+function makeError(message, status = 500) {
+  const error = new Error(message);
+  error.status = status;
+  return error;
 }
 
 function errorMessage(error) {
@@ -115,13 +182,12 @@ function cleanAIResponse(value) {
 
         const formatted = headers.map((header, index) => {
           const value = values[index] || "";
-          return value ? `**${header || `Item ${index + 1}`}:** ${value}` : "";
+          return value
+            ? `**${header || `Item ${index + 1}`}:** ${value}`
+            : "";
         }).filter(Boolean).join("\n");
 
-        if (formatted) {
-          output.push(formatted, "");
-        }
-
+        if (formatted) output.push(formatted, "");
         i++;
       }
 
@@ -139,7 +205,7 @@ function cleanAIResponse(value) {
   return output.join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
-// COOKIE / VISITOR
+// VISITOR COOKIE
 
 function getCookie(req, name) {
   const header = req.headers.cookie || "";
@@ -191,6 +257,12 @@ async function readBody(req) {
     typeof req.body === "object" &&
     !Buffer.isBuffer(req.body)
   ) {
+    const size = Buffer.byteLength(JSON.stringify(req.body));
+
+    if (size > MAX_BODY_BYTES) {
+      throw makeError("Request body is too large.", 413);
+    }
+
     return req.body;
   }
 
@@ -200,7 +272,7 @@ async function readBody(req) {
     raw += chunk.toString();
 
     if (Buffer.byteLength(raw) > MAX_BODY_BYTES) {
-      throw new Error("Request body is too large.");
+      throw makeError("Request body is too large.", 413);
     }
   }
 
@@ -209,7 +281,7 @@ async function readBody(req) {
   try {
     return JSON.parse(raw);
   } catch {
-    throw new Error("Invalid JSON request body.");
+    throw makeError("Invalid JSON request body.", 400);
   }
 }
 
@@ -217,7 +289,7 @@ function requireEnv(name) {
   const value = process.env[name];
 
   if (!value || !value.trim()) {
-    throw new Error(`Missing environment variable: ${name}`);
+    throw makeError(`Missing environment variable: ${name}`, 500);
   }
 
   return value.trim();
@@ -241,7 +313,8 @@ async function redis(command, ...args) {
     .map(value => encodeURIComponent(String(value)))
     .join("/");
 
-  const endpoint = `${url}/${command}${encodedArgs ? `/${encodedArgs}` : ""}`;
+  const endpoint =
+    `${url}/${command}${encodedArgs ? `/${encodedArgs}` : ""}`;
 
   const response = await fetch(endpoint, {
     method: "POST",
@@ -253,8 +326,9 @@ async function redis(command, ...args) {
   const result = await response.json().catch(() => ({}));
 
   if (!response.ok || result.error) {
-    throw new Error(
-      result.error || `Redis request failed (${response.status}).`
+    throw makeError(
+      result.error || `Redis request failed (${response.status}).`,
+      response.status || 500
     );
   }
 
@@ -275,8 +349,7 @@ function cleanMessages(messages) {
     )
     .map(message => ({
       role: message.role,
-      content: message.content.slice(0, 20000),
-      ...(message.imageOmitted ? { imageOmitted: true } : {})
+      content: message.content.slice(0, 8000)
     }));
 }
 
@@ -286,7 +359,7 @@ async function saveHistory(visitor, body) {
   const messages = cleanMessages(body.messages);
 
   if (!messages.length) {
-    throw new Error("There are no messages to save.");
+    throw makeError("There are no messages to save.", 400);
   }
 
   const id =
@@ -387,7 +460,7 @@ async function listHistory(visitor) {
         messageCount: record.messages?.length || 0
       });
     } catch {
-      // Skip invalid records.
+      // Ignore invalid history records.
     }
   }
 
@@ -398,7 +471,7 @@ async function listHistory(visitor) {
 
 async function getHistory(visitor, id) {
   if (typeof id !== "string" || !/^[a-f0-9-]{36}$/i.test(id)) {
-    throw new Error("Invalid conversation ID.");
+    throw makeError("Invalid conversation ID.", 400);
   }
 
   const raw = await redis("GET", historyKey(visitor, id));
@@ -407,7 +480,7 @@ async function getHistory(visitor, id) {
   try {
     return JSON.parse(raw);
   } catch {
-    throw new Error("Saved conversation data is invalid.");
+    throw makeError("Saved conversation data is invalid.", 500);
   }
 }
 
@@ -418,7 +491,7 @@ async function renameHistory(visitor, id, title) {
   if (!record) return null;
 
   if (typeof title !== "string" || !title.trim()) {
-    throw new Error("A conversation title is required.");
+    throw makeError("A conversation title is required.", 400);
   }
 
   record.title = title.trim().slice(0, 100);
@@ -439,7 +512,7 @@ async function renameHistory(visitor, id, title) {
 
 async function deleteHistory(visitor, id) {
   if (typeof id !== "string" || !/^[a-f0-9-]{36}$/i.test(id)) {
-    throw new Error("Invalid conversation ID.");
+    throw makeError("Invalid conversation ID.", 400);
   }
 
   await redis("DEL", historyKey(visitor, id));
@@ -467,7 +540,7 @@ async function clearHistory(visitor) {
 
 function extractImageData(image) {
   if (typeof image !== "string") {
-    throw new Error("Image data is missing.");
+    throw makeError("Image data is missing.", 400);
   }
 
   const match = image.match(
@@ -475,14 +548,14 @@ function extractImageData(image) {
   );
 
   if (!match) {
-    throw new Error("Use a PNG, JPEG, or WEBP image.");
+    throw makeError("Use a PNG, JPEG, or WEBP image.", 400);
   }
 
   const data = match[2];
   const buffer = Buffer.from(data, "base64");
 
   if (buffer.length > MAX_IMAGE_BYTES) {
-    throw new Error("Image must be 8 MB or smaller.");
+    throw makeError("Image must be 8 MB or smaller.", 413);
   }
 
   return {
@@ -495,34 +568,46 @@ function extractImageData(image) {
 
 async function groqChat(body) {
   const apiKey = requireEnv("GROQ_API_KEY");
-  const model = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+
+  const model =
+    process.env.GROQ_MODEL || "qwen/qwen3.8-27b";
 
   const messages = cleanMessages(body.messages);
 
   if (!messages.length && typeof body.message === "string") {
     messages.push({
       role: "user",
-      content: body.message.slice(0, 20000)
+      content: body.message.slice(0, 8000)
     });
   }
 
   if (!messages.length) {
-    throw new Error("Enter a message before sending.");
+    throw makeError("Enter a message before sending.", 400);
   }
 
   const mode = MODE_INSTRUCTIONS[body.mode] || MODE_INSTRUCTIONS.general;
 
+  const systemPrompt = [
+    MAYNARD_SYSTEM_PROMPT,
+    VISUAL_INSTRUCTIONS,
+    mode
+  ].join("\n\n");
+
   const chatMessages = [
     {
       role: "system",
-      content: `${MAYNARD_SYSTEM_PROMPT}\n\n${mode}`
+      content: systemPrompt
     },
     ...messages
   ];
 
+  let selectedModel = model;
+
   if (body.image) {
     const image = extractImageData(body.image);
-    const visionModel = process.env.GROQ_VISION_MODEL || model;
+
+    selectedModel =
+      process.env.GROQ_VISION_MODEL || model;
 
     let lastUserIndex = -1;
 
@@ -534,7 +619,7 @@ async function groqChat(body) {
     }
 
     if (lastUserIndex === -1) {
-      throw new Error("An image needs a user message.");
+      throw makeError("An image needs a user message.", 400);
     }
 
     const previousContent = chatMessages[lastUserIndex].content;
@@ -544,9 +629,7 @@ async function groqChat(body) {
       content: [
         {
           type: "text",
-          text: typeof previousContent === "string"
-            ? previousContent
-            : "Please examine this image."
+          text: previousContent || "Please examine this image."
         },
         {
           type: "image_url",
@@ -556,11 +639,9 @@ async function groqChat(body) {
         }
       ]
     };
-
-    return callGroq(apiKey, visionModel, chatMessages);
   }
 
-  return callGroq(apiKey, model, chatMessages);
+  return callGroq(apiKey, selectedModel, chatMessages);
 }
 
 // GROQ API REQUEST
@@ -576,22 +657,37 @@ async function callGroq(apiKey, model, messages) {
       model,
       messages,
       temperature: 0.7,
-      max_tokens: 4096
+      max_completion_tokens: MAX_OUTPUT_TOKENS
     })
   });
 
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(
-      data.error?.message || `Groq request failed (${response.status}).`
-    );
+    const providerMessage =
+      data.error?.message ||
+      `Groq request failed (${response.status}).`;
+
+    if (response.status === 429) {
+      const retryAfter = response.headers.get("retry-after");
+
+      const waitText = retryAfter
+        ? ` Please try again in about ${retryAfter} seconds.`
+        : " Please wait for your Groq rate limit to reset.";
+
+      throw makeError(
+        `MAYNARD AI has reached the Groq usage limit.${waitText} Details: ${providerMessage}`,
+        429
+      );
+    }
+
+    throw makeError(providerMessage, response.status);
   }
 
   const rawReply = data.choices?.[0]?.message?.content;
 
   if (!rawReply) {
-    throw new Error("Groq returned an empty response.");
+    throw makeError("Groq returned an empty response.", 502);
   }
 
   return {
@@ -611,7 +707,7 @@ async function generateImage(body) {
     : "";
 
   if (!prompt) {
-    throw new Error("Enter an image generation prompt.");
+    throw makeError("Enter an image generation prompt.", 400);
   }
 
   const form = new FormData();
@@ -619,7 +715,13 @@ async function generateImage(body) {
   form.append("output_format", "png");
 
   const allowedRatios = [
-    "1:1", "16:9", "9:16", "4:3", "3:4", "21:9", "9:21"
+    "1:1",
+    "16:9",
+    "9:16",
+    "4:3",
+    "3:4",
+    "21:9",
+    "9:21"
   ];
 
   if (allowedRatios.includes(body.aspectRatio)) {
@@ -638,15 +740,16 @@ async function generateImage(body) {
   if (!response.ok) {
     const errorText = await response.text();
 
-    throw new Error(
-      `Stability AI failed (${response.status}): ${errorText.slice(0, 500)}`
+    throw makeError(
+      `Stability AI failed (${response.status}): ${errorText.slice(0, 500)}`,
+      response.status
     );
   }
 
   const contentType = response.headers.get("content-type") || "";
 
   if (!contentType.includes("image")) {
-    throw new Error("Stability AI did not return an image.");
+    throw makeError("Stability AI did not return an image.", 502);
   }
 
   const imageBuffer = Buffer.from(await response.arrayBuffer());
@@ -671,8 +774,9 @@ async function liveFootball() {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok || (data.errors && Object.keys(data.errors).length)) {
-    throw new Error(
-      JSON.stringify(data.errors || "Football API request failed.")
+    throw makeError(
+      JSON.stringify(data.errors || "Football API request failed."),
+      response.status || 502
     );
   }
 
@@ -723,6 +827,7 @@ export default async function handler(req, res) {
 
       case "history_save": {
         const record = await saveHistory(visitor, body);
+
         return send(res, 200, {
           success: true,
           id: record.id,
@@ -732,6 +837,7 @@ export default async function handler(req, res) {
 
       case "history_list": {
         const histories = await listHistory(visitor);
+
         return send(res, 200, {
           success: true,
           items: histories,
@@ -761,7 +867,11 @@ export default async function handler(req, res) {
       }
 
       case "history_rename": {
-        const history = await renameHistory(visitor, body.id, body.title);
+        const history = await renameHistory(
+          visitor,
+          body.id,
+          body.title
+        );
 
         if (!history) {
           return send(res, 404, {
@@ -770,11 +880,15 @@ export default async function handler(req, res) {
           });
         }
 
-        return send(res, 200, { success: true, history });
+        return send(res, 200, {
+          success: true,
+          history
+        });
       }
 
       case "history_delete": {
         await deleteHistory(visitor, body.id);
+
         return send(res, 200, {
           success: true,
           message: "Conversation deleted."
@@ -783,6 +897,7 @@ export default async function handler(req, res) {
 
       case "history_clear": {
         await clearHistory(visitor);
+
         return send(res, 200, {
           success: true,
           message: "Conversation history cleared."
@@ -791,12 +906,20 @@ export default async function handler(req, res) {
 
       case "image_generate": {
         const result = await generateImage(body);
-        return send(res, 200, { success: true, ...result });
+
+        return send(res, 200, {
+          success: true,
+          ...result
+        });
       }
 
       case "football_live": {
         const result = await liveFootball();
-        return send(res, 200, { success: true, ...result });
+
+        return send(res, 200, {
+          success: true,
+          ...result
+        });
       }
 
       default:
@@ -808,7 +931,11 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error("MAYNARD AI API error:", error);
 
-    return send(res, 500, {
+    const status = Number.isInteger(error.status)
+      ? error.status
+      : 500;
+
+    return send(res, status, {
       success: false,
       error: errorMessage(error)
     });
