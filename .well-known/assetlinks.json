@@ -1,12 +1,8 @@
 [{
-  "relation": [
-    "delegate_permission/common.handle_all_urls"
-  ],
-  "target": {
-    "namespace": "android_app",
-    "package_name": "app.vercel.maynard_ai_favor.twa",
-    "sha256_cert_fingerprints": [
-      "A4:1F:8F:D1:0F:7E:13:12:33:6E:F5:8F:FB:5B:6E:61:FF:B5:88:C1:06:86:80:56:C7:C3:C3:25:AA:92:65:3B"
-    ]
-  }
-}]
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.vercel.maynard_ai_favor.twa",
+        "sha256_cert_fingerprints": ["44:1F:C9:53:E1:EB:12:8C:52:3C:18:20:F2:CF:EE:2C:78:08:F0:FC:1B:24:50:61:B8:35:1B:BF:70:7C:FE:D5"]
+      }
+    }]
